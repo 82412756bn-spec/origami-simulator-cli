@@ -53,6 +53,7 @@ class FoldAnalyzer {
       selfIntersection: this.analyzeSelfIntersection(),
       faceNormals: this.analyzeFaceNormals(),
       holes: this.analyzeHoles(),
+      foldOrder: this.analyzeFoldOrder(),
       warnings: this.collectWarnings(),
     };
   }
@@ -1450,6 +1451,95 @@ class FoldAnalyzer {
       }
     }
     return { coplanar: true, overlap: false, projectionAxis: axis };
+  }
+
+  /**
+   * Analyze fold order — topological sequence of M/V folds.
+   *
+   * v2.9: simple heuristic based on per-face layer (from v2.3) and the
+   * "max layer of adjacent faces" rule.
+   *
+   * Rule: for a fold on an M/V edge shared by two faces, the fold must
+   * happen at step `max(layer_f1, layer_f2)`. The higher-layer face sits
+   * "on top" of the lower-layer face, so the lower-layer fold must be
+   * complete before this fold is meaningful.
+   *
+   * Within a step, all folds are independent (any order is valid).
+   *
+   * This is a necessary (not sufficient) condition for a valid fold
+   * sequence. Real origami simulators may add M/V layer-consistency
+   * checks (mountain/valley assignment must match the layer order).
+   *
+   * @returns {{
+   *   totalFolds: number,
+   *   stepCount: number,
+   *   foldSequence: Array<{ step: number, layer: number, foldCount: number, edgeIndices: number[] }>,
+   *   notes: string[]
+   * }}
+   */
+  analyzeFoldOrder() {
+    const result = {
+      totalFolds: 0,
+      stepCount: 0,
+      foldSequence: [],
+      notes: [],
+    };
+
+    if (this.faces.length < 2) {
+      result.notes.push('Fewer than 2 faces — cannot determine fold order');
+      return result;
+    }
+    if (this.edges.length === 0) {
+      result.notes.push('No edges — nothing to fold');
+      return result;
+    }
+
+    // Get per-face layer from v2.3 analyzeLayers
+    const layerInfo = this.analyzeLayers();
+    let faceLayers = layerInfo.faceOrders;
+    if (!faceLayers || faceLayers.length !== this.faces.length) {
+      // Fallback: all faces on layer 1
+      faceLayers = new Array(this.faces.length).fill(1);
+    }
+
+    // Group M/V edges by their step (= max layer of adjacent faces)
+    const edgesByStep = new Map(); // step → edge indices
+    for (let i = 0; i < this.edges.length; i++) {
+      const assignment = this.assignments[i];
+      if (assignment !== 'M' && assignment !== 'V') continue;
+      const adjacent = this.findAdjacentFaces(i);
+      if (adjacent.length < 2) continue;  // boundary edge: can't be folded in 3D
+
+      const layer1 = faceLayers[adjacent[0]] || 1;
+      const layer2 = faceLayers[adjacent[1]] || 1;
+      // For edges shared by 3+ faces, take max over all
+      let step = Math.max(layer1, layer2);
+      for (let k = 2; k < adjacent.length; k++) {
+        step = Math.max(step, faceLayers[adjacent[k]] || 1);
+      }
+      if (!edgesByStep.has(step)) edgesByStep.set(step, []);
+      edgesByStep.get(step).push(i);
+      result.totalFolds++;
+    }
+
+    if (result.totalFolds === 0) {
+      result.notes.push('No M/V edges found — nothing to fold');
+      return result;
+    }
+
+    // Convert to ordered sequence
+    const sortedSteps = [...edgesByStep.keys()].sort((a, b) => a - b);
+    for (const step of sortedSteps) {
+      result.foldSequence.push({
+        step,
+        layer: step,
+        foldCount: edgesByStep.get(step).length,
+        edgeIndices: edgesByStep.get(step).sort((a, b) => a - b),
+      });
+    }
+    result.stepCount = result.foldSequence.length;
+    result.notes.push(`Computed ${result.stepCount}-step fold sequence for ${result.totalFolds} M/V edges`);
+    return result;
   }
 
   /**
