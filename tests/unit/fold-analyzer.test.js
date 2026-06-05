@@ -1967,3 +1967,129 @@ describe('FoldAnalyzer v2.12 - Strict Kawasaki + Alternating M/V', () => {
     expect(result.schemaVersion).toBe('2.10');
   });
 });
+
+describe('FoldAnalyzer v2.13 - Summary Mode (compact JSON)', () => {
+  test('summarize() returns all 9 top-level fields', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const summary = analyzer.summarize();
+    const expectedFields = [
+      'schemaVersion', 'summaryVersion', 'counts', 'surface',
+      'flatFoldability', 'quality', 'consistency', 'keyWarnings', 'notes',
+    ];
+    for (const field of expectedFields) {
+      expect(summary).toHaveProperty(field);
+    }
+  });
+
+  test('summarize() counts include vertices/edges/faces', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const summary = analyzer.summarize();
+    expect(summary.counts.vertices).toBe(4);
+    expect(summary.counts.edges).toBe(4);
+    expect(summary.counts.faces).toBe(1);
+  });
+
+  test('summarize() summaryVersion is "2.13"', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const summary = analyzer.summarize();
+    expect(summary.summaryVersion).toBe('2.13');
+  });
+
+  test('summarize() flatFoldability has kawasaki + maekawa sub-objects', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const summary = analyzer.summarize();
+    expect(summary.flatFoldability.kawasaki).toBeDefined();
+    expect(summary.flatFoldability.maekawa).toBeDefined();
+    expect(summary.flatFoldability.kawasaki).toHaveProperty('checked');
+    expect(summary.flatFoldability.kawasaki).toHaveProperty('passed');
+    expect(summary.flatFoldability.kawasaki).toHaveProperty('failed');
+  });
+
+  test('summarize() quality includes topIssues (max 5)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0],[0,1],[1,2],[2,3],[3,0]],  // 4 duplicate edges
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const summary = analyzer.summarize();
+    expect(summary.quality.errorCount + summary.quality.warningCount).toBeGreaterThan(0);
+    expect(summary.quality.topIssues.length).toBeLessThanOrEqual(5);
+  });
+
+  test('summarize() consistency section includes v2.12 results', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','M','M','M'],  // non-alternating
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const summary = analyzer.summarize();
+    expect(summary.consistency.mvAlternation).toBeDefined();
+    expect(summary.consistency.strictKawasaki).toBeDefined();
+    expect(summary.consistency.mvAlternation.checked).toBeGreaterThan(0);
+  });
+
+  test('summarize() output is significantly smaller than analyze() output', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fullSize = JSON.stringify(analyzer.analyze()).length;
+    const summarySize = JSON.stringify(analyzer.summarize()).length;
+    expect(summarySize).toBeLessThan(fullSize / 2);
+  });
+
+  test('summarize() with pre-computed analyzeResult is consistent', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const r = analyzer.analyze();
+    const s1 = analyzer.summarize();
+    const s2 = analyzer.summarize(r);  // pass pre-computed
+    expect(s1.counts).toEqual(s2.counts);
+    expect(s1.surface).toEqual(s2.surface);
+  });
+
+  test('summarize() is JSON-serializable and parseable', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const summary = analyzer.summarize();
+    const json = JSON.stringify(summary);
+    const parsed = JSON.parse(json);
+    expect(parsed.summaryVersion).toBe('2.13');
+    expect(parsed.counts.vertices).toBe(4);
+  });
+});

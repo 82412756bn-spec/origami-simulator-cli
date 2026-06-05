@@ -25,6 +25,7 @@ function registerAnalyzeCommand(program) {
     .option('--quality', 'Check quality issues')
     .option('--strict', 'Use strict symmetry detection (tighter tolerance, filter subgroup over-detection)')
     .option('--validate-output', 'Validate analyze() output against docs/fold-analyzer-schema.json (ajv, v2.11)')
+    .option('--summary', 'Output compact summary JSON (v2.13) instead of full report')
     .option('--debug', 'Enable debug output')
     .action((file, options) => {
       analyzeFile(file, options);
@@ -60,6 +61,14 @@ function analyzeFile(filePath, options) {
     }
 
     const analyzer = new FoldAnalyzer(foldData);
+
+    if (options.summary) {
+      // v2.13: compact summary JSON (for scripts/automation)
+      const result = analyzer.analyze(options);
+      const summary = analyzer.summarize(result);
+      console.log(JSON.stringify(summary, null, 2));
+      return;
+    }
 
     if (options.json) {
       // JSON output mode
