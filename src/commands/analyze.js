@@ -102,7 +102,7 @@ function analyzeFile(filePath, options) {
  * Print a human-readable report
  */
 function printReport(filePath, result, options) {
-  const { basic, structure, validation, symmetry, classification, quality, strain, mvConsistency, selfIntersection, faceNormals, holes, foldOrder, warnings } = result;
+  const { basic, structure, validation, symmetry, classification, quality, strain, mvConsistency, selfIntersection, faceNormals, holes, foldOrder, mvAlternation, strictKawasaki, warnings } = result;
 
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
@@ -363,6 +363,46 @@ function printReport(filePath, result, options) {
       console.log(`     ... and ${fo.foldSequence.length - 8} more steps`);
     }
     for (const note of fo.notes) {
+      console.log(`   ℹ️  ${note}`);
+    }
+    console.log('');
+  }
+
+  // M/V Alternation (v2.12)
+  if (options.all && mvAlternation) {
+    const ma = mvAlternation;
+    console.log('🔁 M/V Alternation:');
+    console.log(`   Checked:          ${ma.totalChecked} internal vertex/vertices`);
+    console.log(`   Consistent:       ${ma.consistent}`);
+    if (ma.inconsistent > 0) {
+      console.log(`   Inconsistent:     ${ma.inconsistent}`);
+      for (const inc of ma.inconsistencies.slice(0, 5)) {
+        console.log(`     ⚠️  vertex ${inc.vertex}: pattern="${inc.pattern}", ${inc.detail}`);
+      }
+      if (ma.inconsistencies.length > 5) {
+        console.log(`     ... and ${ma.inconsistencies.length - 5} more`);
+      }
+    }
+    for (const note of ma.notes) {
+      console.log(`   ℹ️  ${note}`);
+    }
+    console.log('');
+  }
+
+  // Strict Kawasaki (v2.12)
+  if (options.all && strictKawasaki) {
+    const sk = strictKawasaki;
+    console.log('📏 Strict Kawasaki:');
+    console.log(`   Total checked:    ${sk.totalChecked}`);
+    console.log(`   Within tolerance: ${sk.withinTolerance} (deviation < 5°)`);
+    console.log(`   Out of tolerance: ${sk.outOfTolerance}`);
+    if (sk.topDeviations.length > 0) {
+      console.log(`   Top deviations:`);
+      for (const d of sk.topDeviations.slice(0, 5)) {
+        console.log(`     vertex ${d.vertex}: ${d.deviation}° (even=${d.evenSum}°, odd=${d.oddSum}°)`);
+      }
+    }
+    for (const note of sk.notes) {
       console.log(`   ℹ️  ${note}`);
     }
     console.log('');
