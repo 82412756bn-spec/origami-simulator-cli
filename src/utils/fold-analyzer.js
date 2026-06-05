@@ -11,7 +11,12 @@
  * - Strain estimation
  * - Layer ordering / nesting depth
  * - Crease pattern classification
+ * - v2.10: JSON Schema-conforming output + M/V-Layer skip detection
+ * - v2.11: Optional ajv-based schema validation via validateAgainstSchema()
  */
+
+const fs = require('fs');
+const path = require('path');
 
 // Symmetry detection tolerances (in model units, e.g. mm).
 // Default: 0.1% of model scale, min 0.01 — enough for floating-point noise on mm-scale models.
@@ -2092,6 +2097,91 @@ class FoldAnalyzer {
       }
     }
     return stretched;
+  }
+
+  /**
+   * Validate the output of analyze() against docs/fold-analyzer-schema.json
+   * using ajv (JSON Schema validator). v2.11.
+   *
+   * Optional check — doesn't run by default. Activate via:
+   *   - CLI: --validate-output flag
+   *   - Programmatic: analyzer.validateAgainstSchema()
+   *
+   * @param {Object} [analyzeResult] - Optional pre-computed analyze() output.
+   *   If not provided, calls this.analyze() internally.
+   * @returns {{
+   *   valid: boolean,
+   *   errors: Array<{ instancePath, schemaPath, keyword, message, params }>,
+   *   schemaVersion: string,
+   *   expectedSchemaVersion: string,
+   *   versionMatch: boolean,
+   *   summary: string
+   * }}
+   */
+  validateAgainstSchema(analyzeResult) {
+    // Lazy-load ajv to avoid hard dependency for users who don't need validation
+    let Ajv;
+    try {
+      Ajv = require('ajv');
+    } catch (e) {
+      return {
+        valid: false,
+        errors: [{ instancePath: '', schemaPath: '', keyword: 'dependency', message: 'ajv not installed; run `npm install ajv`', params: {} }],
+        schemaVersion: null,
+        expectedSchemaVersion: null,
+        versionMatch: false,
+        summary: 'ajv dependency missing — cannot validate',
+      };
+    }
+
+    // Load schema
+    const schemaPath = path.join(__dirname, '..', '..', 'docs', 'fold-analyzer-schema.json');
+    let schema;
+    try {
+      schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    } catch (e) {
+      return {
+        valid: false,
+        errors: [{ instancePath: '', schemaPath: '', keyword: 'schema-load', message: `Failed to load schema: ${e.message}`, params: {} }],
+        schemaVersion: null,
+        expectedSchemaVersion: null,
+        versionMatch: false,
+        summary: 'Schema file load failed',
+      };
+    }
+
+    const expectedSchemaVersion = schema.properties && schema.properties.schemaVersion && schema.properties.schemaVersion.const;
+
+    // Run analyze if not provided
+    const result = analyzeResult || this.analyze();
+    const schemaVersion = result.schemaVersion;
+
+    // Strip $schema field — ajv v8 default doesn't support draft 2020-12 meta-schema.
+    // Stripping it makes ajv use draft-07 (which has all features we need).
+    const schemaForAjv = { ...schema };
+    delete schemaForAjv.$schema;
+
+    // Validate
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(schemaForAjv);
+    const valid = validate(result);
+
+    return {
+      valid: !!valid,
+      errors: (validate.errors || []).map(e => ({
+        instancePath: e.instancePath || '',
+        schemaPath: e.schemaPath || '',
+        keyword: e.keyword || '',
+        message: e.message || '',
+        params: e.params || {},
+      })),
+      schemaVersion,
+      expectedSchemaVersion,
+      versionMatch: schemaVersion === expectedSchemaVersion,
+      summary: valid
+        ? `✅ Output conforms to schema (version ${schemaVersion})`
+        : `❌ ${(validate.errors || []).length} validation error(s) — see errors array`,
+    };
   }
 }
 
