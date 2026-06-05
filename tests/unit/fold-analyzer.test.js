@@ -2093,3 +2093,140 @@ describe('FoldAnalyzer v2.13 - Summary Mode (compact JSON)', () => {
     expect(parsed.counts.vertices).toBe(4);
   });
 });
+
+describe('FoldAnalyzer v2.14 - Strict Maekawa', () => {
+  test('perfect |M-V|=2 vertex: 2M + 2V on 4 edges → within tolerance', () => {
+    // Star with M, V, M, V alternating → 2M + 2V → |M-V| = 0... wait
+    // For |M-V| = 2: need 3M + 1V or 1M + 3V
+    // 4 edges: 3M + 1V → |M-V| = 2 ✓
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','M','M','V'],  // 3M + 1V
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sm = analyzer.analyzeMaekawa();
+    expect(sm.totalChecked).toBe(1);
+    expect(sm.withinTolerance).toBe(1);
+    expect(sm.outOfTolerance).toBe(0);
+  });
+
+  test('non-flat-foldable vertex: 4M + 0V → |M-V| = 4, deviation = 2', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','M','M','M'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sm = analyzer.analyzeMaekawa();
+    expect(sm.totalChecked).toBe(1);
+    expect(sm.withinTolerance).toBe(0);
+    expect(sm.outOfTolerance).toBe(1);
+    expect(sm.topDeviations[0].M).toBe(4);
+    expect(sm.topDeviations[0].V).toBe(0);
+    expect(sm.topDeviations[0].deviation).toBe(2);
+  });
+
+  test('multiple vertices, ranking works', () => {
+    // 2 separate stars: one perfect (3M+1V), one bad (4M)
+    const fold = {
+      vertices_coords: [
+        // Star 1: center 0, leaves 1-4
+        [0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],
+        // Star 2: center 5, leaves 6-9
+        [10,0,0],[11,0,0],[10,1,0],[9,0,0],[10,-1,0],
+      ],
+      edges_vertices: [
+        [0,1],[0,2],[0,3],[0,4],  // star 1
+        [5,6],[5,7],[5,8],[5,9],  // star 2
+      ],
+      faces_vertices: [
+        [0,1,2],[0,2,3],[0,3,4],[0,4,1],
+        [5,6,7],[5,7,8],[5,8,9],[5,9,6],
+      ],
+      edges_assignment: [
+        'M','M','M','V',  // star 1: perfect
+        'M','M','M','M',  // star 2: bad
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sm = analyzer.analyzeMaekawa();
+    expect(sm.totalChecked).toBe(2);
+    expect(sm.withinTolerance).toBe(1);
+    expect(sm.outOfTolerance).toBe(1);
+    // Top deviation: vertex 5 (the bad star)
+    expect(sm.topDeviations[0].vertex).toBe(5);
+    expect(sm.topDeviations[0].deviation).toBe(2);
+  });
+
+  test('topN parameter limits results', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','M','M','M'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sm = analyzer.analyzeMaekawa(1);
+    expect(sm.topDeviations.length).toBeLessThanOrEqual(1);
+  });
+
+  test('vertex with <3 incident edges skipped', () => {
+    // Single edge between 2 vertices → each has 1 incident edge
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0]],
+      edges_vertices: [[0,1]],
+      faces_vertices: [],
+      edges_assignment: ['M'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sm = analyzer.analyzeMaekawa();
+    expect(sm.totalChecked).toBe(0);
+  });
+
+  test('flat dieline (1 face) → notes say "disabled"', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sm = analyzer.analyzeMaekawa();
+    expect(sm.notes.some(n => n.includes('Flat dieline'))).toBe(true);
+  });
+
+  test('integration: analyze() includes strictMaekawa field', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','M','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('strictMaekawa');
+    expect(result.strictMaekawa).toHaveProperty('topDeviations');
+  });
+
+  test('M and V counts are correctly computed (vertex with non-zero deviation)', () => {
+    // 4M + 0V → |M-V| = 4, deviation = 2
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','M','M','M'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sm = analyzer.analyzeMaekawa();
+    expect(sm.topDeviations[0].M).toBe(4);
+    expect(sm.topDeviations[0].V).toBe(0);
+    expect(sm.topDeviations[0].MV).toBe(4);  // signed
+    expect(sm.topDeviations[0].deviation).toBe(2);
+    // withinTolerance should NOT include this vertex
+    expect(sm.withinTolerance).toBe(0);
+    expect(sm.outOfTolerance).toBe(1);
+  });
+});
