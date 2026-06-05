@@ -2525,6 +2525,158 @@ class FoldAnalyzer {
   }
 
   /**
+   * Build a Bounding Volume Hierarchy (BVH) over all face AABBs (v2.17).
+   *
+   * Returns a tree where each node is:
+   *   { aabb, left, right, faces }  — internal nodes: aabb union of children
+   *                                  — leaf nodes: aabb + faces=[indices]
+   *
+   * Build strategy: median split on longest axis. For typical origami
+   * models this gives O(F log F) build + O(F log F) query (vs O(F²) brute).
+   */
+  _buildBVH() {
+    if (this.faces.length === 0) return null;
+
+    const aabbs = this.faces.map((f, i) => ({
+      aabb: this._faceAABB(f),
+      faceIdx: i,
+    }));
+
+    const build = (indices) => {
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+      let minZ = Infinity, maxZ = -Infinity;
+      for (const idx of indices) {
+        const a = aabbs[idx].aabb;
+        if (a.minX < minX) minX = a.minX; if (a.maxX > maxX) maxX = a.maxX;
+        if (a.minY < minY) minY = a.minY; if (a.maxY > maxY) maxY = a.maxY;
+        if (a.minZ < minZ) minZ = a.minZ; if (a.maxZ > maxZ) maxZ = a.maxZ;
+      }
+
+      if (indices.length <= 1) {
+        return { aabb: { minX, maxX, minY, maxY, minZ, maxZ }, left: null, right: null, faces: indices.slice() };
+      }
+
+      const dx = maxX - minX, dy = maxY - minY, dz = maxZ - minZ;
+      const axis = (dx >= dy && dx >= dz) ? 0 : (dy >= dz ? 1 : 2);
+
+      const getCentroid = (faceIdx) => {
+        const a = aabbs[faceIdx].aabb;
+        return axis === 0 ? (a.minX + a.maxX) / 2 : axis === 1 ? (a.minY + a.maxY) / 2 : (a.minZ + a.maxZ) / 2;
+      };
+      const sorted = indices.slice().sort((a, b) => getCentroid(a) - getCentroid(b));
+      const mid = sorted.length >> 1;
+      const left = build(sorted.slice(0, mid));
+      const right = build(sorted.slice(mid));
+
+      return { aabb: { minX, maxX, minY, maxY, minZ, maxZ }, left, right, faces: null };
+    };
+
+    return build(aabbs.map(a => a.faceIdx));
+  }
+
+  /**
+   * Query BVH for all faces whose AABB overlaps a query AABB.
+   * Iterative stack-based (no recursion depth issues for large trees).
+   */
+  _queryBVH(node, queryAABB) {
+    if (!node) return [];
+    const results = [];
+    const stack = [node];
+    while (stack.length > 0) {
+      const n = stack.pop();
+      if (!n || !this._aabbOverlap(n.aabb, queryAABB, 0)) continue;
+      if (n.faces) {
+        for (const f of n.faces) results.push(f);
+      } else {
+        if (n.left) stack.push(n.left);
+        if (n.right) stack.push(n.right);
+      }
+    }
+    return results;
+  }
+
+  /**
+   * BVH-accelerated self-intersection detection (v2.17).
+   *
+   * Same semantics as v2.15 `analyzeCompleteSelfIntersection()` but uses
+   * a Bounding Volume Hierarchy to avoid O(F²) brute-force pair tests.
+   *
+   * @returns same shape as v2.15 analyzeCompleteSelfIntersection() + method field
+   */
+  analyzeSelfIntersectionBVH() {
+    const result = {
+      facePairCount: 0,
+      aabbSurvivorCount: 0,
+      intersectionCount: 0,
+      intersections: [],
+      notes: [],
+      method: 'BVH (v2.17)',
+    };
+
+    if (this.faces.length < 2) {
+      result.notes.push('Fewer than 2 faces — nothing to check');
+      return result;
+    }
+
+    const is3D = this.vertices.some(v => Array.isArray(v) && v.length >= 3 && Math.abs(v[2] || 0) > 1e-6);
+    if (!is3D) {
+      result.notes.push('2D model — all faces coplanar, no 3D intersection possible');
+      return result;
+    }
+
+    const bvh = this._buildBVH();
+    if (!bvh) {
+      result.notes.push('BVH build failed');
+      return result;
+    }
+
+    const triangulations = this.faces.map(f => this.faceTriangles(f));
+    const faceAABBs = this.faces.map(f => this._faceAABB(f));
+    const TOLERANCE = 0.01;
+
+    const seenPairs = new Set();
+    for (let i = 0; i < this.faces.length; i++) {
+      const candidates = this._queryBVH(bvh, faceAABBs[i]);
+      for (const j of candidates) {
+        if (j <= i) continue;  // avoid duplicates and self
+        if (this._facesShareEdge(i, j)) continue;
+        const pairKey = i * 100000 + j;
+        if (seenPairs.has(pairKey)) continue;
+        seenPairs.add(pairKey);
+
+        result.facePairCount++;
+        if (!this._aabbOverlap(faceAABBs[i], faceAABBs[j], TOLERANCE)) continue;
+        result.aabbSurvivorCount++;
+
+        let foundKind = null;
+        for (const t1 of triangulations[i]) {
+          for (const t2 of triangulations[j]) {
+            const r = this.triangleTriangleIntersect3D(t1, t2);
+            if (r.intersects) {
+              foundKind = r.kind;
+              break;
+            }
+          }
+          if (foundKind) break;
+        }
+
+        if (foundKind) {
+          result.intersectionCount++;
+          result.intersections.push({ face1: i, face2: j, kind: foundKind });
+        }
+      }
+    }
+
+    if (result.intersectionCount === 0) {
+      result.notes.push('No self-intersections detected ✓ (BVH-accelerated)');
+    } else {
+      result.notes.push(`Found ${result.intersectionCount} intersecting face pair(s) (BVH-accelerated)`);
+    }
+    return result;
+  }
+
+  /**
    * Generate a self-contained HTML visual report (v2.16).
    *
    * Returns a string containing:

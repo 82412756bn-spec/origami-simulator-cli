@@ -27,6 +27,7 @@ function registerAnalyzeCommand(program) {
     .option('--validate-output', 'Validate analyze() output against docs/fold-analyzer-schema.json (ajv, v2.11)')
     .option('--summary', 'Output compact summary JSON (v2.13) instead of full report')
     .option('--visualize <file>', 'Write self-contained HTML visual report to <file> (v2.16)')
+    .option('--bvh', 'Use BVH-accelerated self-intersection check (v2.17, faster for large models)')
     .option('--debug', 'Enable debug output')
     .action((file, options) => {
       analyzeFile(file, options);
@@ -78,6 +79,23 @@ function analyzeFile(filePath, options) {
       const html = analyzer.toVisualReport({ title: `Visual Report: ${path.basename(filePath)}`, fileName: path.basename(filePath) }, result);
       fs.writeFileSync(outPath, html, 'utf8');
       console.log(`📊 Visual report written to: ${outPath}  (${html.length} bytes)`);
+      return;
+    }
+
+    if (options.bvh) {
+      // v2.17: BVH-accelerated self-intersection
+      const result = analyzer.analyzeSelfIntersectionBVH();
+      console.log('🪡 Self-Intersection (BVH-accelerated, v2.17):');
+      console.log(`   Pairs checked:    ${result.facePairCount}`);
+      console.log(`   AABB survivors:   ${result.aabbSurvivorCount}`);
+      console.log(`   Intersections:    ${result.intersectionCount}`);
+      for (const intr of result.intersections.slice(0, 5)) {
+        console.log(`     ⚠️  faces ${intr.face1}–${intr.face2} [${intr.kind}]`);
+      }
+      if (result.intersections.length > 5) {
+        console.log(`     ... and ${result.intersections.length - 5} more`);
+      }
+      for (const note of result.notes) console.log(`   ℹ️  ${note}`);
       return;
     }
 
