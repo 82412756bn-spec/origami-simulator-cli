@@ -1016,6 +1016,62 @@ program
     }
   });
 
+// ============================================================================
+// Validate Command v2.19 - Top-level alias for `analyze --validate-output`
+// (CI/CD-friendly: exits with non-zero code on schema mismatch)
+// ============================================================================
+const { FoldAnalyzer: FAForValidate } = require('./utils/fold-analyzer');
+program
+  .command('validate <file>')
+  .description('Validate analyze() output against docs/fold-analyzer-schema.json (v2.11/v2.19 — alias for `analyze --validate-output`)')
+  .option('--json', 'Output machine-readable JSON instead of human-readable')
+  .action((file, options) => {
+    const filePath = path.resolve(file);
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ File not found: ${file}`);
+      process.exit(1);
+    }
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const foldData = JSON.parse(content);
+      const analyzer = new FAForValidate(foldData);
+      const result = analyzer.analyze();
+      const validation = analyzer.validateAgainstSchema(result);
+
+      if (options.json) {
+        console.log(JSON.stringify(validation, null, 2));
+      } else {
+        console.log('✅ JSON Schema Validation (v2.19):');
+        console.log(`   ${validation.summary}`);
+        console.log(`   Output schemaVersion:    ${validation.schemaVersion}`);
+        console.log(`   Expected schemaVersion:   ${validation.expectedSchemaVersion}`);
+        console.log(`   Version match:           ${validation.versionMatch ? '✅' : '⚠️  version mismatch'}`);
+        if (!validation.valid && validation.errors.length > 0) {
+          console.log(`   Errors:`);
+          for (const err of validation.errors.slice(0, 10)) {
+            console.log(`     ❌ ${err.instancePath || '<root>'} — ${err.message} (${err.keyword})`);
+          }
+          if (validation.errors.length > 10) {
+            console.log(`     ... and ${validation.errors.length - 10} more`);
+          }
+        }
+      }
+      // CI/CD-friendly exit codes:
+      //   0 = valid
+      //   2 = validation failed (schema mismatch)
+      //   3 = version mismatch (warning, still valid)
+      if (!validation.valid) {
+        process.exit(2);
+      }
+      if (!validation.versionMatch) {
+        process.exit(3);
+      }
+    } catch (error) {
+      console.error(`❌ Error: ${error.message}`);
+      process.exit(1);
+    }
+  });
+
 // Only parse when run directly (not when imported as module for testing)
 if (require.main === module || process.argv[1]?.includes('index.js')) {
   program.parse();
