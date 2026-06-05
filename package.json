@@ -1,0 +1,42 @@
+{
+  "name": "origami-simulator-cli",
+  "version": "0.2.0",
+  "description": "CLI tool for OrigamiSimulator.org - Simulate origami folding patterns via command line",
+  "main": "src/index.js",
+  "bin": {
+    "origami": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest tests/unit",
+    "test:e2e": "jest tests/e2e",
+    "test:all": "jest",
+    "lint": "eslint src/"
+  },
+  "keywords": [
+    "origami",
+    "simulation",
+    "cli",
+    "folding",
+    "3d-printing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@jackwener/opencli": "^1.7.0",
+    "canvas": "^3.2.3",
+    "commander": "^14.0.3",
+    "earcut": "^3.0.2",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^2.4.5",
+    "playwright": "^1.59.1",
+    "three": "^0.184.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "jest": "^30.3.0"
+  }
+}

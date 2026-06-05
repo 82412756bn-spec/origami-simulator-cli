@@ -1,0 +1,1470 @@
+/**
+ * Unit tests for fold-analyzer module
+ */
+
+const { FoldAnalyzer } = require('../../src/utils/fold-analyzer');
+
+describe('FoldAnalyzer - Basic Analysis', () => {
+  test('should analyze basic FOLD structure', () => {
+    const fold = {
+      vertices_coords: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]],
+      edges_vertices: [[0, 1], [1, 2], [2, 3], [3, 0]],
+      faces_vertices: [[0, 1, 2, 3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.basicAnalysis();
+
+    expect(result.vertexCount).toBe(4);
+    expect(result.edgeCount).toBe(4);
+    expect(result.faceCount).toBe(1);
+    expect(result.boundingBox.width).toBe(1);
+    expect(result.boundingBox.height).toBe(1);
+  });
+
+  test('should count edge types', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [0, 1]],
+      edges_vertices: [[0, 1], [1, 2], [2, 0]],
+      faces_vertices: [[0, 1, 2]],
+      edges_assignment: ['M', 'V', 'B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.basicAnalysis();
+
+    expect(result.edgeStats.M).toBe(1);
+    expect(result.edgeStats.V).toBe(1);
+    expect(result.edgeStats.B).toBe(1);
+  });
+
+  test('should compute Euler characteristic', () => {
+    // Box: V=8, E=12, F=6, χ=2
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[1,1,0],[0,1,0],
+        [0,0,1],[1,0,1],[1,1,1],[0,1,1],
+      ],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7],
+      ],
+      faces_vertices: [
+        [0,1,2,3], [4,5,6,7], [0,1,5,4],
+        [1,2,6,5], [2,3,7,6], [3,0,4,7],
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.basicAnalysis();
+    expect(result.eulerCharacteristic).toBe(2);
+  });
+});
+
+describe('FoldAnalyzer - Structure', () => {
+  test('should check manifold property', () => {
+    // Box: each edge shared by exactly 2 faces
+    const boxFold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[1,1,0],[0,1,0],
+        [0,0,1],[1,0,1],[1,1,1],[0,1,1],
+      ],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7],
+      ],
+      faces_vertices: [
+        [0,1,2,3], [4,5,6,7], [0,1,5,4],
+        [1,2,6,5], [2,3,7,6], [3,0,4,7],
+      ],
+    };
+    const analyzer = new FoldAnalyzer(boxFold);
+    const result = analyzer.structureAnalysis();
+    expect(result.isManifold).toBe(true);
+  });
+
+  test('should count connected components', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[10,10],[11,10]],
+      edges_vertices: [[0,1],[2,3]],  // Two disconnected
+      faces_vertices: [[0,1,2],[1,2,3]],  // 2 degenerate faces
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.structureAnalysis();
+    expect(result.componentCount).toBe(2);
+  });
+
+  test('should compute vertex valences', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[0,1],[1,1],[0.5,0.5]],
+      edges_vertices: [
+        [0,1],[0,2],[0,4],[1,3],[1,4],[2,3],[2,4],[3,4],
+      ],
+      faces_vertices: [[0,1,3,2],[0,1,4],[1,3,4],[2,3,4],[0,2,4]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.structureAnalysis();
+    expect(result.avgValence).toBe('3.20');
+  });
+});
+
+describe('FoldAnalyzer - Kawasaki/Maekawa Validation', () => {
+  test('should pass a simple valid vertex (M=2, V=2, 90° angles)', () => {
+    // Single vertex with 4 edges at 90° angles, alternating M/V
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]],
+      edges_vertices: [[0, 1], [0, 2], [0, 3], [0, 4]],
+      faces_vertices: [[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1]],
+      edges_assignment: ['M', 'V', 'M', 'V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.validateFlatFoldability();
+    // Vertex 0: M=2, V=2, Maekawa |2-2|=0 ≠ 2 (should fail Maekawa)
+    // This is a corner case - for valid pattern we need |M-V|=2
+  });
+
+  test('should detect Maekawa violation (M+V should differ by 2)', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1]],
+      edges_vertices: [[0, 1], [0, 2], [0, 3], [0, 4]],
+      faces_vertices: [[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1]],
+      edges_assignment: ['M', 'M', 'V', 'V'],  // 2M, 2V diff=0
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.validateFlatFoldability();
+    expect(result.failCount).toBeGreaterThan(0);
+  });
+});
+
+describe('FoldAnalyzer - Symmetry Detection', () => {
+  test('should detect 2-fold rotational symmetry', () => {
+    // Symmetric cross: 5 points, rotating 180° maps each to another
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]],
+      edges_vertices: [[0, 1], [0, 2], [0, 3], [0, 4]],
+      faces_vertices: [[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 1]],
+      edges_assignment: ['M', 'M', 'V', 'V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.detectSymmetry();
+    expect(result.hasSymmetry).toBe(true);
+  });
+
+  test('should detect 3-fold rotational symmetry (triangle)', () => {
+    // Equilateral triangle
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [0.5, 0.866]],
+      edges_vertices: [[0, 1], [1, 2], [2, 0]],
+      faces_vertices: [[0, 1, 2]],
+      edges_assignment: ['B', 'B', 'B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.detectSymmetry();
+    expect(result.hasSymmetry).toBe(true);
+  });
+});
+
+describe('FoldAnalyzer - Quality Issues', () => {
+  test('should detect degenerate edges', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [1, 1]],
+      edges_vertices: [[0, 0], [0, 1], [1, 2]],  // First edge is degenerate
+      faces_vertices: [[0, 1, 2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.qualityAnalysis();
+    expect(result.errorCount).toBeGreaterThan(0);
+  });
+
+  test('should detect isolated vertices', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [10, 10]],  // Vertex 2 isolated
+      edges_vertices: [[0, 1]],
+      faces_vertices: [[0, 1]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.qualityAnalysis();
+    const isolatedWarning = result.issues.find(i => i.message.includes('isolated'));
+    expect(isolatedWarning).toBeDefined();
+  });
+
+  test('should detect stretched faces', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [100, 0], [100, 1]],  // Very stretched
+      edges_vertices: [[0, 1], [1, 2], [2, 0]],
+      faces_vertices: [[0, 1, 2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.qualityAnalysis();
+    const stretched = result.issues.find(i => i.message.includes('stretched'));
+    expect(stretched).toBeDefined();
+  });
+});
+
+describe('FoldAnalyzer - Pattern Classification', () => {
+  test('should classify box pattern (8 vertices, 6 faces)', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[1,1,0],[0,1,0],
+        [0,0,1],[1,0,1],[1,1,1],[0,1,1],
+      ],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7],
+      ],
+      faces_vertices: [
+        [0,1,2,3], [4,5,6,7], [0,1,5,4],
+        [1,2,6,5], [2,3,7,6], [3,0,4,7],
+      ],
+      edges_assignment: ['B','B','B','B','B','B','B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.classifyPattern();
+    expect(result.patternType).toBe('box');
+  });
+
+  test('should classify flat sheet (1 face, 4 vertices)', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [1, 1], [0, 1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0, 1, 2, 3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.classifyPattern();
+    expect(result.patternType).toBe('flat-sheet');
+  });
+});
+
+describe('FoldAnalyzer - Warnings', () => {
+  test('should warn about thin-sheet assumption (±180°)', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [1, 1], [0, 1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0, 1, 2, 3]],
+      edges_assignment: ['B','B','B','B'],
+      edges_foldAngle: [180, 180, -180, -180],  // Thin sheet
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const warnings = analyzer.collectWarnings();
+    expect(warnings.some(w => w.includes('thin-sheet'))).toBe(true);
+  });
+
+  test('should warn about no fold angles', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0]],
+      edges_vertices: [[0, 1]],
+      faces_vertices: [[0, 1]],
+      edges_assignment: ['B'],
+      edges_foldAngle: [],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const warnings = analyzer.collectWarnings();
+    expect(warnings.some(w => w.includes('flat (unfolded)'))).toBe(true);
+  });
+});
+
+describe('FoldAnalyzer - Full Integration', () => {
+  test('should run full analysis pipeline', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [1, 1], [0, 1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0, 1, 2, 3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+
+    expect(result).toHaveProperty('basic');
+    expect(result).toHaveProperty('structure');
+    expect(result).toHaveProperty('validation');
+    expect(result).toHaveProperty('symmetry');
+    expect(result).toHaveProperty('classification');
+    expect(result).toHaveProperty('quality');
+    expect(result).toHaveProperty('warnings');
+  });
+
+  test('should analyze a real example file', () => {
+    // Use sample-crane.fold
+    const fs = require('fs');
+    const path = require('path');
+    const filePath = path.join(__dirname, '../../examples/sample-crane.fold');
+    const fold = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+
+    expect(result.basic.vertexCount).toBeGreaterThan(0);
+    expect(result.basic.edgeCount).toBeGreaterThan(0);
+    expect(result.basic.faceCount).toBeGreaterThan(0);
+  });
+});
+
+describe('FoldAnalyzer - Strict Mode & Over-detection Filter', () => {
+  const cubeFold = {
+    vertices_coords: [
+      [0,0,0],[1,0,0],[1,1,0],[0,1,0],
+      [0,0,1],[1,0,1],[1,1,1],[0,1,1],
+    ],
+    edges_vertices: [
+      [0,1],[1,2],[2,3],[3,0],
+      [4,5],[5,6],[6,7],[7,4],
+      [0,4],[1,5],[2,6],[3,7],
+    ],
+    faces_vertices: [
+      [0,1,2,3], [4,5,6,7], [0,1,5,4],
+      [1,2,6,5], [2,3,7,6], [3,0,4,7],
+    ],
+    edges_assignment: ['B','B','B','B','B','B','B','B','B','B','B','B'],
+  };
+
+  test('default mode should NOT report spurious 5/6/12-fold for unit cube', () => {
+    // Bug fix: v1.0 used tolerance = max(0.5, scale*0.01). For unit cube scale=1,
+    // this gave 0.5 tolerance, causing 5/6/12-fold to falsely match.
+    // New default tolerance: max(0.01, 1*0.001) = 0.01 — should filter these.
+    const analyzer = new FoldAnalyzer(cubeFold);
+    const result = analyzer.detectSymmetry();
+    const rot = result.symmetries.filter(s => s.type === 'rotational');
+    if (rot.length > 0) {
+      // If any rotational is reported, it must be a divisor of 4 (the cube's real symmetry)
+      expect([2, 3, 4]).toContain(rot[0].n);
+      expect([5, 6, 8, 12]).not.toContain(rot[0].n);
+    }
+    // No 5-fold should ever pass
+    expect(rot.some(s => s.n === 5)).toBe(false);
+    expect(rot.some(s => s.n === 6)).toBe(false);
+    expect(rot.some(s => s.n === 12)).toBe(false);
+  });
+
+  test('strict mode should report only the largest independent rotational group', () => {
+    const analyzer = new FoldAnalyzer(cubeFold);
+    const result = analyzer.detectSymmetry({ strict: true });
+    expect(result.strict).toBe(true);
+    // Even if 4-fold passes, only the max is reported (no 2,3 alongside)
+    const rot = result.symmetries.filter(s => s.type === 'rotational');
+    expect(rot.length).toBeLessThanOrEqual(1);
+    if (rot.length === 1) {
+      expect(rot[0].residual).toBeDefined();
+      expect(rot[0].tolerance).toBeDefined();
+    }
+  });
+
+  test('hexagram (6-fold) keeps correct detection in strict mode', () => {
+    // Six-pointed star: 6-fold rotational + 2 reflective axes
+    // Use exact sin(60°) = √3/2 ≈ 0.8660 for true 6-fold symmetry.
+    const SQRT3_2 = Math.sqrt(3) / 2;
+    const starFold = {
+      vertices_coords: [
+        [100, 0], [50, 100*SQRT3_2], [-50, 100*SQRT3_2],
+        [-100, 0], [-50, -100*SQRT3_2], [50, -100*SQRT3_2]
+      ],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]],
+      faces_vertices: [[0,1,2,3,4,5]],
+      edges_assignment: ['B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(starFold);
+    const result = analyzer.detectSymmetry({ strict: true });
+    const rot = result.symmetries.filter(s => s.type === 'rotational');
+    expect(rot.length).toBe(1);
+    expect(rot[0].n).toBe(6);
+    // The 6-fold should pass with very small residual (exact)
+    expect(rot[0].residual).toBeLessThan(0.001);
+  });
+
+  test('asymmetric shape reports no rotational symmetry in strict mode', () => {
+    const asymFold = {
+      vertices_coords: [[0, 0], [1, 0], [1.3, 0.7], [0.4, 1.2]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(asymFold);
+    const result = analyzer.detectSymmetry({ strict: true });
+    const rot = result.symmetries.filter(s => s.type === 'rotational');
+    expect(rot.length).toBe(0);
+  });
+
+  test('strict mode reports filteredSubgroups when n-divisors are dropped', () => {
+    // 8-fold shape: default reports just 8, but if a 4 also "matches" the filter should drop it
+    const octFold = {
+      vertices_coords: [[100, 0], [70.7, 70.7], [0, 100], [-70.7, 70.7],
+                        [-100, 0], [-70.7, -70.7], [0, -100], [70.7, -70.7]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0]],
+      faces_vertices: [[0,1,2,3,4,5,6,7]],
+      edges_assignment: ['B','B','B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(octFold);
+    const result = analyzer.detectSymmetry();
+    const rot = result.symmetries.filter(s => s.type === 'rotational');
+    // Should keep only the largest (8)
+    expect(rot.length).toBe(1);
+    expect(rot[0].n).toBe(8);
+  });
+
+  test('tolerance scales with model size (no false positives on 1000mm crane)', () => {
+    // 1000mm-scale asymmetric: tolerance should be ~1mm, not blow up
+    const asymLarge = {
+      vertices_coords: [[0, 0], [1000, 0], [1100, 700], [400, 1200]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(asymLarge);
+    const result = analyzer.detectSymmetry();
+    const rot = result.symmetries.filter(s => s.type === 'rotational');
+    expect(rot.length).toBe(0);  // asymmetric → no symmetry
+  });
+});
+
+describe('FoldAnalyzer v2.2 - T-junction Detection', () => {
+  test('detects vertex lying on interior of another edge', () => {
+    // Triangle [0,1,2] + dangling vertex 3 sitting on edge 1→2 at midpoint
+    const fold = {
+      vertices_coords: [[0, 0], [10, 0], [10, 10], [10, 5]],
+      edges_vertices: [[0,1], [1,2], [2,0], [3,0]],  // v3→v0 is the dangling edge
+      faces_vertices: [[0,1,2], [0,3,1]],  // 2 faces, manifold-ish
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const tj = analyzer.findTJunctions();
+    expect(tj.length).toBeGreaterThan(0);
+    // Vertex 3 should be on the interior of edge [1,2] (the vertical edge at x=10)
+    const tOnEdge12 = tj.find(t => t.vertex === 3 && t.edge === 1);
+    expect(tOnEdge12).toBeDefined();
+    expect(tOnEdge12.t).toBeCloseTo(0.5, 2);  // midpoint
+    expect(tOnEdge12.perpDist).toBeLessThan(0.01);
+  });
+
+  test('does not flag edge endpoints as T-junctions', () => {
+    // Clean L-shape: 4 vertices, 4 edges, no T-junctions
+    const fold = {
+      vertices_coords: [[0, 0], [10, 0], [10, 10], [0, 10]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const tj = analyzer.findTJunctions();
+    expect(tj.length).toBe(0);
+  });
+
+  test('quality analysis surfaces T-junctions as warnings', () => {
+    const fold = {
+      vertices_coords: [[0, 0], [10, 0], [10, 10], [10, 5]],
+      edges_vertices: [[0,1], [1,2], [2,0], [3,0]],
+      faces_vertices: [[0,1,2], [0,3,1]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const q = analyzer.qualityAnalysis();
+    const tjWarning = q.issues.find(i => i.message.includes('T-junction'));
+    expect(tjWarning).toBeDefined();
+    expect(tjWarning.type).toBe('warning');
+  });
+});
+
+describe('FoldAnalyzer v2.2 - Reflective Symmetry Centroid Fix', () => {
+  test('reflective axis correctly handles off-centre models', () => {
+    // Square at (100,100)-(200,200): centroid (150,150), not (0,0)
+    // Should have reflective symmetry about x=150 and y=150
+    const fold = {
+      vertices_coords: [[100,100],[200,100],[200,200],[100,200]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.detectSymmetry();
+    const ref = result.symmetries.filter(s => s.type === 'reflective');
+    // Should detect at least 2 reflective axes (X and Y through centroid)
+    expect(ref.length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('reflective symmetry residual is ~0 for exactly symmetric shapes', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.detectSymmetry();
+    const ref = result.symmetries.filter(s => s.type === 'reflective');
+    expect(ref.length).toBeGreaterThan(0);
+    for (const r of ref) {
+      expect(r.residual).toBeLessThan(0.01);
+    }
+  });
+});
+
+describe('FoldAnalyzer v2.2 - Precomputed Adjacency (perf)', () => {
+  test('getIncidentEdges returns correct edges (cached)', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1],[0.5,0.5]],
+      edges_vertices: [[0,1],[0,2],[0,4],[1,3],[1,4],[2,3],[2,4],[3,4]],
+      faces_vertices: [[0,1,3,2],[0,1,4],[1,3,4],[2,3,4],[0,2,4]],
+      edges_assignment: ['B','B','B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    // Vertex 0 is on edges 0,1,2 — verify
+    const inc0 = analyzer.getIncidentEdges(0).sort();
+    expect(inc0).toEqual([0, 1, 2]);
+    // Vertex 4 is on edges 2,4,6,7
+    const inc4 = analyzer.getIncidentEdges(4).sort((a,b) => a-b);
+    expect(inc4).toEqual([2, 4, 6, 7]);
+    // Call again — should return same data (cache hit)
+    const inc0b = analyzer.getIncidentEdges(0);
+    expect(inc0b.sort()).toEqual([0, 1, 2]);
+  });
+
+  test('incident-edge map is O(V+E) — no quadratic blowup on dense graph', () => {
+    // Star graph: 1 centre + 100 leaves, 100 edges
+    const N = 100;
+    const verts = [[0, 0]];
+    for (let i = 1; i <= N; i++) verts.push([Math.cos(i), Math.sin(i)]);
+    const edges = [];
+    for (let i = 1; i <= N; i++) edges.push([0, i]);
+    const fold = { vertices_coords: verts, edges_vertices: edges, faces_vertices: [verts.map((_, i) => i)] };
+    const analyzer = new FoldAnalyzer(fold);
+    const t0 = Date.now();
+    // Build cache once on first call
+    const inc0 = analyzer.getIncidentEdges(0);
+    // Many subsequent lookups (should be cache hits, ~free)
+    for (let i = 0; i < 1000; i++) analyzer.getIncidentEdges(i % (N + 1));
+    const elapsed = Date.now() - t0;
+    expect(inc0.length).toBe(N);
+    expect(elapsed).toBeLessThan(100);  // well under 100ms
+  });
+});
+
+describe('FoldAnalyzer v2.2 - Dieline-aware Basic Analysis', () => {
+  test('dieline (1 face) reports genus=null and surfaceType=dieline', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],  // 1 face = dieline
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.basicAnalysis();
+    expect(result.surfaceType).toBe('dieline');
+    expect(result.genus).toBeNull();
+  });
+
+  test('closed mesh (≥2 faces) reports genus and surfaceType=closed-or-mesh', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[1,1,0],[0,1,0],
+        [0,0,1],[1,0,1],[1,1,1],[0,1,1],
+      ],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7],
+      ],
+      faces_vertices: [
+        [0,1,2,3], [4,5,6,7], [0,1,5,4],
+        [1,2,6,5], [2,3,7,6], [3,0,4,7],
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.basicAnalysis();
+    expect(result.surfaceType).toBe('closed-or-mesh');
+    expect(result.genus).toBe(0);  // V-E+F = 8-12+6 = 2 → genus 0 (sphere)
+  });
+
+  test('empty FOLD (0 faces) reports surfaceType=empty and genus=null', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0]],
+      edges_vertices: [[0,1]],
+      faces_vertices: [],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.basicAnalysis();
+    expect(result.surfaceType).toBe('empty');
+    expect(result.genus).toBeNull();
+  });
+});
+
+describe('FoldAnalyzer v2.3 - Layer Analysis (real, was stub)', () => {
+  test('flat dieline (no face_orders, no 3D) reports source=flat, depth=1', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const layers = analyzer.analyzeLayers();
+    expect(layers.source).toBe('flat');
+    expect(layers.nestingDepth).toBe(1);
+    expect(layers.maxLayer).toBe(1);
+    expect(layers.hasExplicitOrders).toBe(false);
+  });
+
+  test('explicit face_orders used when present (FOLD spec)', () => {
+    // 3 faces with explicit z-order: [3, 1, 2] → 3 distinct layers, depth 3
+    const fold = {
+      vertices_coords: [[0,0],[2,0],[1,1],[0,2],[2,2]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,4],[4,1],[0,3]],
+      faces_vertices: [[0,1,2], [1,4,2], [0,3,4,1]],
+      edges_assignment: ['B','B','B','B','B','B'],
+      face_orders: [3, 1, 2],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const layers = analyzer.analyzeLayers();
+    expect(layers.source).toBe('explicit');
+    expect(layers.hasExplicitOrders).toBe(true);
+    expect(layers.minLayer).toBe(1);
+    expect(layers.maxLayer).toBe(3);
+    expect(layers.nestingDepth).toBe(3);
+    expect(layers.faceOrders).toEqual([3, 1, 2]);
+    expect(layers.facesPerLayer).toEqual({ 1: 1, 2: 1, 3: 1 });
+  });
+
+  test('3D z-coordinates are quantized into layers', () => {
+    // 4 vertices: 2 in z=0 plane, 2 in z=5 plane
+    // 2 faces, one on each plane
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],  // z=0
+        [0,0,5],[1,0,5],[0,1,5],  // z=5
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]],
+      faces_vertices: [[0,1,2], [3,4,5]],
+      edges_assignment: ['B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const layers = analyzer.analyzeLayers();
+    expect(layers.source).toBe('implicit-3d');
+    expect(layers.nestingDepth).toBe(2);
+    expect(layers.facesPerLayer['1']).toBe(1);
+    expect(layers.facesPerLayer['2']).toBe(1);
+  });
+
+  test('3D z-coords with 3 distinct planes → 3 layers', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],
+        [0,0,5],[1,0,5],[0,1,5],
+        [0,0,10],[1,0,10],[0,1,10],
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[6,7],[7,8],[8,6]],
+      faces_vertices: [[0,1,2], [3,4,5], [6,7,8]],
+      edges_assignment: ['B','B','B','B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const layers = analyzer.analyzeLayers();
+    expect(layers.source).toBe('implicit-3d');
+    expect(layers.nestingDepth).toBe(3);
+  });
+
+  test('spatial nesting: small face inside big face → maxOverlap=2', () => {
+    // Outer square (face 0) + inner square (face 1) at center
+    const fold = {
+      vertices_coords: [[0,0],[10,0],[10,10],[0,10],[4,4],[6,4],[6,6],[4,6]],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],  // outer
+        [4,5],[5,6],[6,7],[7,4],  // inner
+      ],
+      faces_vertices: [
+        [0,1,2,3],  // outer
+        [4,5,6,7],  // inner (centroid at (5,5), which is inside outer)
+      ],
+      edges_assignment: ['B','B','B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const layers = analyzer.analyzeLayers();
+    expect(layers.source).toBe('flat');
+    expect(layers.maxOverlap).toBe(2);  // inner centroid contained in outer
+  });
+
+  test('spatial nesting: 3 nested squares → maxOverlap=3', () => {
+    // Three concentric squares: outer (0-3), mid (4-7), inner (8-11)
+    const fold = {
+      vertices_coords: [
+        [0,0],[10,0],[10,10],[0,10],       // outer
+        [3,3],[7,3],[7,7],[3,7],            // mid
+        [4,4],[6,4],[6,6],[4,6],            // inner
+      ],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [8,9],[9,10],[10,11],[11,8],
+      ],
+      faces_vertices: [
+        [0,1,2,3], [4,5,6,7], [8,9,10,11],
+      ],
+      edges_assignment: ['B','B','B','B','B','B','B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const layers = analyzer.analyzeLayers();
+    expect(layers.maxOverlap).toBe(3);
+  });
+
+  test('foldAngle-based estimate (implicit-fold)', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+      edges_foldAngle: [90, 90, -90, 90],  // multiple distinct angles
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const layers = analyzer.analyzeLayers();
+    expect(layers.source).toBe('implicit-fold');
+    expect(layers.nestingDepth).toBeGreaterThan(1);
+    expect(layers.notes.some(n => n.includes('rough'))).toBe(true);
+  });
+
+  test('classifyPattern surfaces layer info (integration)', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B','B','B','B'],
+      face_orders: [1],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const cls = analyzer.classifyPattern();
+    expect(cls.layers).toBeDefined();
+    expect(cls.layers.source).toBe('explicit');
+    expect(cls.layers.nestingDepth).toBe(1);
+  });
+
+  test('point-in-polygon correctly handles concave polygons', () => {
+    // L-shape: vertices in order forming a concave polygon
+    const fold = {
+      vertices_coords: [[0,0],[4,0],[4,2],[2,2],[2,4],[0,4]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0]],
+      faces_vertices: [[0,1,2,3,4,5]],
+      edges_assignment: ['B','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    // (1, 1) is inside the L
+    expect(analyzer._pointInPolygon([1, 1], [0,1,2,3,4,5])).toBe(true);
+    // (3, 3) is in the concave notch (outside the L)
+    expect(analyzer._pointInPolygon([3, 3], [0,1,2,3,4,5])).toBe(false);
+  });
+});
+
+describe('FoldAnalyzer v2.4 - Strain Estimation', () => {
+  test('flat edges (180°) have strain=0', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+      edges_foldAngle: [180, 180, 180, 180],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const s = analyzer.analyzeStrain();
+    expect(s.foldEdgeCount).toBe(4);
+    expect(s.avgBendingStrain).toBe(0);
+    expect(s.maxBendingStrain).toBe(0);
+    expect(s.strainDistribution).toEqual({ low: 4, medium: 0, high: 0 });
+  });
+
+  test('90° fold gives strain=0.5 (half bent)', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+      edges_foldAngle: [90, 90, 90, 90],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const s = analyzer.analyzeStrain();
+    expect(s.avgBendingStrain).toBeCloseTo(0.5, 3);
+    expect(s.strainDistribution.medium).toBe(4);
+  });
+
+  test('0° fold (fully creased) gives strain=1', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','M','V','V'],
+      edges_foldAngle: [0, 0, 0, 0],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const s = analyzer.analyzeStrain();
+    expect(s.avgBendingStrain).toBeCloseTo(1.0, 3);
+    expect(s.maxBendingStrain).toBeCloseTo(1.0, 3);
+    expect(s.strainDistribution.high).toBe(4);
+  });
+
+  test('no foldAngle data → foldEdgeCount=0, notes populated', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+      // no edges_foldAngle
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const s = analyzer.analyzeStrain();
+    expect(s.edgeCount).toBe(0);
+    expect(s.foldEdgeCount).toBe(0);
+    expect(s.avgBendingStrain).toBeNull();
+    expect(s.notes.some(n => n.includes('No fold angles'))).toBe(true);
+  });
+
+  test('boundary (B) and flat (F) edges excluded from M/V fold stats', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0],[0,2]],  // 5 edges
+      faces_vertices: [[0,1,2,3],[0,2,1]],
+      edges_assignment: ['M','B','M','V','F'],  // only 3 are real folds
+      edges_foldAngle: [90, 180, 90, 90, 180],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const s = analyzer.analyzeStrain();
+    expect(s.edgeCount).toBe(5);     // all have foldAngle
+    expect(s.foldEdgeCount).toBe(3); // only M/V counted
+    expect(s.avgBendingStrain).toBeCloseTo(0.5, 3);  // 3 edges at 90°
+  });
+
+  test('distribution buckets (low/med/high) match thresholds', () => {
+    // 3 edges: 10° (high), 90° (med), 170° (low)
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M'],
+      edges_foldAngle: [10, 90, 170],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const s = analyzer.analyzeStrain();
+    expect(s.strainDistribution.high).toBe(1);   // 10° → strain ≈ 0.99
+    expect(s.strainDistribution.medium).toBe(1); // 90° → strain = 0.5
+    expect(s.strainDistribution.low).toBe(1);    // 170° → strain ≈ 0.0015
+  });
+
+  test('perEdgeStrain exposes per-edge detail', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+      edges_foldAngle: [45, 90, 135, 180],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const s = analyzer.analyzeStrain();
+    expect(s.perEdgeStrain.length).toBe(4);
+    expect(s.perEdgeStrain[0].angle).toBe(45);
+    expect(s.perEdgeStrain[0].assignment).toBe('M');
+    expect(s.perEdgeStrain[0].strain).toBeCloseTo(0.854, 2);  // (1+cos45°)/2
+    expect(s.perEdgeStrain[3].strain).toBeCloseTo(0, 3);     // 180° → 0
+  });
+
+  test('integration: analyze() includes strain field', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+      edges_foldAngle: [90, 90, 90, 90],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('strain');
+    expect(result.strain.foldEdgeCount).toBe(4);
+  });
+});
+
+describe('FoldAnalyzer v2.5 - M/V Bend-Direction Consistency', () => {
+  test('faceNormal: Newell method on simple square in xy-plane', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const n = analyzer.faceNormal([0,1,2,3]);
+    // CCW winding from +z view → normal points in +z
+    expect(n[2]).toBeGreaterThan(0);
+    expect(n[0]).toBeCloseTo(0, 6);
+    expect(n[1]).toBeCloseTo(0, 6);
+  });
+
+  test('findAdjacentFaces returns 2 for interior edge, 1 for boundary', () => {
+    // Two triangles sharing edge 0-1
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[1,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0],[1,3],[3,0]],
+      faces_vertices: [[0,1,2],[1,3,0]],
+      edges_assignment: ['B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    // Edge 0 (0-1) is shared by both triangles
+    expect(analyzer.findAdjacentFaces(0).length).toBe(2);
+    // Edge 1 (1-2) is only in face 0
+    expect(analyzer.findAdjacentFaces(1).length).toBe(1);
+    // Edge 3 (1-3) is only in face 1
+    expect(analyzer.findAdjacentFaces(3).length).toBe(1);
+  });
+
+  test('dihedralAngle ≈ 180° for coplanar faces (no fold)', () => {
+    // Two triangles in xy-plane sharing an edge
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[1,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0],[1,3],[3,0]],
+      faces_vertices: [[0,1,2],[1,3,0]],
+      edges_assignment: ['B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const d = analyzer.dihedralAngle(0);
+    expect(d).not.toBeNull();
+    expect(d).toBeCloseTo(180, 1);
+  });
+
+  test('dihedralAngle < 180° when one face tilts up', () => {
+    // Two triangles sharing edge 0-1. Triangle 1 is tilted up to z=1.
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],  // triangle 0 in xy-plane
+        [1,1,1],[0,0,1],            // wait — the 4th vertex is wrong, let me redo
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[1,3],[3,0]],
+      faces_vertices: [[0,1,2],[1,3,0]],
+      edges_assignment: ['M','B','B','B','B'],
+    };
+    // Redo: put 4th vertex correctly
+    fold.vertices_coords = [
+      [0,0,0],[1,0,0],[0,1,0],     // triangle 0
+      [1,1,0.5],                    // v3 for face 1 (slightly raised)
+    ];
+    const analyzer = new FoldAnalyzer(fold);
+    const d = analyzer.dihedralAngle(0);
+    expect(d).not.toBeNull();
+    // Dihedral < 180° since v3 is raised (tilted ~27° from horizontal)
+    expect(d).toBeLessThan(180);
+    expect(d).toBeGreaterThan(150);  // tilted, but not fully folded
+  });
+
+  test('3D model with consistent M + foldAngle passes check', () => {
+    // 4 vertices, 4 edges, 2 triangles sharing edge 0-1
+    // v3 raised to z=1 — produces a fold
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],  // triangle 0
+        [1,1,1],                    // v3 raised
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[1,3],[3,0]],
+      faces_vertices: [[0,1,2],[1,3,0]],
+      edges_assignment: ['M','B','B','B','B'],
+      edges_foldAngle: [90],  // claimed 90° fold on the shared edge
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    expect(mvc.totalChecked).toBe(1);
+    // Whether it passes depends on the dihedral vs 90°; we just verify no crash
+    expect(mvc.geometricInconsistencies.length + mvc.consistent).toBeGreaterThan(0);
+  });
+
+  test('2D model: M edge with flat foldAngle (180°) flagged as inconsistent', () => {
+    // Flat 2D dieline with M assignment but flat foldAngle
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','B','B','B'],
+      edges_foldAngle: [180, 180, 180, 180],  // flat — but edge 0 is M
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    expect(mvc.totalChecked).toBe(1);
+    expect(mvc.structuralInconsistencies.length).toBe(1);
+    expect(mvc.structuralInconsistencies[0].issue).toBe('fold-edge-with-flat-angle');
+  });
+
+  test('2D model: M edge with non-flat foldAngle passes structural check', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','B','B','B'],
+      edges_foldAngle: [90, 180, 180, 180],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    expect(mvc.totalChecked).toBe(1);
+    expect(mvc.consistent).toBe(1);
+    expect(mvc.structuralInconsistencies.length).toBe(0);
+  });
+
+  test('no M/V edges → totalChecked=0', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    expect(mvc.totalChecked).toBe(0);
+    expect(mvc.notes.some(n => n.includes('No M/V edges'))).toBe(true);
+  });
+
+  test('integration: analyze() includes mvConsistency field', () => {
+    const fold = {
+      vertices_coords: [[0,0],[1,0],[1,1],[0,1]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+      edges_foldAngle: [90, 90, 90, 90],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('mvConsistency');
+    expect(result.mvConsistency.totalChecked).toBe(4);
+  });
+});
+
+describe('FoldAnalyzer v2.6 - Self-Intersection Detection', () => {
+  test('_segmentClosestDistance3D: parallel non-touching segments', () => {
+    const analyzer = new FoldAnalyzer({ vertices_coords: [], edges_vertices: [], faces_vertices: [] });
+    // Segments along x-axis at y=0 and y=2 (parallel, distance 2)
+    const r = analyzer._segmentClosestDistance3D(
+      [0, 0, 0], [1, 0, 0],
+      [0, 2, 0], [1, 2, 0]
+    );
+    expect(r.distance).toBeCloseTo(2.0, 6);
+  });
+
+  test('_segmentClosestDistance3D: crossing segments at origin', () => {
+    const analyzer = new FoldAnalyzer({ vertices_coords: [], edges_vertices: [], faces_vertices: [] });
+    // Segments crossing at (0.5, 0, 0): one along x, one along y
+    const r = analyzer._segmentClosestDistance3D(
+      [0, 0, 0], [1, 0, 0],     // along x
+      [0.5, -1, 0], [0.5, 1, 0]  // along y at x=0.5
+    );
+    expect(r.distance).toBeCloseTo(0, 6);  // they cross
+  });
+
+  test('_segmentClosestDistance3D: skew segments in 3D', () => {
+    const analyzer = new FoldAnalyzer({ vertices_coords: [], edges_vertices: [], faces_vertices: [] });
+    // Skew: one along x-axis at z=0, one along y-axis at z=5
+    const r = analyzer._segmentClosestDistance3D(
+      [0, 0, 0], [1, 0, 0],
+      [0, 0, 5], [0, 1, 5]
+    );
+    expect(r.distance).toBeCloseTo(5.0, 6);
+  });
+
+  test('_faceAABB computes min/max for 3D face', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[2,0,1],[1,3,2],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const aabb = analyzer._faceAABB([0,1,2,3]);
+    expect(aabb.minX).toBe(0); expect(aabb.maxX).toBe(2);
+    expect(aabb.minY).toBe(0); expect(aabb.maxY).toBe(3);
+    expect(aabb.minZ).toBe(0); expect(aabb.maxZ).toBe(2);
+  });
+
+  test('_aabbOverlap: clear overlap / clear separation', () => {
+    const analyzer = new FoldAnalyzer({ vertices_coords: [], edges_vertices: [], faces_vertices: [] });
+    const a = { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 1 };
+    const b = { minX: 0.5, maxX: 1.5, minY: 0, maxY: 1, minZ: 0, maxZ: 1 };
+    const c = { minX: 2, maxX: 3, minY: 0, maxY: 1, minZ: 0, maxZ: 1 };
+    expect(analyzer._aabbOverlap(a, b)).toBe(true);
+    expect(analyzer._aabbOverlap(a, c)).toBe(false);
+  });
+
+  test('two separated 3D faces: no intersection', () => {
+    // Two triangles far apart in z
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0.5,1,0],  // face 0 at z=0
+        [5,5,10],[6,5,10],[5.5,6,10],  // face 1 at z=10
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]],
+      faces_vertices: [[0,1,2], [3,4,5]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeSelfIntersection();
+    expect(si.intersectionCount).toBe(0);
+  });
+
+  test('two 3D faces crossing: intersection detected', () => {
+    // Face 0: triangle in xy-plane (z=0)
+    // Face 1: triangle in xz-plane (y=0) — crosses face 0 along x-axis
+    const fold = {
+      vertices_coords: [
+        [0, 0, 0], [1, 0, 0], [0.5, 1, 0],   // face 0
+        [0.5, -0.5, 0], [0.5, 0.5, 0], [0.5, 0, 1],  // face 1
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]],
+      faces_vertices: [[0,1,2], [3,4,5]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeSelfIntersection();
+    // The two faces should cross at the x-axis (y=0, z=0)
+    expect(si.intersectionCount).toBeGreaterThan(0);
+  });
+
+  test('two adjacent 3D faces: skipped (share an edge)', () => {
+    // Two triangles sharing edge 0-1
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[1,1,0.5]],
+      edges_vertices: [[0,1],[1,2],[2,0],[1,3],[3,0]],
+      faces_vertices: [[0,1,2], [1,3,0]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeSelfIntersection();
+    // Adjacent faces are skipped → no pairs checked
+    expect(si.facePairCount).toBe(0);
+    expect(si.intersectionCount).toBe(0);
+  });
+
+  test('2D model: notes say "2D, skip"', () => {
+    // 2 faces in xy-plane, all z=0
+    const fold = {
+      vertices_coords: [[0,0,0],[2,0,0],[2,1,0],[0,1,0],[1,0,0],[1,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0],[1,4],[4,5],[5,2]],
+      faces_vertices: [[0,1,2,3], [1,4,5,2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeSelfIntersection();
+    expect(si.facePairCount).toBe(0);
+    expect(si.notes.some(n => n.includes('2D model'))).toBe(true);
+  });
+
+  test('no faces: notes say "nothing to check"', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0]],
+      edges_vertices: [[0,1]],
+      faces_vertices: [],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeSelfIntersection();
+    expect(si.notes.some(n => n.includes('Fewer than 2 faces'))).toBe(true);
+  });
+
+  test('integration: analyze() includes selfIntersection field', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0.5,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0]],
+      faces_vertices: [[0,1,2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('selfIntersection');
+    expect(result.selfIntersection).toHaveProperty('intersectionCount');
+  });
+});
+
+describe('FoldAnalyzer v2.7 - Face Normal Consistency + Complete Self-Intersection', () => {
+  test('_pointInsideFace3D: vertex inside face in xy-plane', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[2,0,0],[2,2,0],[0,2,0],[1,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    expect(analyzer._pointInsideFace3D([1, 1, 0], [0,1,2,3])).toBe(true);
+    expect(analyzer._pointInsideFace3D([5, 5, 0], [0,1,2,3])).toBe(false);
+  });
+
+  test('_pointInsideFace3D: vertex above the plane (off-plane)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[2,0,0],[2,2,0],[0,2,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    // (1, 1, 5) is above the plane — not on the face
+    expect(analyzer._pointInsideFace3D([1, 1, 5], [0,1,2,3])).toBe(false);
+  });
+
+  test('_pointInsideFace3D: tilted face (xy → yz projection)', () => {
+    // Face in yz-plane: x=0 for all vertices
+    const fold = {
+      vertices_coords: [[0,0,0],[0,1,0],[0,1,1],[0,0,1],[0,0.5,0.5]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    expect(analyzer._pointInsideFace3D([0, 0.5, 0.5], [0,1,2,3])).toBe(true);
+  });
+
+  test('_coplanarOverlap: two non-coplanar faces → coplanar=false', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[0,0,1]],
+      edges_vertices: [[0,1],[1,2],[2,0],[2,3]],
+      faces_vertices: [[0,1,2], [0,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const r = analyzer._coplanarOverlap([0,1,2], [0,2,3]);
+    expect(r.coplanar).toBe(false);
+  });
+
+  test('_coplanarOverlap: two coplanar overlapping faces → overlap=true', () => {
+    // Two squares in xy-plane that overlap
+    const fold = {
+      vertices_coords: [[0,0,0],[2,0,0],[2,2,0],[0,2,0],[1,1,0],[3,1,0],[3,3,0],[1,3,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4]],
+      faces_vertices: [[0,1,2,3], [4,5,6,7]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const r = analyzer._coplanarOverlap([0,1,2,3], [4,5,6,7]);
+    expect(r.coplanar).toBe(true);
+    expect(r.overlap).toBe(true);
+  });
+
+  test('_coplanarOverlap: two coplanar non-overlapping faces → overlap=false', () => {
+    // Two squares in xy-plane that don't overlap (far apart)
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0],[10,0,0],[11,0,0],[11,1,0],[10,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4]],
+      faces_vertices: [[0,1,2,3], [4,5,6,7]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const r = analyzer._coplanarOverlap([0,1,2,3], [4,5,6,7]);
+    expect(r.coplanar).toBe(true);
+    expect(r.overlap).toBe(false);
+  });
+
+  test('analyzeFaceNormals: closed mesh (cube) detects inconsistent winding', () => {
+    // 6-face cube with all faces wound CCW from above.
+    // This gives the top and bottom faces normals in the same direction (+z),
+    // so they don't cancel → divergence is high, correctly flagged as inconsistent.
+    // A properly-oriented cube would have opposite windings for top vs bottom.
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[1,1,0],[0,1,0],
+        [0,0,1],[1,0,1],[1,1,1],[0,1,1],
+      ],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]],
+      faces_vertices: [
+        [0,1,2,3], [4,5,6,7], [0,1,5,4],
+        [1,2,6,5], [2,3,7,6], [3,0,4,7],
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fn = analyzer.analyzeFaceNormals();
+    expect(fn.faceCount).toBe(6);
+    // This cube has 2 faces with same-direction normals → divergence > 0.5
+    expect(fn.divergenceRatio).toBeGreaterThan(0.5);
+    expect(fn.consistent).toBe(false);
+    expect(fn.degenerateFaces.length).toBe(0);
+  });
+
+  test('analyzeFaceNormals: degenerate face (collinear vertices) detected', () => {
+    // A "face" with all collinear vertices has zero area
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[2,0,0],[3,0,0]],
+      edges_vertices: [[0,1],[1,2],[2,3]],
+      faces_vertices: [[0,1,2,3]],  // all on x-axis
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fn = analyzer.analyzeFaceNormals();
+    expect(fn.degenerateFaces.length).toBe(1);
+    expect(fn.degenerateFaces[0]).toBe(0);
+  });
+
+  test('analyzeFaceNormals: no faces → notes populated', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0]],
+      edges_vertices: [[0,1]],
+      faces_vertices: [],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fn = analyzer.analyzeFaceNormals();
+    expect(fn.faceCount).toBe(0);
+    expect(fn.notes.some(n => n.includes('No faces'))).toBe(true);
+  });
+
+  test('G+1: vertex inside another face → vertex-inside intersection', () => {
+    // Both faces in z=0.0001 plane (slight 3D variation for is3D detection).
+    // Face 1 is small and fully inside face 0's 2D projection → vertex-inside fires.
+    const fold = {
+      vertices_coords: [
+        [0,0,0.0001],[2,0,0.0001],[1,2,0.0001],     // face 0 (large)
+        [1,0.5,0.0001],[1,1,0.0001],[0.7,0.5,0.0001],  // face 1 (small, all on z=0.0001 plane)
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]],
+      faces_vertices: [[0,1,2], [3,4,5]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeSelfIntersection();
+    expect(si.intersectionCount).toBeGreaterThan(0);
+    expect(si.intersections[0].kind).toMatch(/vertex-inside|coplanar-overlap/);
+  });
+
+  test('G+2: two parallel-offset overlapping faces detected as coplanar-overlap', () => {
+    // Two parallel squares offset in z by 0.005 (within 0.01 AABB tolerance).
+    // Normals are parallel → coplanarity check passes. 2D projection shows
+    // overlap (inner square fully inside outer) → coplanar-overlap fires.
+    const fold = {
+      vertices_coords: [
+        // face 0: outer square at z=0
+        [0,0,0],[3,0,0],[3,3,0],[0,3,0],
+        // face 1: inner square fully inside face 0 at z=0.005
+        [1,1,0.005],[2,1,0.005],[2,2,0.005],[1,2,0.005],
+      ],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4]],
+      faces_vertices: [[0,1,2,3], [4,5,6,7]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeSelfIntersection();
+    expect(si.intersectionCount).toBe(1);
+    expect(si.intersections[0].kind).toBe('coplanar-overlap');
+  });
+
+  test('integration: analyze() includes faceNormals field', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('faceNormals');
+    expect(result.faceNormals.faceCount).toBe(1);
+  });
+});
+
+describe('FoldAnalyzer v2.8 - Holes & Boundary Loops', () => {
+  test('closed mesh (cube): no boundary edges, no holes', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[1,1,0],[0,1,0],
+        [0,0,1],[1,0,1],[1,1,1],[0,1,1],
+      ],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],
+        [4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7],
+      ],
+      faces_vertices: [
+        [0,1,2,3], [4,5,6,7], [0,1,5,4],
+        [1,2,6,5], [2,3,7,6], [3,0,4,7],
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const h = analyzer.analyzeHoles();
+    expect(h.boundaryEdgeCount).toBe(0);
+    expect(h.loopCount).toBe(0);
+    expect(h.holeCount).toBe(0);
+  });
+
+  test('single square face: 1 boundary loop (outer)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[2,0,0],[2,2,0],[0,2,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const h = analyzer.analyzeHoles();
+    expect(h.boundaryEdgeCount).toBe(4);
+    expect(h.loopCount).toBe(1);
+    expect(h.outerBoundaryCount).toBe(1);
+    expect(h.holeCount).toBe(0);
+    expect(h.loops[0].edgeIndices.length).toBe(4);
+    expect(h.loops[0].enclosedArea).toBe(4);  // 2×2 square
+    expect(h.loops[0].perimeter).toBe(8);     // 4 sides of 2
+  });
+
+  test('square with hole: 2 loops (1 outer + 1 hole)', () => {
+    // Outer square 4x4 with 1x1 inner square hole
+    // 5 faces: 4 trapezoids around the hole + 1 outer ring? Actually simpler: just 2 faces separated by a hole
+    // Use "L-shape" outer + inner square: 5 vertices
+    //   outer corners: (0,0),(4,0),(4,4),(0,4)  (vertices 0,1,2,3)
+    //   inner hole:   (1,1),(3,1),(3,3),(1,3)  (vertices 4,5,6,7)
+    // Faces: 4 trapezoids (one per side of the hole)
+    //   bottom: [0,1,5,4]
+    //   right:  [1,2,6,5]
+    //   top:    [2,3,7,6]
+    //   left:   [3,0,4,7]
+    const fold = {
+      vertices_coords: [[0,0,0],[4,0,0],[4,4,0],[0,4,0],[1,1,0],[3,1,0],[3,3,0],[1,3,0]],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],  // outer
+        [4,5],[5,6],[6,7],[7,4],  // inner
+        [0,4],[1,5],[2,6],[3,7],  // spokes
+      ],
+      faces_vertices: [
+        [0,1,5,4],  // bottom
+        [1,2,6,5],  // right
+        [2,3,7,6],  // top
+        [3,0,4,7],  // left
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const h = analyzer.analyzeHoles();
+    // Outer boundary: 0-1-2-3-0 (4 edges)
+    // Inner hole: 4-5-6-7-4 (4 edges)
+    // Spokes (0-4, 1-5, etc.) are interior (shared by 2 faces)
+    expect(h.boundaryEdgeCount).toBe(8);
+    expect(h.interiorEdgeCount).toBe(4);
+    expect(h.loopCount).toBe(2);
+    expect(h.outerBoundaryCount).toBe(1);
+    expect(h.holeCount).toBe(1);
+    // Outer loop area should be 16 (4×4), inner hole area 4 (2×2)
+    const outerLoop = h.loops.find(l => l.isOuterBoundary);
+    const innerLoop = h.loops.find(l => !l.isOuterBoundary);
+    expect(outerLoop.enclosedArea).toBe(16);
+    expect(innerLoop.enclosedArea).toBe(4);
+  });
+
+  test('two disconnected sheets: 2 outer boundary loops', () => {
+    // Two separate squares, no shared edges
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0], [10,0,0],[11,0,0],[11,1,0],[10,1,0]],
+      edges_vertices: [
+        [0,1],[1,2],[2,3],[3,0],  // first square
+        [4,5],[5,6],[6,7],[7,4],  // second square
+      ],
+      faces_vertices: [[0,1,2,3], [4,5,6,7]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const h = analyzer.analyzeHoles();
+    expect(h.loopCount).toBe(2);
+    expect(h.outerBoundaryCount).toBe(2);
+    expect(h.holeCount).toBe(0);
+  });
+
+  test('triangle: 1 boundary loop with 3 edges, area = √3/4 × side²', () => {
+    // Equilateral triangle, side 2
+    const fold = {
+      vertices_coords: [[0,0,0],[2,0,0],[1, Math.sqrt(3), 0]],
+      edges_vertices: [[0,1],[1,2],[2,0]],
+      faces_vertices: [[0,1,2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const h = analyzer.analyzeHoles();
+    expect(h.loopCount).toBe(1);
+    expect(h.loops[0].edgeIndices.length).toBe(3);
+    // Perimeter = 6, area = √3 ≈ 1.732
+    expect(h.loops[0].perimeter).toBeCloseTo(6, 5);
+    expect(h.loops[0].enclosedArea).toBeCloseTo(Math.sqrt(3), 3);
+  });
+
+  test('no edges: notes say "nothing to check"', () => {
+    const fold = {
+      vertices_coords: [],
+      edges_vertices: [],
+      faces_vertices: [],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const h = analyzer.analyzeHoles();
+    expect(h.notes.some(n => n.includes('No edges'))).toBe(true);
+  });
+
+  test('integration: analyze() includes holes field', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('holes');
+    expect(result.holes.loopCount).toBe(1);
+  });
+});

@@ -1,0 +1,1030 @@
+/**
+ * Crease Pattern Generator v3.0
+ * 折痕图生成器 v3.0 - 逆推优化版
+ *
+ * 基于研究成果优化：
+ * 1. 纸鹤分析：预折痕(Pre-creasing)技术
+ * 2. 模块化折纸：数学公式
+ * 3. PDF教程：多种基本型支持
+ */
+
+const fs = require('fs');
+const path = require('path');
+const CreasePatternValidator = require('./utils/crease-pattern-validator');
+
+// 尝试加载 earcut（用于三角剖分）
+let earcut = null;
+try {
+  earcut = require('earcut').default;
+} catch (e) {
+  console.warn('⚠️  earcut 库未找到，faces 计算功能受限');
+}
+
+class CreasePatternGeneratorV3 {
+  constructor(options = {}) {
+    this.type = options.type || 'star';  // star, crane, miura, custom
+    this.gridSize = options.gridSize || 32;  // CP网格密度
+    this.symmetric = options.symmetric !== false;  // 对称性
+  }
+
+  /**
+   * 生成器工厂
+   */
+  static create(type, options = {}) {
+    const generator = new CreasePatternGeneratorV3({ ...options, type });
+
+    switch (type) {
+      case 'star':
+        return generator.generateStarTessellation(options);
+      case 'crane':
+        return generator.generateCraneBase(options);
+      case 'miura':
+        return generator.generateMiuraOri(options);
+      case 'tiger':
+        return generator.generateTigerBase(options);
+      case 'fish':
+        return generator.generateFishBase(options);
+      default:
+        throw new Error(`未知类型: ${type}`);
+    }
+  }
+
+  /**
+   * 生成星形折纸折痕图
+   * 基于10角放射对称数学公式
+   */
+  generateStarTessellation(options = {}) {
+    const arms = options.arms || 10;
+    const rings = options.rings || 4;
+    const radius = options.radius || 10;
+
+    const vertices = [];
+    const edges = [];
+    const faces = [];
+    const edges_assignment = [];
+    const edges_foldAngle = [];
+
+    // 中心点
+    vertices.push([0, 0, 0]);
+    const centerIdx = 0;
+
+    // 生成同心环顶点
+    const layerVertices = [];
+    for (let ring = 1; ring <= rings; ring++) {
+      const ringVertices = [];
+      const r = (ring / rings) * radius;
+      for (let i = 0; i < arms; i++) {
+        const angle = (2 * Math.PI * i) / arms - Math.PI / 2;
+        ringVertices.push(vertices.length);
+        vertices.push([r * Math.cos(angle), r * Math.sin(angle), 0]);
+      }
+      layerVertices.push(ringVertices);
+    }
+
+    // 中心到第一层的折痕（主折痕）
+    for (let i = 0; i < arms; i++) {
+      edges.push([centerIdx, layerVertices[0][i]]);
+      edges_assignment.push(i % 2 === 0 ? 'M' : 'V');
+      edges_foldAngle.push(i % 2 === 0 ? 180 : -180);
+    }
+
+    // 相邻臂之间的连接（形成三角形）
+    for (let ring = 0; ring < rings - 1; ring++) {
+      for (let i = 0; i < arms; i++) {
+        const next = (i + 1) % arms;
+        const curr = layerVertices[ring];
+        const nextRing = layerVertices[ring + 1];
+
+        // 当前环的相邻点
+        edges.push([curr[i], curr[next]]);
+        edges_assignment.push(ring % 2 === 0 ? 'V' : 'M');
+        edges_foldAngle.push(ring % 2 === 0 ? -180 : 180);
+
+        // 跨环连接
+        edges.push([curr[i], nextRing[i]]);
+        edges_assignment.push('M');
+        edges_foldAngle.push(180);
+
+        // 跨环连接（相邻臂）
+        edges.push([nextRing[i], nextRing[next]]);
+        edges_assignment.push('V');
+        edges_foldAngle.push(-180);
+      }
+    }
+
+    // 生成面（只使用实际存在的边）
+    const edgeSet = new Set();
+    for (const edge of edges) {
+      const key = `${Math.min(edge[0], edge[1])}-${Math.max(edge[0], edge[1])}`;
+      edgeSet.add(key);
+    }
+    const hasEdge = (v1, v2) => edgeSet.has(`${Math.min(v1,v2)}-${Math.max(v1,v2)}`);
+
+    for (let ring = 0; ring < rings - 1; ring++) {
+      for (let i = 0; i < arms; i++) {
+        const next = (i + 1) % arms;
+        const curr = layerVertices[ring];
+        const nextRing = layerVertices[ring + 1];
+
+        // 形成四边形的两个三角形
+        if (hasEdge(curr[i], curr[next]) &&
+            hasEdge(curr[i], nextRing[i]) &&
+            hasEdge(curr[next], nextRing[i])) {
+          faces.push([curr[i], curr[next], nextRing[i]]);
+        }
+        if (hasEdge(curr[next], nextRing[next]) &&
+            hasEdge(curr[next], nextRing[i]) &&
+            hasEdge(nextRing[next], nextRing[i])) {
+          faces.push([curr[next], nextRing[next], nextRing[i]]);
+        }
+      }
+    }
+
+    // 最外层闭合
+    const lastRing = layerVertices[rings - 1];
+    for (let i = 0; i < arms; i++) {
+      const next = (i + 1) % arms;
+      edges.push([lastRing[i], lastRing[next]]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+    }
+
+    return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
+      title: `Star Tessellation (${arms}-fold, ${rings} rings)`,
+      type: 'star_tessellation',
+      params: { arms, rings, radius }
+    });
+  }
+
+  /**
+   * 生成纸鹤基本型 (Bird Base) 折痕图
+   * 基于预折痕技术分析
+   */
+  generateCraneBase(options = {}) {
+    const grid = options.grid || this.gridSize;
+    const vertices = [];
+    const edges = [];
+    const faces = [];
+    const edges_assignment = [];
+    const edges_foldAngle = [];
+
+    const step = 2 / grid;  // 纸张范围 [-1, 1]
+
+    // 生成网格顶点
+    for (let y = 0; y <= grid; y++) {
+      for (let x = 0; x <= grid; x++) {
+        vertices.push([x * step - 1, y * step - 1, 0]);
+      }
+    }
+
+    // 辅助函数：获取网格点索引
+    const idx = (x, y) => y * (grid + 1) + x;
+
+    // 1. 对角线折痕（X形）
+    for (let i = 0; i < grid; i++) {
+      // 主对角线
+      edges.push([idx(i, i), idx(i + 1, i + 1)]);
+      edges_assignment.push('V');
+      edges_foldAngle.push(-180);
+
+      // 副对角线
+      edges.push([idx(i, grid - i), idx(i + 1, grid - i - 1)]);
+      edges_assignment.push('V');
+      edges_foldAngle.push(-180);
+    }
+
+    // 2. 中线折痕（十字形）
+    const mid = Math.floor(grid / 2);
+    for (let i = 0; i < grid; i++) {
+      // 垂直中线
+      edges.push([idx(mid, i), idx(mid, i + 1)]);
+      edges_assignment.push(i === mid ? 'B' : 'M');
+      edges_foldAngle.push(i === mid ? 0 : 180);
+
+      // 水平中线
+      edges.push([idx(i, mid), idx(i + 1, mid)]);
+      edges_assignment.push(i === mid ? 'B' : 'M');
+      edges_foldAngle.push(i === mid ? 0 : 180);
+    }
+
+    // 3. 预折痕（象限对折线）- 基于纸鹤分析
+    // 将四个角向中心折的预折痕
+    for (let i = 1; i < grid; i++) {
+      // 第一象限辅助线
+      edges.push([idx(mid, i), idx(i, grid)]);
+      edges_assignment.push('M');
+      edges_foldAngle.push(45);
+
+      // 第三象限辅助线
+      edges.push([idx(i, mid), idx(grid, i)]);
+      edges_assignment.push('M');
+      edges_foldAngle.push(45);
+    }
+
+    // 4. 边界
+    // 上边
+    for (let x = 0; x < grid; x++) {
+      edges.push([idx(x, 0), idx(x + 1, 0)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+    }
+    // 下边
+    for (let x = 0; x < grid; x++) {
+      edges.push([idx(x, grid), idx(x + 1, grid)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+    }
+    // 左边
+    for (let y = 0; y < grid; y++) {
+      edges.push([idx(0, y), idx(0, y + 1)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+    }
+    // 右边
+    for (let y = 0; y < grid; y++) {
+      edges.push([idx(grid, y), idx(grid, y + 1)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+    }
+
+    return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
+      title: `Crane Bird Base (${grid}x${grid} grid)`,
+      type: 'bird_base',
+      params: { grid },
+      description: '纸鹤基本型，基于预折痕技术'
+    });
+  }
+
+  /**
+   * 生成鱼形基本型 (Fish Base)
+   */
+  generateFishBase(options = {}) {
+    const grid = options.grid || this.gridSize;
+    const vertices = [];
+    const edges = [];
+    const faces = [];
+    const edges_assignment = [];
+    const edges_foldAngle = [];
+
+    const step = 2 / grid;
+
+    // 生成网格
+    for (let y = 0; y <= grid; y++) {
+      for (let x = 0; x <= grid; x++) {
+        vertices.push([x * step - 1, y * step - 1, 0]);
+      }
+    }
+
+    const idx = (x, y) => y * (grid + 1) + x;
+    const mid = Math.floor(grid / 2);
+
+    // 对角线
+    for (let i = 0; i < grid; i++) {
+      edges.push([idx(i, i), idx(i + 1, i + 1)]);
+      edges_assignment.push('V');
+      edges_foldAngle.push(-180);
+
+      edges.push([idx(i, grid - i), idx(i + 1, grid - i - 1)]);
+      edges_assignment.push('V');
+      edges_foldAngle.push(-180);
+    }
+
+    // 垂直中线
+    for (let y = 0; y < grid; y++) {
+      edges.push([idx(mid, y), idx(mid, y + 1)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+    }
+
+    // 鱼尾折叠线（斜线）
+    for (let i = 1; i < mid; i++) {
+      edges.push([idx(0, i), idx(mid, mid)]);
+      edges_assignment.push('M');
+      edges_foldAngle.push(180);
+
+      edges.push([idx(grid, i), idx(mid, mid)]);
+      edges_assignment.push('M');
+      edges_foldAngle.push(180);
+    }
+
+    // 边界
+    for (let x = 0; x < grid; x++) {
+      edges.push([idx(x, 0), idx(x + 1, 0)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+      edges.push([idx(x, grid), idx(x + 1, grid)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+    }
+    for (let y = 0; y < grid; y++) {
+      edges.push([idx(0, y), idx(0, y + 1)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+      edges.push([idx(grid, y), idx(grid, y + 1)]);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
+    }
+
+    return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
+      title: `Fish Base (${grid}x${grid} grid)`,
+      type: 'fish_base',
+      params: { grid }
+    });
+  }
+
+  /**
+   * 生成Miura-Ori折痕图
+   */
+  generateMiuraOri(options = {}) {
+    const rows = options.rows || 5;
+    const cols = options.cols || 8;
+    const vertices = [];
+    const edges = [];
+    const faces = [];
+    const edges_assignment = [];
+    const edges_foldAngle = [];
+
+    const dx = 2 / cols;
+    const dy = 2 / rows;
+
+    // 创建顶点网格
+    for (let row = 0; row <= rows; row++) {
+      for (let col = 0; col <= cols; col++) {
+        vertices.push([col * dx - 1, row * dy - 1, 0]);
+      }
+    }
+
+    // 添加水平边
+    for (let row = 0; row <= rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const idx = row * (cols + 1) + col;
+        edges.push([idx, idx + 1]);
+        if (row === 0 || row === rows) {
+          edges_assignment.push('B');
+          edges_foldAngle.push(0);
+        } else {
+          edges_assignment.push((row + col) % 2 === 0 ? 'M' : 'V');
+          edges_foldAngle.push((row + col) % 2 === 0 ? 180 : -180);
+        }
+      }
+    }
+
+    // 添加垂直边
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col <= cols; col++) {
+        const idx = row * (cols + 1) + col;
+        edges.push([idx, idx + cols + 1]);
+        edges_assignment.push((row + col) % 2 === 0 ? 'V' : 'M');
+        edges_foldAngle.push((row + col) % 2 === 0 ? -180 : 180);
+      }
+    }
+
+    // 生成三角形面 (Miura-Ori专用)
+    // 只生成使用实际存在边的面
+    const edgeSet = new Set();
+    for (const edge of edges) {
+      const key = `${Math.min(edge[0], edge[1])}-${Math.max(edge[0], edge[1])}`;
+      edgeSet.add(key);
+    }
+    const hasEdge = (v1, v2) => edgeSet.has(`${Math.min(v1,v2)}-${Math.max(v1,v2)}`);
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const topLeft = row * (cols + 1) + col;
+        const topRight = topLeft + 1;
+        const bottomLeft = topLeft + cols + 1;
+        const bottomRight = bottomLeft + 1;
+
+        // 只添加有完整边界的面
+        if (hasEdge(topLeft, topRight) &&
+            hasEdge(topRight, bottomRight) &&
+            hasEdge(bottomRight, bottomLeft) &&
+            hasEdge(bottomLeft, topLeft)) {
+          faces.push([topLeft, topRight, bottomLeft]);
+          faces.push([topRight, bottomRight, bottomLeft]);
+        }
+      }
+    }
+
+    return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
+      title: `Miura-Ori (${rows}x${cols})`,
+      type: 'miura_ori',
+      params: { rows, cols },
+      isCreasePattern: true
+    });
+  }
+
+  /**
+   * 生成老虎基本型 (Tiger Base)
+   */
+  generateTigerBase(options = {}) {
+    const grid = options.grid || 32;
+
+    // 老虎基于鱼形基本型的变体
+    const fishBase = this.generateFishBase({ grid });
+
+    // 添加额外的折痕（模拟虎纹）
+    const additionalEdges = [];
+    const additionalAssignment = [];
+    const additionalFoldAngle = [];
+
+    // 在现有基础上添加斜向折痕
+    const idx = (x, y) => y * (grid + 1) + x;
+    const mid = Math.floor(grid / 2);
+
+    // 添加V形纹路折痕
+    for (let i = 1; i < mid; i++) {
+      additionalEdges.push([idx(0, mid - i), idx(mid, mid + i)]);
+      additionalAssignment.push('M');
+      additionalFoldAngle.push(90);
+
+      additionalEdges.push([idx(grid, mid - i), idx(mid, mid + i)]);
+      additionalAssignment.push('M');
+      additionalFoldAngle.push(90);
+    }
+
+    // 合并折痕
+    fishBase.edges_vertices = [...fishBase.edges_vertices, ...additionalEdges];
+    fishBase.edges_assignment = [...fishBase.edges_assignment, ...additionalAssignment];
+    fishBase.edges_foldAngle = [...fishBase.edges_foldAngle, ...additionalFoldAngle];
+    fishBase.frame_title = `Tiger Base (${grid}x${grid} grid)`;
+    fishBase.metadata.type = 'tiger_base';
+
+    return fishBase;
+  }
+
+  /**
+   * 验证折痕图 (基于Kawasaki和Maekawa定理)
+   * @param {Object} foldData - FOLD格式数据
+   * @returns {Object} 验证结果
+   */
+  validate(foldData) {
+    const validator = new CreasePatternValidator();
+    return validator.validate(foldData);
+  }
+
+  /**
+   * 生成验证报告
+   * @param {Object} foldData - FOLD格式数据
+   * @returns {string} 报告文本
+   */
+  validateAndReport(foldData) {
+    const validator = new CreasePatternValidator();
+    return validator.generateReport(foldData);
+  }
+
+  /**
+   * 创建标准FOLD结果
+   * 支持 FOLD v1.2 标准
+   */
+  createFoldResult(vertices, edges, faces, assignment, foldAngle, metadata = {}) {
+    const isCreasePattern = metadata.isCreasePattern || false;
+
+    // 如果没有 faces 但有 edges，尝试计算 faces
+    let computedFaces = faces;
+    if ((!faces || faces.length === 0) && edges && edges.length > 0 && vertices && vertices.length > 0) {
+      computedFaces = this.computeFaces(vertices, edges, assignment);
+      if (computedFaces && computedFaces.length > 0) {
+        console.log(`✅ 自动计算了 ${computedFaces.length} 个面`);
+      }
+    }
+
+    const foldData = {
+      file_spec: 1.2,  // 升级到 FOLD v1.2
+      file_creator: 'CreasePatternGeneratorV3 (origami-simulator-cli)',
+      file_classes: isCreasePattern ? ['creasePattern'] : ['singleModel'],
+      frame_classes: isCreasePattern ? ['creasePattern'] : ['foldedForm'],
+      frame_attributes: ['2D'],  // FOLD v1.2 标准属性
+      frame_title: metadata.title || 'Crease Pattern',
+      vertices_coords: vertices,
+      edges_vertices: edges,
+      faces_vertices: computedFaces || [],
+      edges_assignment: assignment,
+      edges_foldAngle: foldAngle,
+      // FOLD v1.2 新增: 可选的 vertices_edges 计算
+      vertices_edges: this._computeVerticesEdges(vertices, edges),
+      metadata: {
+        generator: 'CreasePatternGeneratorV3',
+        version: '1.2',
+        ...metadata
+      }
+    };
+
+    return foldData;
+  }
+
+  /**
+   * 计算 faces_vertices (三角剖分)
+   * 对于折痕图，识别外边界多边形并进行三角剖分
+   *
+   * @param {Array} vertices - 顶点坐标数组
+   * @param {Array} edges - 边数组
+   * @param {Array} edges_assignment - 边赋值数组
+   * @returns {Array} faces_vertices 数组
+   */
+  computeFaces(vertices, edges, edges_assignment) {
+    if (!vertices || !edges || vertices.length === 0) return [];
+
+    // 构建边集合和邻接图
+    const edgeSet = new Set();
+    const edges_by_vert = Array.from({ length: vertices.length }, () => []);
+
+    for (let i = 0; i < edges.length; i++) {
+      const [v1, v2] = edges[i];
+      const key = `${Math.min(v1, v2)}-${Math.max(v1, v2)}`;
+      edgeSet.add(key);
+      edges_by_vert[v1].push(v2);
+      edges_by_vert[v2].push(v1);
+    }
+
+    const hasEdge = (v1, v2) => edgeSet.has(`${Math.min(v1, v2)}-${Math.max(v1, v2)}`);
+
+    // 尝试网格面计算（适用于 Crane, Fish, Tiger 等网格类折痕）
+    const gridFaces = this._computeGridFaces(vertices, edges_by_vert, hasEdge);
+    if (gridFaces.length > 0) {
+      return gridFaces;
+    }
+
+    // 回退：使用 earcut 进行三角剖分（需要 earcut 库）
+    if (!earcut) {
+      console.warn('⚠️  earcut 未安装且无法使用网格计算');
+      return [];
+    }
+
+    // 识别边界顶点
+    const boundaryVertices = new Set();
+    for (let i = 0; i < edges.length; i++) {
+      if ((edges_assignment[i] || '').toUpperCase() === 'B') {
+        boundaryVertices.add(edges[i][0]);
+        boundaryVertices.add(edges[i][1]);
+      }
+    }
+
+    const boundaryVertexList = Array.from(boundaryVertices);
+    if (boundaryVertexList.length < 3) {
+      console.warn('⚠️  边界顶点不足');
+      return [];
+    }
+
+    const boundaryOrder = this._computeConvexHull(vertices, boundaryVertexList);
+    if (boundaryOrder.length < 3) {
+      console.warn('⚠️  无法形成有效的边界多边形');
+      return [];
+    }
+
+    const boundaryCoords = [];
+    for (const v of boundaryOrder) {
+      const coord = vertices[v];
+      if (coord && coord.length >= 2) {
+        boundaryCoords.push(coord[0], coord[1]);
+      }
+    }
+
+    if (boundaryCoords.length < 6) return [];
+
+    const triangles = earcut(boundaryCoords);
+    const faces = [];
+
+    for (let i = 0; i < triangles.length; i += 3) {
+      faces.push([
+        boundaryOrder[triangles[i]],
+        boundaryOrder[triangles[i + 1]],
+        boundaryOrder[triangles[i + 2]]
+      ]);
+    }
+
+    return faces;
+  }
+
+  /**
+   * 计算网格面（适用于 Crane, Fish, Tiger 等网格类折痕）
+   * 识别规则的 4-邻接 网格单元
+   */
+  _computeGridFaces(vertices, edges_by_vert, hasEdge) {
+    const faces = [];
+    const n = vertices.length;
+    const visited = new Set();
+
+    // 分析顶点分布，判断是否为规则网格
+    // 收集所有 x 和 y 坐标
+    const xCoords = [...new Set(vertices.map(v => v[0]))].sort((a, b) => a - b);
+    const yCoords = [...new Set(vertices.map(v => v[1]))].sort((a, b) => a - b);
+
+    // 检查是否为规则网格（等间距）
+    const xStep = xCoords.length > 1 ? xCoords[1] - xCoords[0] : null;
+    const yStep = yCoords.length > 1 ? yCoords[1] - yCoords[0] : null;
+
+    if (!xStep || !yStep || xCoords.length < 2 || yCoords.length < 2) {
+      return [];
+    }
+
+    // 验证网格间距一致性
+    const xValid = xCoords.every((x, i) => i === 0 || Math.abs(x - xCoords[i - 1] - xStep) < 1e-10);
+    const yValid = yCoords.every((y, i) => i === 0 || Math.abs(y - yCoords[i - 1] - yStep) < 1e-10);
+
+    if (!xValid || !yValid) {
+      return [];
+    }
+
+    const cols = xCoords.length;
+    const rows = yCoords.length;
+
+    // 建立坐标到索引的映射
+    const coordToIdx = new Map();
+    vertices.forEach((v, i) => coordToIdx.set(`${v[0].toFixed(6)},${v[1].toFixed(6)}`, i));
+
+    // 遍历每个可能的网格单元
+    for (let row = 0; row < rows - 1; row++) {
+      for (let col = 0; col < cols - 1; col++) {
+        // 获取四个角点
+        const x1 = xCoords[col];
+        const y1 = yCoords[row];
+        const x2 = xCoords[col + 1];
+        const y2 = yCoords[row + 1];
+
+        const topLeft = coordToIdx.get(`${x1.toFixed(6)},${y1.toFixed(6)}`);
+        const topRight = coordToIdx.get(`${x2.toFixed(6)},${y1.toFixed(6)}`);
+        const bottomLeft = coordToIdx.get(`${x1.toFixed(6)},${y2.toFixed(6)}`);
+        const bottomRight = coordToIdx.get(`${x2.toFixed(6)},${y2.toFixed(6)}`);
+
+        if (topLeft === undefined || topRight === undefined ||
+            bottomLeft === undefined || bottomRight === undefined) {
+          continue;
+        }
+
+        // 检查四个边是否都存在
+        if (hasEdge(topLeft, topRight) &&
+            hasEdge(topRight, bottomRight) &&
+            hasEdge(bottomRight, bottomLeft) &&
+            hasEdge(bottomLeft, topLeft)) {
+
+          // 避免重复面
+          const faceKey = [topLeft, topRight, bottomRight, bottomLeft].sort().join('-');
+          if (!visited.has(faceKey)) {
+            visited.add(faceKey);
+            faces.push([topLeft, topRight, bottomLeft]);
+            faces.push([topRight, bottomRight, bottomLeft]);
+          }
+        }
+      }
+    }
+
+    return faces;
+  }
+
+  /**
+   * 计算凸包（Andrew's monotone chain algorithm）
+   * @param {Array} vertices - 所有顶点坐标
+   * @param {Array} boundaryVertexList - 边界顶点索引列表
+   * @returns {Array} 按凸包顺序排列的顶点索引
+   */
+  _computeConvexHull(vertices, boundaryVertexList) {
+    // 按x坐标排序，相同时按y排序
+    const sorted = [...boundaryVertexList].sort((a, b) => {
+      const [ax, ay] = vertices[a];
+      const [bx, by] = vertices[b];
+      return ax - bx || ay - by;
+    });
+
+    // 构建下凸壳
+    const lower = [];
+    for (const v of sorted) {
+      while (lower.length >= 2 && this._cross(lower[lower.length - 2], lower[lower.length - 1], v, vertices) <= 0) {
+        lower.pop();
+      }
+      lower.push(v);
+    }
+
+    // 构建上凸壳
+    const upper = [];
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      const v = sorted[i];
+      while (upper.length >= 2 && this._cross(upper[upper.length - 2], upper[upper.length - 1], v, vertices) <= 0) {
+        upper.pop();
+      }
+      upper.push(v);
+    }
+
+    // 移除最后一个点（因为它与第一个点相同）
+    lower.pop();
+    upper.pop();
+
+    return [...lower, ...upper];
+  }
+
+  /**
+   * 计算向量叉积
+   */
+  _cross(o, a, b, vertices) {
+    const [ox, oy] = vertices[o];
+    const [ax, ay] = vertices[a];
+    const [bx, by] = vertices[b];
+    return (ax - ox) * (by - oy) - (ay - oy) * (bx - ox);
+  }
+
+  /**
+   * 计算 vertices_edges (FOLD v1.2)
+   * 为每个顶点计算其关联的边ID列表
+   */
+  _computeVerticesEdges(vertices, edges) {
+    if (!vertices || vertices.length === 0) return [];
+    const verticesEdges = Array.from({ length: vertices.length }, () => []);
+    for (let edgeIdx = 0; edgeIdx < edges.length; edgeIdx++) {
+      const [v1, v2] = edges[edgeIdx];
+      if (v1 >= 0 && v1 < vertices.length) verticesEdges[v1].push(edgeIdx);
+      if (v2 >= 0 && v2 < vertices.length) verticesEdges[v2].push(edgeIdx);
+    }
+    return verticesEdges;
+  }
+
+  /**
+   * 导出为FOLD文件
+   */
+  saveFOLD(foldData, outputPath) {
+    fs.mkdirSync(path.dirname(outputPath) || '.', { recursive: true });
+    fs.writeFileSync(outputPath, JSON.stringify(foldData, null, 2));
+    console.log(`✅ FOLD已保存: ${outputPath}`);
+    return outputPath;
+  }
+
+  /**
+   * 生成 SVG 格式的折痕图
+   * 支持 FOLD v1.2 折痕信息 (M/V/B/C/J)
+   *
+   * @param {Object} foldData - FOLD格式数据
+   * @param {Object} options - SVG选项
+   * @param {number} options.width - SVG宽度
+   * @param {number} options.height - SVG高度
+   * @param {number} options.padding - 内边距
+   * @returns {string} SVG内容
+   */
+  generateSVG(foldData, options = {}) {
+    const {
+      width = 800,
+      height = 800,
+      padding = 50
+    } = options;
+
+    const { vertices_coords, edges_vertices, edges_assignment, frame_title = 'Crease Pattern' } = foldData;
+
+    if (!vertices_coords || vertices_coords.length === 0) {
+      throw new Error('No vertices found in fold data');
+    }
+
+    // 计算坐标范围
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [x, y] of vertices_coords) {
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+
+    // 添加padding
+    minX -= 0.1;
+    maxX += 0.1;
+    minY -= 0.1;
+    maxY += 0.1;
+
+    // 计算缩放和偏移
+    const scaleX = (width - 2 * padding) / (maxX - minX);
+    const scaleY = (height - 2 * padding) / (maxY - minY);
+    const scale = Math.min(scaleX, scaleY);
+    const offsetX = padding + (width - 2 * padding - (maxX - minX) * scale) / 2;
+    const offsetY = padding + (height - 2 * padding - (maxY - minY) * scale) / 2;
+
+    // 坐标转换函数
+    const toSvgX = (x) => (x - minX) * scale + offsetX;
+    const toSvgY = (y) => height - ((y - minY) * scale + offsetY); // Y轴翻转
+
+    // 颜色映射 - origami-simulator 官方标准
+    const colors = {
+      M: '#FF0000',  // 红色 - Mountain (官方标准)
+      V: '#0000FF',  // 蓝色 - Valley (官方标准)
+      B: '#000000',  // 黑色 - Boundary (官方标准)
+      F: '#FFFF00',  // 黄色 - Flat
+      C: '#FF00FF',  // 紫红色 - Cut
+      J: '#00FF00',  // 绿色 - Join
+    };
+
+    // 折痕类型统计
+    const stats = { M: 0, V: 0, B: 0, F: 0, C: 0, J: 0 };
+
+    // 生成SVG
+    let svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 ${width} ${height}"
+     width="${width}" height="${height}">
+  <title>${this.escapeXml(frame_title)}</title>
+  <desc>Generated by CreasePatternGeneratorV3</desc>
+
+  <!-- Styles -->
+  <defs>
+    <style>
+      .crease-m { stroke: #FF0000; stroke-width: 1.5; fill: none; }
+      .crease-v { stroke: #0000FF; stroke-width: 1.5; fill: none; }
+      .crease-b { stroke: #000000; stroke-width: 2; fill: none; }
+      .crease-f { stroke: #FFFF00; stroke-width: 1; fill: none; }
+      .crease-c { stroke: #FF00FF; stroke-width: 2; fill: none; }
+      .crease-j { stroke: #00FF00; stroke-width: 2; fill: none; }
+      .vertex { fill: #000000; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="${width}" height="${height}" fill="#fafafa"/>
+
+  <!-- Crease Lines -->
+  <g id="creases">
+`;
+
+    // 绘制边 - 使用 path 元素（origami-simulator 兼容）
+    if (edges_vertices && edges_assignment) {
+      let errorCount = 0;
+      for (let i = 0; i < edges_vertices.length; i++) {
+        const [v1, v2] = edges_vertices[i];
+        const assignment = (edges_assignment[i] || 'B').toUpperCase();
+
+        // 边界检查
+        if (v1 < 0 || v1 >= vertices_coords.length ||
+            v2 < 0 || v2 >= vertices_coords.length ||
+            !vertices_coords[v1] || !vertices_coords[v2]) {
+          errorCount++;
+          continue; // 跳过无效边
+        }
+
+        const x1 = toSvgX(vertices_coords[v1][0]);
+        const y1 = toSvgY(vertices_coords[v1][1]);
+        const x2 = toSvgX(vertices_coords[v2][0]);
+        const y2 = toSvgY(vertices_coords[v2][1]);
+
+        stats[assignment] = (stats[assignment] || 0) + 1;
+
+        // 使用官方的 origami-simulator 格式：
+        // fill 和 stroke 使用相同颜色（不是 fill="none"）
+        const color = this._getStrokeColor(assignment);
+        svg += `    <path fill="${color}" stroke="${color}" stroke-width="${assignment === 'B' ? 2 : 1.5}" stroke-miterlimit="10" d="M${x1.toFixed(2)},${y1.toFixed(2)} L${x2.toFixed(2)},${y2.toFixed(2)}"/>\n`;
+      }
+      if (errorCount > 0) {
+        console.warn(`⚠️  跳过 ${errorCount} 条无效边`);
+      }
+    }
+
+    svg += `  </g>
+
+  <!-- Vertices -->
+  <g id="vertices" class="vertex">
+`;
+
+    // 绘制顶点（小圆点）
+    for (let i = 0; i < vertices_coords.length; i++) {
+      const coord = vertices_coords[i];
+      if (!coord || coord.length < 2) continue;
+      const [x, y] = coord;
+      if (typeof x !== 'number' || typeof y !== 'number') continue;
+      svg += `    <circle cx="${toSvgX(x).toFixed(2)}" cy="${toSvgY(y).toFixed(2)}" r="2"/>\n`;
+    }
+
+    svg += `  </g>
+
+  <!-- Legend -->
+  <g id="legend" transform="translate(20, ${height - 120})">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Legend</text>
+    <line x1="0" y1="15" x2="30" y2="15" stroke="#FF0000" stroke-width="2"/>
+    <text x="40" y="19" font-family="Arial, sans-serif" font-size="11">Mountain (M): ${stats.M || 0}</text>
+    <line x1="0" y1="35" x2="30" y2="35" stroke="#0000FF" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="40" y="39" font-family="Arial, sans-serif" font-size="11">Valley (V): ${stats.V || 0}</text>
+    <line x1="0" y1="55" x2="30" y2="55" stroke="#000000" stroke-width="2"/>
+    <text x="40" y="59" font-family="Arial, sans-serif" font-size="11">Boundary (B): ${stats.B || 0}</text>
+    <line x1="0" y1="75" x2="30" y2="75" stroke="#FFFF00" stroke-width="1" stroke-dasharray="2,2"/>
+    <text x="40" y="79" font-family="Arial, sans-serif" font-size="11">Flat (F): ${stats.F || 0}</text>
+    <line x1="0" y1="95" x2="30" y2="95" stroke="#FF00FF" stroke-width="2" stroke-dasharray="8,4"/>
+    <text x="40" y="99" font-family="Arial, sans-serif" font-size="11">Cut (C): ${stats.C || 0}</text>
+  </g>
+
+  <!-- Title -->
+  <text x="${width / 2}" y="25" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold">${this.escapeXml(frame_title)}</text>
+
+</svg>`;
+
+    return svg;
+  }
+
+  /**
+   * 保存为SVG文件
+   */
+  saveSVG(foldData, outputPath, options = {}) {
+    const svg = this.generateSVG(foldData, options);
+    fs.mkdirSync(path.dirname(outputPath) || '.', { recursive: true });
+    fs.writeFileSync(outputPath, svg, 'utf8');
+    console.log(`✅ SVG已保存: ${outputPath}`);
+    return outputPath;
+  }
+
+  /**
+   * XML转义
+   */
+  escapeXml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
+  /**
+   * 获取折痕类型的颜色 (origami-simulator 官方标准)
+   */
+  _getStrokeColor(assignment) {
+    const colors = {
+      M: '#FF0000',  // 红色 - Mountain
+      V: '#0000FF',  // 蓝色 - Valley
+      B: '#000000',  // 黑色 - Boundary
+      F: '#FFFF00',  // 黄色 - Flat
+      C: '#FF00FF',  // 紫红色 - Cut
+      J: '#00FF00',  // 绿色 - Join
+    };
+    return colors[assignment.toUpperCase()] || colors.B;
+  }
+}
+
+// CLI入口
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  const type = args[0] || 'help';
+  const output = args[1] || './output.fold';
+
+  switch (type) {
+    case 'star':
+      CreasePatternGeneratorV3.create('star', { arms: 10, rings: 4 })
+        .pipe?.() || new CreasePatternGeneratorV3().saveFOLD(
+          CreasePatternGeneratorV3.create('star', { arms: 10, rings: 4 }),
+          output
+        );
+      break;
+
+    case 'crane':
+      new CreasePatternGeneratorV3().saveFOLD(
+        new CreasePatternGeneratorV3().generateCraneBase({ grid: 32 }),
+        output
+      );
+      break;
+
+    case 'fish':
+      new CreasePatternGeneratorV3().saveFOLD(
+        new CreasePatternGeneratorV3().generateFishBase({ grid: 32 }),
+        output
+      );
+      break;
+
+    case 'miura':
+      new CreasePatternGeneratorV3().saveFOLD(
+        new CreasePatternGeneratorV3().generateMiuraOri({ rows: 6, cols: 10 }),
+        output
+      );
+      break;
+
+    case 'tiger':
+      new CreasePatternGeneratorV3().saveFOLD(
+        new CreasePatternGeneratorV3().generateTigerBase({ grid: 32 }),
+        output
+      );
+      break;
+
+    case 'all': {
+      const gen = new CreasePatternGeneratorV3();
+      const dir = path.dirname(output);
+      fs.mkdirSync(dir, { recursive: true });
+
+      gen.saveFOLD(gen.generateStarTessellation({ arms: 10, rings: 4 }), path.join(dir, 'star.fold'));
+      gen.saveFOLD(gen.generateCraneBase({ grid: 32 }), path.join(dir, 'crane_base.fold'));
+      gen.saveFOLD(gen.generateFishBase({ grid: 32 }), path.join(dir, 'fish_base.fold'));
+      gen.saveFOLD(gen.generateMiuraOri({ rows: 6, cols: 10 }), path.join(dir, 'miura_ori.fold'));
+      gen.saveFOLD(gen.generateTigerBase({ grid: 32 }), path.join(dir, 'tiger_base.fold'));
+      console.log('✅ 所有折痕图已生成');
+      break;
+    }
+
+    default:
+      console.log(`
+折痕图生成器 v3.0 (逆推优化版)
+
+用法: node crease-pattern-generator-v3.js <类型> [输出路径]
+
+类型:
+  star    - 星形镶嵌折纸 (10角对称)
+  crane   - 纸鹤基本型 (预折痕技术)
+  fish    - 鱼形基本型
+  miura   - Miura-Ori 折痕
+  tiger   - 老虎基本型
+  all     - 生成所有类型
+
+示例:
+  node crease-pattern-generator-v3.js crane ./output/crane_base.fold
+  node crease-pattern-generator-v3.js all ./origami-cp/
+      `);
+  }
+}
+
+module.exports = CreasePatternGeneratorV3;

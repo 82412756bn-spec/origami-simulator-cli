@@ -1,0 +1,184 @@
+{
+  "file_spec": "http://w3.org/TR/FOLD-FILE-FORMAT",
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "bistable-curved",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      175.71,
+      70.461,
+      0.0
+    ],
+    [
+      437.13800000000003,
+      70.461,
+      0.0
+    ],
+    [
+      437.13800000000003,
+      331.89,
+      0.0
+    ],
+    [
+      175.71,
+      331.89,
+      0.0
+    ],
+    [
+      308.031,
+      198.498,
+      0.0
+    ],
+    [
+      437.138,
+      198.498,
+      0.0
+    ],
+    [
+      175.71,
+      198.498,
+      0.0
+    ],
+    [
+      308.031,
+      70.461,
+      0.0
+    ],
+    [
+      254.917,
+      70.461,
+      0.0
+    ],
+    [
+      363.206,
+      331.89,
+      0.0
+    ],
+    [
+      175.707,
+      143.688,
+      0.0
+    ],
+    [
+      437.138,
+      251.976,
+      0.0
+    ],
+    [
+      175.71,
+      253.307,
+      0.0
+    ],
+    [
+      437.138,
+      145.02,
+      0.0
+    ],
+    [
+      361.056,
+      70.483,
+      0.0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      4,
+      2
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      4,
+      3
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      4,
+      7
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      12,
+      13
+    ],
+    [
+      4,
+      14
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B",
+    "U",
+    "U",
+    "U",
+    "U",
+    "U",
+    "U",
+    "U",
+    "U",
+    "U",
+    "U"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 0,
+    "valley_creases": 0,
+    "total_edges": 14,
+    "total_vertices": 15,
+    "total_faces": 0,
+    "conversion_note": "Faces not computed - use Origami Simulator for 3D preview"
+  }
+}

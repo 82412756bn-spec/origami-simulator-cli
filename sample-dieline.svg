@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <style>
+    .cut-line { stroke: #000000; stroke-width: 0.5; fill: none; stroke-linecap: round; }
+    .mountain-line { stroke: #ff0000; stroke-width: 0.3; fill: none; stroke-dasharray: 4,2; stroke-linecap: round; }
+    .valley-line { stroke: #0066cc; stroke-width: 0.3; fill: none; stroke-dasharray: 2,2; stroke-linecap: round; }
+    .label { font-family: Arial, sans-serif; font-size: 10px; fill: #333; }
+    .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #000; }
+    .dimension { font-family: Arial, sans-serif; font-size: 9px; fill: #666; font-style: italic; }
+  </style>
+  <rect width="100%" height="100%" fill="white"/>
+  <text class="title" x="20" y="20">Mailer Box 100×60×30mm (t=1mm)</text>
+  <text class="label" x="20" y="35">Dieline: Cut solid black, Fold dashed (M=red M, V=blue V)</text>
+  <g transform="translate(70,70) scale(6.055045871559633, 6.055045871559633)">
+    <polygon points="0,0 100,0 100,60 0,60" fill="#f0f0f0" stroke="none" opacity="0.5"/>
+    <line class="cut-line" x1="0" y1="0" x2="100" y2="0" />
+    <line class="cut-line" x1="100" y1="0" x2="100" y2="60" />
+    <line class="cut-line" x1="100" y1="60" x2="0" y2="60" />
+    <line class="cut-line" x1="0" y1="60" x2="0" y2="0" />
+    <line class="mountain-line" x1="0" y1="0" x2="9" y2="-15" />
+    <line class="mountain-line" x1="9" y1="-15" x2="91" y2="-15" />
+    <line class="mountain-line" x1="91" y1="-15" x2="100" y2="0" />
+    <line class="valley-line" x1="100" y1="0" x2="109" y2="-15" />
+    <line class="valley-line" x1="109" y1="-15" x2="109" y2="15" />
+    <line class="valley-line" x1="109" y1="15" x2="100" y2="9" />
+    <line class="valley-line" x1="100" y1="9" x2="100" y2="51" />
+    <line class="valley-line" x1="100" y1="51" x2="109" y2="51" />
+    <line class="valley-line" x1="109" y1="51" x2="109" y2="69" />
+    <line class="valley-line" x1="109" y1="69" x2="100" y2="60" />
+  </g>
+  <g>
+    <rect x="670" y="35" width="120" height="80" fill="white" stroke="#ccc"/>
+    <text class="label" x="675" y="50">Legend:</text>
+    <line class="cut-line" x1="675" y1="62" x2="700" y2="62"/>
+    <text class="label" x="705" y="65">Cut line (B)</text>
+    <line class="mountain-line" x1="675" y1="77" x2="700" y2="77"/>
+    <text class="label" x="705" y="80">Mountain (M)</text>
+    <line class="valley-line" x1="675" y1="92" x2="700" y2="92"/>
+    <text class="label" x="705" y="95">Valley (V)</text>
+  </g>
+  <text class="dimension" x="20" y="580">Width: 100mm</text>
+  <text class="dimension" x="120" y="580">Height: 60mm</text>
+  <text class="dimension" x="240" y="580">Depth/⌀: 30mm</text>
+</svg>

@@ -1,0 +1,157 @@
+{
+  "file_spec": "http://w3.org/TR/FOLD-FILE-FORMAT",
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "rotating-star",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      543.484,
+      552.257,
+      0.0
+    ],
+    [
+      451.418,
+      659.334,
+      0.0
+    ],
+    [
+      318.148,
+      706.035,
+      0.0
+    ],
+    [
+      179.382,
+      679.843,
+      0.0
+    ],
+    [
+      72.304,
+      587.777,
+      0.0
+    ],
+    [
+      25.605,
+      454.507,
+      0.0
+    ],
+    [
+      51.796,
+      315.74,
+      0.0
+    ],
+    [
+      143.862,
+      208.662,
+      0.0
+    ],
+    [
+      277.132,
+      161.962,
+      0.0
+    ],
+    [
+      415.898,
+      188.155,
+      0.0
+    ],
+    [
+      522.977,
+      280.221,
+      0.0
+    ],
+    [
+      569.676,
+      413.492,
+      0.0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      7,
+      8
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      11,
+      0
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 0,
+    "valley_creases": 0,
+    "total_edges": 12,
+    "total_vertices": 12,
+    "total_faces": 0,
+    "conversion_note": "Faces not computed - use Origami Simulator for 3D preview"
+  }
+}

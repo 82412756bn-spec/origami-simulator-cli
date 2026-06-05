@@ -1,0 +1,192 @@
+{
+  "file_spec": "http://w3.org/TR/FOLD-FILE-FORMAT",
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "square-twist",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      150.82,
+      88.47,
+      0
+    ],
+    [
+      213.18,
+      249.18,
+      0
+    ],
+    [
+      249.18,
+      186.82,
+      0
+    ],
+    [
+      150.82,
+      213.18,
+      0
+    ],
+    [
+      186.82,
+      150.82,
+      0
+    ],
+    [
+      124.47,
+      186.82,
+      0
+    ],
+    [
+      88.47,
+      249.18,
+      0
+    ],
+    [
+      213.18,
+      124.47,
+      0
+    ],
+    [
+      275.53,
+      88.47,
+      0
+    ],
+    [
+      311.53,
+      150.82,
+      0
+    ],
+    [
+      275.53,
+      213.18,
+      0
+    ],
+    [
+      311.53,
+      275.53,
+      0
+    ],
+    [
+      249.18,
+      311.53,
+      0
+    ],
+    [
+      186.82,
+      275.53,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      1
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      6,
+      0
+    ],
+    [
+      0,
+      7
+    ],
+    [
+      7,
+      8
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      11,
+      12
+    ],
+    [
+      12,
+      13
+    ]
+  ],
+  "edges_assignment": [
+    "V",
+    "V",
+    "V",
+    "V",
+    "V",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B",
+    "B"
+  ],
+  "edges_foldAngle": [
+    -177,
+    -177,
+    -177,
+    -177,
+    -177,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 0,
+    "valley_creases": 5,
+    "total_edges": 14,
+    "total_vertices": 14,
+    "total_faces": 0,
+    "conversion_note": "Faces not computed - use Origami Simulator for 3D preview"
+  },
+  "thickness": 1,
+  "upgrades": [
+    {
+      "version": "v1.5",
+      "upgrade": "system-wide thickness constraint applied",
+      "thickness": 1,
+      "reduction_degrees": 3,
+      "upgraded_at": "2026-06-01",
+      "tool": "origami-simulator-cli v1.5.0 (system-wide upgrade)",
+      "original_path": "文档/origami-simulator-cli/square-twist.fold"
+    }
+  ],
+  "file_creator": "unknown [v1.5 upgraded]"
+}

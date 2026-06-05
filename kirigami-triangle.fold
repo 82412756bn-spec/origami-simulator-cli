@@ -1,0 +1,21 @@
+{
+  "file_spec": "http://w3.org/TR/FOLD-FILE-FORMAT",
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "kirigami-triangle",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [],
+  "edges_vertices": [],
+  "edges_assignment": [],
+  "edges_foldAngle": [],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 0,
+    "valley_creases": 0,
+    "total_edges": 0,
+    "total_vertices": 0,
+    "total_faces": 0,
+    "conversion_note": "Faces not computed - use Origami Simulator for 3D preview"
+  }
+}

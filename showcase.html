@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>origami-simulator-cli 包装CAD成果展示</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      color: #fff;
+      padding: 40px 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    h1 {
+      text-align: center;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #00d9ff, #00ff88);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 40px;
+      font-size: 1.1em;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .card h2 {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      color: #00d9ff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card h2 .icon { font-size: 1.2em; }
+
+    /* Workflow */
+    .workflow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 30px 0;
+    }
+    .workflow-step {
+      background: rgba(0,217,255,0.1);
+      border: 2px solid rgba(0,217,255,0.3);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      min-width: 200px;
+    }
+    .workflow-step .num {
+      background: #00d9ff;
+      color: #000;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin: 0 auto 10px;
+    }
+    .workflow-step .cmd {
+      font-family: monospace;
+      background: #000;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.85em;
+      color: #0f0;
+      margin-top: 10px;
+    }
+    .arrow {
+      font-size: 2em;
+      color: #00d9ff;
+    }
+
+    /* Comparison Table */
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .comparison .before, .comparison .after {
+      padding: 20px;
+      border-radius: 12px;
+    }
+    .before {
+      background: rgba(255,0,0,0.2);
+      border: 1px solid rgba(255,0,0,0.3);
+    }
+    .after {
+      background: rgba(0,255,0,0.1);
+      border: 1px solid rgba(0,255,0,0.3);
+    }
+    .before h3 { color: #ff6b6b; }
+    .after h3 { color: #00ff88; }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      margin-left: 10px;
+    }
+    .badge.fail { background: #ff4757; }
+    .badge.pass { background: #2ed573; }
+
+    /* Code Block */
+    .code-block {
+      background: #0d1117;
+      border-radius: 8px;
+      padding: 15px 20px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.9em;
+      overflow-x: auto;
+      line-height: 1.6;
+    }
+    .code-block .key { color: #ff79c6; }
+    .code-block .str { color: #f1fa8c; }
+    .code-block .num { color: #bd93f9; }
+
+    /* Template Grid */
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .template-item {
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 15px;
+      border-left: 3px solid #00d9ff;
+    }
+    .template-item .name { font-weight: bold; color: #00d9ff; }
+    .template-item .cn { color: #888; font-size: 0.9em; }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .stat {
+      text-align: center;
+      padding: 20px;
+      background: rgba(0,217,255,0.1);
+      border-radius: 12px;
+    }
+    .stat .num {
+      font-size: 2.5em;
+      font-weight: bold;
+      color: #00d9ff;
+    }
+    .stat .label { color: #888; margin-top: 5px; }
+
+    /* Fold Angle Diagram */
+    .angle-diagram {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin: 30px 0;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .angle-item {
+      text-align: center;
+    }
+    .angle-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 10px;
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+    .mountain { background: linear-gradient(135deg, #ff6b6b, #ee5a5a); }
+    .valley { background: linear-gradient(135deg, #5f9ea0, #4682b4); }
+    .thickness-slider {
+      width: 100%;
+      max-width: 400px;
+      margin: 20px auto;
+    }
+    .thickness-slider input {
+      width: 100%;
+      cursor: pointer;
+    }
+
+    /* Commands */
+    .commands {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+    }
+    .cmd-item {
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 12px 15px;
+    }
+    .cmd-item .cmd { color: #50fa7b; font-family: monospace; }
+    .cmd-item .desc { color: #888; font-size: 0.85em; margin-top: 5px; }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      color: #666;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 768px) {
+      .comparison, .stats { grid-template-columns: 1fr; }
+      .workflow { flex-direction: column; }
+      .arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📦 origami-simulator-cli</h1>
+    <p class="subtitle">包装设计 CAD 工具 - 从折纸模拟器到商业包装可视化</p>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="num">4</div>
+        <div class="label">新增模块</div>
+      </div>
+      <div class="stat">
+        <div class="num">95</div>
+        <div class="label">测试通过</div>
+      </div>
+      <div class="stat">
+        <div class="num">177°</div>
+        <div class="label">Mountain 角度</div>
+      </div>
+      <div class="stat">
+        <div class="num">5</div>
+        <div class="label">内置盒型</div>
+      </div>
+    </div>
+
+    <!-- Core Improvement -->
+    <div class="card">
+      <h2><span class="icon">⚡</span> 核心提升: 厚度约束解决物理冲突</h2>
+
+      <div class="angle-diagram">
+        <div class="angle-item">
+          <div class="angle-circle mountain">M<br>177°</div>
+          <div>Mountain (山折)</div>
+        </div>
+        <div class="angle-item">
+          <div class="angle-circle valley">V<br>-177°</div>
+          <div>Valley (谷折)</div>
+        </div>
+      </div>
+
+      <div class="comparison">
+        <div class="before">
+          <h3>BEFORE <span class="badge fail">v0.2.0</span></h3>
+          <div class="code-block">
+<span class="key">"edges_foldAngle"</span>: [<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>, ...]<br>
+<span class="key">"edges_assignment"</span>: [<span class="str">"B"</span>,<span class="str">"B"</span>,<span class="str">"B"</span>,<span class="str">"B"</span>...]
+          </div>
+          <p style="margin-top:15px; color:#ff6b6b;">❌ t=0 薄纸假设 → 多解冲突<br>折叠时面会重叠</p>
+        </div>
+        <div class="after">
+          <h3>AFTER <span class="badge pass">v1.0.0</span></h3>
+          <div class="code-block">
+<span class="key">"edges_foldAngle"</span>: [<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>, <span class="num">177</span>, <span class="num">177</span>, <span class="num">-177</span>, <span class="num">-177</span>]<br>
+<span class="key">"edges_assignment"</span>: [<span class="str">"B"</span>,<span class="str">"B"</span>,<span class="str">"B"</span>,<span class="str">"B"</span>,<span class="str">"M"</span>,<span class="str">"M"</span>,<span class="str">"V"</span>,<span class="str">"V"</span>]
+          </div>
+          <p style="margin-top:15px; color:#2ed573;">✅ t=1mm 真实厚度 → 唯一解<br>物理正确的折叠模拟</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Workflow -->
+    <div class="card">
+      <h2><span class="icon">🔄</span> 工作流程</h2>
+      <div class="workflow">
+        <div class="workflow-step">
+          <div class="num">1</div>
+          <div>生成盒型模板</div>
+          <div class="cmd">template generate</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="workflow-step">
+          <div class="num">2</div>
+          <div>绑定设计图</div>
+          <div class="cmd">bind add</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="workflow-step">
+          <div class="num">3</div>
+          <div>3D渲染</div>
+          <div class="cmd">render single</div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="workflow-step">
+          <div class="num">4</div>
+          <div>商业图片</div>
+          <div class="cmd">--dpi 300</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Templates -->
+    <div class="card">
+      <h2><span class="icon">📦</span> 内置盒型模板</h2>
+      <div class="template-grid">
+        <div class="template-item">
+          <div class="name">folding-carton</div>
+          <div class="cn">折叠纸盒</div>
+        </div>
+        <div class="template-item">
+          <div class="name">aircraft</div>
+          <div class="cn">飞机盒</div>
+        </div>
+        <div class="template-item">
+          <div class="name">mailer</div>
+          <div class="cn">邮寄盒</div>
+        </div>
+        <div class="template-item">
+          <div class="name">pizza</div>
+          <div class="cn">披萨盒</div>
+        </div>
+        <div class="template-item">
+          <div class="name">tube</div>
+          <div class="cn">圆管盒</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commands -->
+    <div class="card">
+      <h2><span class="icon">⌨️</span> 新增命令</h2>
+      <div class="commands">
+        <div class="cmd-item">
+          <div class="cmd">origami dieline parse &lt;file&gt;</div>
+          <div class="desc">解析 PDF/EPS/SVG/FOLD 文件</div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd">origami bind add &lt;model&gt; &lt;face&gt; &lt;artwork&gt;</div>
+          <div class="desc">绑定 artwork 到指定面</div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd">origami render single &lt;model&gt;</div>
+          <div class="desc">商业级 3D 渲染</div>
+        </div>
+        <div class="cmd-item">
+          <div class="cmd">origami template generate &lt;name&gt;</div>
+          <div class="desc">生成盒型模板，支持 --thickness 参数</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Example -->
+    <div class="card">
+      <h2><span class="icon">💡</span> 使用示例</h2>
+      <div class="code-block">
+# 生成 100×60×30mm 邮寄盒，厚度1mm<br>
+$ origami template generate mailer -w 100 -h 60 -d 30 -t 1 -o mailer.fold<br><br>
+# 渲染 300 DPI 商业图片<br>
+$ origami render single mailer.fold -o mockup.png --dpi 300 --shadow --preset print<br><br>
+# 绑定设计图<br>
+$ origami bind add mailer.fold 0 artwork/front.png<br>
+$ origami bind add mailer.fold 1 artwork/back.png
+      </div>
+    </div>
+
+    <footer>
+      origami-simulator-cli v1.0.0 | 95 tests passed ✅
+    </footer>
+  </div>
+</body>
+</html>

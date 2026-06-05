@@ -1,0 +1,123 @@
+{
+  "file_spec": 1.1,
+  "file_creator": "OrigamiSimulator CLI Test [v1.5 upgraded]",
+  "file_classes": [
+    "singleModel"
+  ],
+  "frame_title": "Test Crane",
+  "vertices_coords": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      0.5,
+      0.5,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      0
+    ],
+    [
+      0,
+      4
+    ],
+    [
+      1,
+      4
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      3,
+      4
+    ]
+  ],
+  "faces_vertices": [
+    [
+      0,
+      1,
+      4
+    ],
+    [
+      1,
+      2,
+      4
+    ],
+    [
+      2,
+      3,
+      4
+    ],
+    [
+      3,
+      0,
+      4
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B",
+    "M",
+    "V",
+    "M",
+    "V"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0,
+    177,
+    -177,
+    177,
+    -177
+  ],
+  "thickness": 1,
+  "upgrades": [
+    {
+      "version": "v1.5",
+      "upgrade": "system-wide thickness constraint applied",
+      "thickness": 1,
+      "reduction_degrees": 3,
+      "upgraded_at": "2026-06-01",
+      "tool": "origami-simulator-cli v1.5.0 (system-wide upgrade)",
+      "original_path": "文档/origami-simulator-cli/examples/sample-crane.fold"
+    }
+  ]
+}
