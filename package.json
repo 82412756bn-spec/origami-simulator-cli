@@ -1,6 +1,6 @@
 {
   "name": "origami-simulator-cli",
-  "version": "0.2.0",
+  "version": "2.19.0",
   "description": "CLI tool for OrigamiSimulator.org - Simulate origami folding patterns via command line",
   "main": "src/index.js",
   "bin": {
@@ -18,7 +18,9 @@
     "simulation",
     "cli",
     "folding",
-    "3d-printing"
+    "3d-printing",
+    "fold-analyzer",
+    "json-schema"
   ],
   "author": "",
   "license": "MIT",
