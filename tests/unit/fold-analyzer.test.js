@@ -2674,3 +2674,74 @@ describe('FoldAnalyzer v2.18 - CLI Refactor (subcommand aliases)', () => {
     expect(html).toContain('&lt;script&gt;');
   });
 });
+
+describe('FoldAnalyzer v2.19 - Validate Subcommand (CI/CD-friendly)', () => {
+  test('validateAgainstSchema: returns CI-friendly structure (v2.19)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const validation = analyzer.validateAgainstSchema();
+    expect(validation).toHaveProperty('valid');
+    expect(validation).toHaveProperty('errors');
+    expect(validation).toHaveProperty('schemaVersion');
+    expect(validation).toHaveProperty('expectedSchemaVersion');
+    expect(validation).toHaveProperty('versionMatch');
+    expect(validation).toHaveProperty('summary');
+  });
+
+  test('validateAgainstSchema: valid model → valid=true, versionMatch=true', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const validation = analyzer.validateAgainstSchema();
+    expect(validation.valid).toBe(true);
+    expect(validation.versionMatch).toBe(true);
+    expect(validation.errors.length).toBe(0);
+  });
+
+  test('validateAgainstSchema: broken output → valid=false, errors populated', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    delete result.basic;  // remove required field
+    const validation = analyzer.validateAgainstSchema(result);
+    expect(validation.valid).toBe(false);
+    expect(validation.errors.length).toBeGreaterThan(0);
+  });
+
+  test('validateAgainstSchema: empty errors list when valid', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0]],
+      faces_vertices: [[0,1,2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const validation = analyzer.validateAgainstSchema();
+    expect(Array.isArray(validation.errors)).toBe(true);
+    expect(validation.errors.length).toBe(0);
+  });
+
+  test('validateAgainstSchema: result is JSON-serializable for --json output', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const validation = analyzer.validateAgainstSchema();
+    const json = JSON.stringify(validation);
+    const parsed = JSON.parse(json);
+    expect(parsed.valid).toBeDefined();
+    expect(parsed.schemaVersion).toBe('2.10');
+  });
+});
