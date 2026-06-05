@@ -1612,3 +1612,132 @@ describe('FoldAnalyzer v2.9 - Fold Order', () => {
     expect(result.foldOrder).toHaveProperty('foldSequence');
   });
 });
+
+describe('FoldAnalyzer v2.10 - JSON Schema & M/V-Layer Consistency', () => {
+  test('analyze() includes schemaVersion: "2.10"', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result.schemaVersion).toBe('2.10');
+  });
+
+  test('analyze() output has all 14 schema-required top-level fields', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    const requiredFields = [
+      'schemaVersion', 'basic', 'structure', 'validation', 'symmetry',
+      'classification', 'quality', 'strain', 'mvConsistency',
+      'selfIntersection', 'faceNormals', 'holes', 'foldOrder', 'warnings',
+    ];
+    for (const field of requiredFields) {
+      expect(result).toHaveProperty(field);
+    }
+  });
+
+  test('schema.json is valid JSON and references v2.10', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const schemaPath = path.join(__dirname, '../../docs/fold-analyzer-schema.json');
+    expect(fs.existsSync(schemaPath)).toBe(true);
+    const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+    expect(schema.title).toContain('FOLD Analyzer');
+    expect(schema.required).toContain('schemaVersion');
+    expect(schema.properties.schemaVersion.const).toBe('2.10');
+  });
+
+  test('M/V-Layer: edge between same-layer faces → no inconsistency', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[0,-1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0],[0,1],[1,3],[3,0]],
+      faces_vertices: [[0,1,2], [0,1,3]],
+      edges_assignment: ['M','B','B','B','B','B'],
+      face_orders: [1, 1],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    const layerSkips = mvc.structuralInconsistencies.filter(s => s.issue === 'mv-layer-skip');
+    expect(layerSkips.length).toBe(0);
+  });
+
+  test('M/V-Layer: edge between adjacent layers (gap=1) → no skip', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[0,-1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0],[0,1],[1,3],[3,0]],
+      faces_vertices: [[0,1,2], [0,1,3]],
+      edges_assignment: ['M','B','B','B','B','B'],
+      face_orders: [1, 2],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    const layerSkips = mvc.structuralInconsistencies.filter(s => s.issue === 'mv-layer-skip');
+    expect(layerSkips.length).toBe(0);
+  });
+
+  test('M/V-Layer: edge skipping layers (gap>1) → structuralInconsistency', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[0,-1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0],[0,1],[1,3],[3,0]],
+      faces_vertices: [[0,1,2], [0,1,3]],
+      edges_assignment: ['M','B','B','B','B','B'],
+      face_orders: [1, 5],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    const layerSkips = mvc.structuralInconsistencies.filter(s => s.issue === 'mv-layer-skip');
+    expect(layerSkips.length).toBe(1);
+    expect(layerSkips[0].issue).toBe('mv-layer-skip');
+    expect(layerSkips[0].detail).toContain('skips layers');
+  });
+
+  test('M/V-Layer: V edge also flagged (not just M)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[0,-1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0],[0,1],[1,3],[3,0]],
+      faces_vertices: [[0,1,2], [0,1,3]],
+      edges_assignment: ['V','B','B','B','B','B'],
+      face_orders: [1, 4],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    const layerSkips = mvc.structuralInconsistencies.filter(s => s.issue === 'mv-layer-skip');
+    expect(layerSkips.length).toBe(1);
+    expect(layerSkips[0].assignment).toBe('V');
+  });
+
+  test('M/V-Layer: no face_orders → layer-skip check skipped gracefully', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[0,-1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0],[0,1],[1,3],[3,0]],
+      faces_vertices: [[0,1,2], [0,1,3]],
+      edges_assignment: ['M','B','B','B','B','B'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const mvc = analyzer.analyzeMVConsistency();
+    const layerSkips = mvc.structuralInconsistencies.filter(s => s.issue === 'mv-layer-skip');
+    expect(layerSkips.length).toBe(0);
+    expect(mvc.notes.some(n => n.includes('skipping layers'))).toBe(false);
+  });
+
+  test('JSON output is valid and parseable with schemaVersion', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    const json = JSON.stringify(result);
+    const parsed = JSON.parse(json);
+    expect(parsed.schemaVersion).toBe('2.10');
+    expect(parsed.basic.vertexCount).toBe(4);
+  });
+});

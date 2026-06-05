@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://origami-simulator-cli.local/fold-analyzer-schema.json",
+  "title": "FOLD Analyzer v2.10 Output Schema",
+  "description": "JSON Schema for the output of FoldAnalyzer.analyze(). Every field is documented with type, units, and source version. The schema is enforced by tests/unit/fold-analyzer.test.js (v2.10 'schema-compliance' describe block).",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "basic",
+    "structure",
+    "validation",
+    "symmetry",
+    "classification",
+    "quality",
+    "strain",
+    "mvConsistency",
+    "selfIntersection",
+    "faceNormals",
+    "holes",
+    "foldOrder",
+    "warnings"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "2.10",
+      "description": "Schema version (matches the analyzer version that produced this output)."
+    },
+
+    "basic": {
+      "type": "object",
+      "category": "math",
+      "addedIn": "2.0",
+      "description": "Basic geometric counts and bounding box. Math primitives.",
+      "required": ["vertexCount", "edgeCount", "faceCount", "boundingBox", "eulerCharacteristic", "genus", "surfaceType", "edgeStats"],
+      "properties": {
+        "vertexCount": { "type": "integer", "minimum": 0 },
+        "edgeCount": { "type": "integer", "minimum": 0 },
+        "faceCount": { "type": "integer", "minimum": 0 },
+        "boundingBox": { "type": "object" },
+        "eulerCharacteristic": { "type": "integer" },
+        "genus": { "type": ["number", "null"], "description": "null for dieline/empty" },
+        "surfaceType": { "enum": ["empty", "dieline", "closed-or-mesh"] },
+        "edgeStats": { "type": "object" }
+      }
+    },
+
+    "structure": {
+      "type": "object",
+      "category": "topology",
+      "addedIn": "2.0",
+      "description": "Manifold check, component count, valence, layer info.",
+      "properties": {
+        "isManifold": { "type": "boolean" },
+        "componentCount": { "type": "integer", "minimum": 1 },
+        "avgValence": { "type": "string" },
+        "valences": { "type": "array" },
+        "layers": { "$ref": "#/$defs/layerInfo" }
+      }
+    },
+
+    "validation": {
+      "type": "object",
+      "category": "math",
+      "addedIn": "2.0",
+      "description": "Flat-foldability via Kawasaki and Maekawa theorems.",
+      "properties": {
+        "totalVertices": { "type": "integer" },
+        "checkedVertices": { "type": "integer" },
+        "passCount": { "type": "integer" },
+        "failCount": { "type": "integer" },
+        "skipped": { "type": "integer" },
+        "passRate": { "type": ["string", "number"] },
+        "note": { "type": "string" },
+        "failedVertices": { "type": "array" }
+      }
+    },
+
+    "symmetry": {
+      "type": "object",
+      "category": "geometry",
+      "addedIn": "2.0 (refined 2.1, 2.2)",
+      "description": "Rotational and reflective symmetry detection.",
+      "properties": {
+        "symmetries": { "type": "array" },
+        "hasSymmetry": { "type": "boolean" },
+        "strict": { "type": "boolean" },
+        "residualAccept": { "type": "number" },
+        "filteredSubgroups": { "type": "integer" },
+        "notes": { "type": "array" }
+      }
+    },
+
+    "classification": {
+      "type": "object",
+      "category": "topology",
+      "addedIn": "2.0",
+      "description": "Crease pattern type, aspect ratio, layer classification.",
+      "properties": {
+        "patternType": { "type": "string" },
+        "aspectRatio": { "type": "string" },
+        "boundingBox": { "type": "object" },
+        "layers": { "$ref": "#/$defs/layerInfo" }
+      }
+    },
+
+    "quality": {
+      "type": "object",
+      "category": "topology",
+      "addedIn": "2.0 (T-junction real 2.2)",
+      "description": "Mesh quality issues: degenerate edges, duplicates, isolated vertices, T-junctions, stretched faces.",
+      "properties": {
+        "issues": { "type": "array" },
+        "issueCount": { "type": "integer" },
+        "errorCount": { "type": "integer" },
+        "warningCount": { "type": "integer" }
+      }
+    },
+
+    "strain": {
+      "type": "object",
+      "category": "math",
+      "addedIn": "2.4",
+      "description": "Bending strain per edge: (1+cos(θ))/2, normalized 0–1.",
+      "properties": {
+        "edgeCount": { "type": "integer" },
+        "foldEdgeCount": { "type": "integer" },
+        "avgBendingStrain": { "type": ["number", "null"] },
+        "maxBendingStrain": { "type": ["number", "null"] },
+        "strainDistribution": { "type": "object" },
+        "perEdgeStrain": { "type": "array" },
+        "notes": { "type": "array" }
+      }
+    },
+
+    "mvConsistency": {
+      "type": "object",
+      "category": "consistency",
+      "addedIn": "2.5 (layer check added 2.10)",
+      "description": "M/V bend-direction consistency: dihedral vs foldAngle, plus layer-skip detection.",
+      "properties": {
+        "totalChecked": { "type": "integer" },
+        "consistent": { "type": "integer" },
+        "inconsistent": { "type": "integer" },
+        "noGeometry": { "type": "integer" },
+        "geometricInconsistencies": { "type": "array" },
+        "structuralInconsistencies": { "type": "array", "description": "M/V + layer conflicts (v2.10: also includes layer-skip)" },
+        "notes": { "type": "array" }
+      }
+    },
+
+    "selfIntersection": {
+      "type": "object",
+      "category": "geometry",
+      "addedIn": "2.6 (vertex-inside, coplanar 2.7)",
+      "description": "3D self-intersection: edge-crossing, vertex-inside, coplanar-overlap.",
+      "properties": {
+        "facePairCount": { "type": "integer" },
+        "aabbSurvivorCount": { "type": "integer" },
+        "intersectionCount": { "type": "integer" },
+        "edgeCrossingCount": { "type": "integer" },
+        "vertexInsideCount": { "type": "integer" },
+        "coplanarOverlapCount": { "type": "integer" },
+        "intersections": { "type": "array" },
+        "notes": { "type": "array" }
+      }
+    },
+
+    "faceNormals": {
+      "type": "object",
+      "category": "geometry",
+      "addedIn": "2.7",
+      "description": "Face normal consistency: divergence ratio, degenerate faces.",
+      "properties": {
+        "faceCount": { "type": "integer" },
+        "degenerateFaces": { "type": "array" },
+        "normalMagnitudes": { "type": "array" },
+        "signedAreaSum": { "type": "array" },
+        "totalArea": { "type": "number" },
+        "divergenceRatio": { "type": "number" },
+        "consistent": { "type": "boolean" },
+        "notes": { "type": "array" }
+      }
+    },
+
+    "holes": {
+      "type": "object",
+      "category": "geometry",
+      "addedIn": "2.8",
+      "description": "Boundary loops and hole detection.",
+      "properties": {
+        "boundaryEdgeCount": { "type": "integer" },
+        "interiorEdgeCount": { "type": "integer" },
+        "loopCount": { "type": "integer" },
+        "outerBoundaryCount": { "type": "integer" },
+        "holeCount": { "type": "integer" },
+        "loops": { "type": "array" },
+        "notes": { "type": "array" }
+      }
+    },
+
+    "foldOrder": {
+      "type": "object",
+      "category": "topology",
+      "addedIn": "2.9",
+      "description": "Topological sequence of M/V folds based on max-of-adjacent-faces layer heuristic.",
+      "properties": {
+        "totalFolds": { "type": "integer" },
+        "stepCount": { "type": "integer" },
+        "foldSequence": { "type": "array" },
+        "notes": { "type": "array" }
+      }
+    },
+
+    "warnings": {
+      "type": "array",
+      "category": "metadata",
+      "addedIn": "2.0",
+      "description": "Global warnings about the input (e.g., no edge assignments, no fold angles).",
+      "items": { "type": "string" }
+    }
+  },
+
+  "$defs": {
+    "layerInfo": {
+      "type": "object",
+      "description": "Per-face layer information (from v2.3 analyzeLayers).",
+      "properties": {
+        "source": { "enum": ["explicit", "implicit-3d", "implicit-fold", "flat"] },
+        "faceCount": { "type": "integer" },
+        "minLayer": { "type": "integer" },
+        "maxLayer": { "type": "integer" },
+        "nestingDepth": { "type": "integer" },
+        "avgLayer": { "type": "number" },
+        "facesPerLayer": { "type": "object" },
+        "maxOverlap": { "type": "integer" },
+        "hasExplicitOrders": { "type": "boolean" },
+        "faceOrders": { "type": "array" },
+        "notes": { "type": "array" }
+      }
+    }
+  }
+}

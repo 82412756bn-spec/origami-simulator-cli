@@ -38,10 +38,11 @@ class FoldAnalyzer {
   /**
    * Full analysis of the FOLD model
    * @param {Object} options - { all: boolean, strict: boolean, validate: boolean, ... }
-   * @returns {Object} Comprehensive analysis report
+   * @returns {Object} Comprehensive analysis report conforming to docs/fold-analyzer-schema.json
    */
   analyze(options = {}) {
     return {
+      schemaVersion: '2.10',
       basic: this.basicAnalysis(),
       structure: this.structureAnalysis(),
       validation: this.validateFlatFoldability(options),
@@ -1170,6 +1171,38 @@ class FoldAnalyzer {
 
     if (result.totalChecked === 0) {
       result.notes.push('No M/V edges found');
+    }
+
+    // v2.10: M/V-Layer skip detection (structural inconsistency)
+    // For each M/V edge between faces at different layers, if the layer gap is > 1,
+    // that's a "skip-layer" fold — physically implausible (a single fold can't bridge
+    // a layer gap > 1). Flag as structuralInconsistency.
+    const layerInfo = this.analyzeLayers();
+    if (layerInfo.faceOrders && layerInfo.faceOrders.length === this.faces.length) {
+      for (let i = 0; i < this.edges.length; i++) {
+        const assignment = this.assignments[i];
+        if (assignment !== 'M' && assignment !== 'V') continue;
+        const adjacent = this.findAdjacentFaces(i);
+        if (adjacent.length < 2) continue;
+
+        const layer1 = layerInfo.faceOrders[adjacent[0]] || 1;
+        const layer2 = layerInfo.faceOrders[adjacent[1]] || 1;
+        const layerGap = Math.abs(layer1 - layer2);
+        if (layerGap > 1) {
+          result.inconsistent++;
+          result.structuralInconsistencies.push({
+            edge: i,
+            assignment,
+            foldAngle: (i < this.foldAngles.length) ? this.foldAngles[i] : undefined,
+            issue: 'mv-layer-skip',
+            detail: `${assignment} edge ${i} skips layers: face ${adjacent[0]} on layer ${layer1}, face ${adjacent[1]} on layer ${layer2} (gap ${layerGap})`,
+          });
+        }
+      }
+      const layerSkips = result.structuralInconsistencies.filter(s => s.issue === 'mv-layer-skip').length;
+      if (layerSkips > 0) {
+        result.notes.push(`Found ${layerSkips} M/V edge(s) skipping layers (structural inconsistency)`);
+      }
     }
     return result;
   }
