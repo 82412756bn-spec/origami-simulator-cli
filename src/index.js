@@ -961,6 +961,61 @@ registerTemplateCommand(program);
 const { registerAnalyzeCommand } = require('./commands/analyze');
 registerAnalyzeCommand(program);
 
+// ============================================================================
+// Summary Command v2.18 - Top-level alias for `analyze --summary`
+// ============================================================================
+const { FoldAnalyzer: FAForSummary } = require('./utils/fold-analyzer');
+program
+  .command('summary <file>')
+  .description('Output compact summary JSON for a FOLD file (v2.13/v2.18 — alias for `analyze --summary`)')
+  .action((file) => {
+    const filePath = path.resolve(file);
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ File not found: ${file}`);
+      process.exit(1);
+    }
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const foldData = JSON.parse(content);
+      const analyzer = new FAForSummary(foldData);
+      const result = analyzer.analyze();
+      const summary = analyzer.summarize(result);
+      console.log(JSON.stringify(summary, null, 2));
+    } catch (error) {
+      console.error(`❌ Error: ${error.message}`);
+      process.exit(1);
+    }
+  });
+
+// ============================================================================
+// Visualize Command v2.18 - Top-level alias for `analyze --visualize`
+// ============================================================================
+const { FoldAnalyzer: FAForViz } = require('./utils/fold-analyzer');
+program
+  .command('visualize <file>')
+  .description('Write self-contained HTML visual report (v2.16/v2.18 — alias for `analyze --visualize`)')
+  .option('-o, --output <path>', 'Output HTML path (default: <file>.html)')
+  .action((file, options) => {
+    const filePath = path.resolve(file);
+    if (!fs.existsSync(filePath)) {
+      console.error(`❌ File not found: ${file}`);
+      process.exit(1);
+    }
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      const foldData = JSON.parse(content);
+      const analyzer = new FAForViz(foldData);
+      const result = analyzer.analyze();
+      const outPath = options.output ? path.resolve(options.output) : filePath.replace(/\.fold$/, '') + '.html';
+      const html = analyzer.toVisualReport({ title: `Visual Report: ${path.basename(file)}`, fileName: path.basename(file) }, result);
+      fs.writeFileSync(outPath, html, 'utf8');
+      console.log(`📊 Visual report written to: ${outPath}  (${html.length} bytes)`);
+    } catch (error) {
+      console.error(`❌ Error: ${error.message}`);
+      process.exit(1);
+    }
+  });
+
 // Only parse when run directly (not when imported as module for testing)
 if (require.main === module || process.argv[1]?.includes('index.js')) {
   program.parse();

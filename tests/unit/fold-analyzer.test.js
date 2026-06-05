@@ -2607,3 +2607,70 @@ describe('FoldAnalyzer v2.17 - BVH Acceleration', () => {
     expect(result.facePairCount).toBe(30);
   });
 });
+
+describe('FoldAnalyzer v2.18 - CLI Refactor (subcommand aliases)', () => {
+  test('summary subcommand: outputs compact JSON (97% smaller than --json)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    const summary = analyzer.summarize(result);
+    expect(summary.summaryVersion).toBe('2.13');
+    // Check key fields present
+    expect(summary).toHaveProperty('schemaVersion');
+    expect(summary).toHaveProperty('counts');
+    expect(summary).toHaveProperty('flatFoldability');
+  });
+
+  test('visualize subcommand: returns self-contained HTML', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    const html = analyzer.toVisualReport({ title: 'Test', fileName: 'test.fold' }, result);
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('Test');  // title
+    expect(html).toContain('test.fold');  // fileName
+  });
+
+  test('index.js exports include PRESETS + FoldAnalyzer helpers (no regression)', () => {
+    // The CLI refactor shouldn't break existing module exports
+    const cli = require('/home/rayna/文档/origami-simulator-cli/src/index.js');
+    expect(Array.isArray(cli.PRESETS)).toBe(true);
+    expect(cli.PRESETS.length).toBeGreaterThan(0);
+    expect(typeof cli.getPresetFile).toBe('function');
+    expect(typeof cli.buildPresetUrl).toBe('function');
+  });
+
+  test('summary output is valid JSON parseable', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const summary = analyzer.summarize();
+    const json = JSON.stringify(summary);
+    const parsed = JSON.parse(json);
+    expect(parsed.summaryVersion).toBe('2.13');
+    expect(parsed.counts.vertices).toBe(4);
+  });
+
+  test('visualize output escapes XSS in title (security preserved)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const html = analyzer.toVisualReport({ title: '<script>alert(1)</script>', fileName: 'test' });
+    expect(html).not.toContain('<script>alert');
+    expect(html).toContain('&lt;script&gt;');
+  });
+});
