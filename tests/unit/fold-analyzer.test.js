@@ -2230,3 +2230,121 @@ describe('FoldAnalyzer v2.14 - Strict Maekawa', () => {
     expect(sm.outOfTolerance).toBe(1);
   });
 });
+
+describe('FoldAnalyzer v2.15 - Complete Self-Intersection (Möller)', () => {
+  test('faceTriangles: triangle → 1 triangle', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0]],
+      faces_vertices: [[0,1,2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const tris = analyzer.faceTriangles([0,1,2]);
+    expect(tris.length).toBe(1);
+    expect(tris[0]).toEqual([0,1,2]);
+  });
+
+  test('faceTriangles: quad → 2 triangles (fan)', () => {
+    const analyzer = new FoldAnalyzer({});
+    const tris = analyzer.faceTriangles([0,1,2,3]);
+    expect(tris.length).toBe(2);
+    expect(tris[0]).toEqual([0,1,2]);
+    expect(tris[1]).toEqual([0,2,3]);
+  });
+
+  test('faceTriangles: pentagon → 3 triangles', () => {
+    const analyzer = new FoldAnalyzer({});
+    const tris = analyzer.faceTriangles([0,1,2,3,4]);
+    expect(tris.length).toBe(3);
+  });
+
+  test('faceTriangles: degenerate (<3 vertices) → []', () => {
+    const analyzer = new FoldAnalyzer({});
+    expect(analyzer.faceTriangles([])).toEqual([]);
+    expect(analyzer.faceTriangles([0,1])).toEqual([]);
+  });
+
+  test('triangleTriangleIntersect3D: two separated triangles in 3D → no intersection', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],        // triangle 1 in xy
+        [10,5,10],[11,5,10],[10,6,10],  // triangle 2 in different 3D region (not coplanar)
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const r = analyzer.triangleTriangleIntersect3D([0,1,2], [3,4,5]);
+    expect(r.intersects).toBe(false);
+  });
+
+  test('triangleTriangleIntersect3D: two coplanar overlapping triangles → coplanar', () => {
+    // Two triangles in xy plane, overlap
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[2,0,0],[0,2,0],   // triangle 1
+        [1,1,0],[3,1,0],[1,3,0],   // triangle 2 (overlaps)
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const r = analyzer.triangleTriangleIntersect3D([0,1,2], [3,4,5]);
+    expect(r.coplanar).toBe(true);
+  });
+
+  test('triangleTriangleIntersect3D: two crossing triangles in 3D → edge-edge', () => {
+    // Triangle 1 in xy plane (z=0)
+    // Triangle 2 in xz plane (y=0) — crosses triangle 1 at the origin
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],  // triangle 1 (xy plane)
+        [0.5,-0.5,0],[0.5,0.5,0],[0.5,0,1],  // triangle 2 (xz plane, crosses t1)
+      ],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const r = analyzer.triangleTriangleIntersect3D([0,1,2], [3,4,5]);
+    expect(r.intersects).toBe(true);
+    expect(r.kind).toBe('edge-edge');
+  });
+
+  test('analyzeCompleteSelfIntersection: separated 3D faces → no intersection', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],
+        [10,0,0],[11,0,0],[10,1,0],
+        [5,0,10],[6,0,10],[5,1,10],
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[6,7],[7,8],[8,6]],
+      faces_vertices: [[0,1,2], [3,4,5], [6,7,8]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeCompleteSelfIntersection();
+    expect(si.intersectionCount).toBe(0);
+  });
+
+  test('analyzeCompleteSelfIntersection: hex face triangulation', () => {
+    // Hexagon split into 6 vertices + 4 fan triangles. Two hexes
+    // positioned to overlap partially — should detect via triangulation.
+    const fold = {
+      vertices_coords: [
+        [1,0,0],[0.5,0.866,0],[-0.5,0.866,0],[-1,0,0],[-0.5,-0.866,0],[0.5,-0.866,0],  // hex 1
+        [0.5,0,1],[0,0.5,1],[-0.5,0,1],[0,-0.5,1],  // square 2, slightly raised
+      ],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[6,7],[7,8],[8,9],[9,6]],
+      faces_vertices: [[0,1,2,3,4,5], [6,7,8,9]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const si = analyzer.analyzeCompleteSelfIntersection();
+    // Two non-adjacent faces, far apart in z → no intersection
+    expect(si.intersectionCount).toBe(0);
+  });
+
+  test('integration: analyze() includes completeSelfIntersection field', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('completeSelfIntersection');
+    expect(result.completeSelfIntersection).toHaveProperty('intersections');
+  });
+});

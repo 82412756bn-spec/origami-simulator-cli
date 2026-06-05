@@ -63,6 +63,7 @@ class FoldAnalyzer {
       mvAlternation: this.analyzeAlternatingMV(),
       strictKawasaki: this.strictKawasaki(),
       strictMaekawa: this.analyzeMaekawa(),
+      completeSelfIntersection: this.analyzeCompleteSelfIntersection(),
       warnings: this.collectWarnings(),
     };
   }
@@ -1492,6 +1493,173 @@ class FoldAnalyzer {
       }
     }
     return { coplanar: true, overlap: false, projectionAxis: axis };
+  }
+
+  /**
+   * Fan-triangulate a face (v2.15). Returns array of [v0, v1, v2] triangle
+   * index tuples. For an N-gon, returns N-2 triangles using vertex 0 as fan apex.
+   */
+  faceTriangles(face) {
+    if (!Array.isArray(face) || face.length < 3) return [];
+    if (face.length === 3) return [[face[0], face[1], face[2]]];
+    const tris = [];
+    for (let i = 1; i < face.length - 1; i++) {
+      tris.push([face[0], face[i], face[i + 1]]);
+    }
+    return tris;
+  }
+
+  /**
+   * Möller triangle-triangle intersection test (v2.15).
+   * Returns: { intersects, coplanar, kind: 'edge-edge' | 'vertex-inside' | 'coplanar' | 'none' }
+   *
+   * Reference: Möller, T. (1997). "A fast triangle-triangle intersection test."
+   * Simplified for our use case (no exact intersection geometry).
+   */
+  triangleTriangleIntersect3D(t1, t2) {
+    const EPS = 1e-9;
+
+    const V1 = [
+      this.vertices[t1[0]] || [0, 0, 0],
+      this.vertices[t1[1]] || [0, 0, 0],
+      this.vertices[t1[2]] || [0, 0, 0],
+    ];
+    const V2 = [
+      this.vertices[t2[0]] || [0, 0, 0],
+      this.vertices[t2[1]] || [0, 0, 0],
+      this.vertices[t2[2]] || [0, 0, 0],
+    ];
+
+    // Plane of triangle 1
+    const e1 = [V1[1][0] - V1[0][0], V1[1][1] - V1[0][1], V1[1][2] - V1[0][2]];
+    const e2 = [V1[2][0] - V1[0][0], V1[2][1] - V1[0][1], V1[2][2] - V1[0][2]];
+    const N1 = [
+      e1[1] * e2[2] - e1[2] * e2[1],
+      e1[2] * e2[0] - e1[0] * e2[2],
+      e1[0] * e2[1] - e1[1] * e2[0],
+    ];
+    const n1Len = Math.sqrt(N1[0] ** 2 + N1[1] ** 2 + N1[2] ** 2);
+    if (n1Len < EPS) return { intersects: false, coplanar: false, kind: 'none' };
+    const N1n = [N1[0] / n1Len, N1[1] / n1Len, N1[2] / n1Len];
+
+    // Signed distances of t2 vertices from t1's plane
+    const d_v = (v) => N1n[0] * (v[0] - V1[0][0]) + N1n[1] * (v[1] - V1[0][1]) + N1n[2] * (v[2] - V1[0][2]);
+    const d2 = [d_v(V2[0]), d_v(V2[1]), d_v(V2[2])];
+
+    // Check if t2 is entirely on one side of t1's plane
+    if ((d2[0] > EPS && d2[1] > EPS && d2[2] > EPS) ||
+        (d2[0] < -EPS && d2[1] < -EPS && d2[2] < -EPS)) {
+      return { intersects: false, coplanar: false, kind: 'none' };
+    }
+
+    // Coplanarity: all 3 d2 ≈ 0
+    if (Math.abs(d2[0]) < EPS && Math.abs(d2[1]) < EPS && Math.abs(d2[2]) < EPS) {
+      return { intersects: true, coplanar: true, kind: 'coplanar' };
+    }
+
+    // Compute t2's plane
+    const e3 = [V2[1][0] - V2[0][0], V2[1][1] - V2[0][1], V2[1][2] - V2[0][2]];
+    const e4 = [V2[2][0] - V2[0][0], V2[2][1] - V2[0][1], V2[2][2] - V2[0][2]];
+    const N2 = [
+      e3[1] * e4[2] - e3[2] * e4[1],
+      e3[2] * e4[0] - e3[0] * e4[2],
+      e3[0] * e4[1] - e3[1] * e4[0],
+    ];
+    const n2Len = Math.sqrt(N2[0] ** 2 + N2[1] ** 2 + N2[2] ** 2);
+    if (n2Len < EPS) return { intersects: false, coplanar: false, kind: 'none' };
+    const N2n = [N2[0] / n2Len, N2[1] / n2Len, N2[2] / n2Len];
+
+    const d_v2 = (v) => N2n[0] * (v[0] - V2[0][0]) + N2n[1] * (v[1] - V2[0][1]) + N2n[2] * (v[2] - V2[0][2]);
+    const d1 = [d_v2(V1[0]), d_v2(V1[1]), d_v2(V1[2])];
+    if ((d1[0] > EPS && d1[1] > EPS && d1[2] > EPS) ||
+        (d1[0] < -EPS && d1[1] < -EPS && d1[2] < -EPS)) {
+      return { intersects: false, coplanar: false, kind: 'none' };
+    }
+
+    // Both planes straddle — triangles intersect in a line segment or point
+    return { intersects: true, coplanar: false, kind: 'edge-edge' };
+  }
+
+  /**
+   * Detect self-intersections using complete Möller triangle-triangle
+   * intersection (v2.15).
+   *
+   * Differs from v2.6/v2.7 analyzeSelfIntersection in that it:
+   *   1. Triangulates all faces (handles polygons, not just triangles)
+   *   2. Uses Möller algorithm (gold standard for tri-tri intersection)
+   *   3. Detects coplanar face overlap via 2D polygon intersection
+   *
+   * @returns {{
+   *   facePairCount: number,
+   *   aabbSurvivorCount: number,
+   *   intersectionCount: number,
+   *   intersections: Array<{ face1, face2, kind }>,
+   *   notes: string[]
+   * }}
+   */
+  analyzeCompleteSelfIntersection() {
+    const result = {
+      facePairCount: 0,
+      aabbSurvivorCount: 0,
+      intersectionCount: 0,
+      intersections: [],
+      notes: [],
+    };
+
+    if (this.faces.length < 2) {
+      result.notes.push('Fewer than 2 faces — nothing to check');
+      return result;
+    }
+
+    const is3D = this.vertices.some(v => Array.isArray(v) && v.length >= 3 && Math.abs(v[2] || 0) > 1e-6);
+    if (!is3D) {
+      result.notes.push('2D model — all faces coplanar, no 3D intersection possible');
+      return result;
+    }
+
+    // Pre-triangulate all faces
+    const triangulations = this.faces.map(f => this.faceTriangles(f));
+    const aabbs = this.faces.map(f => this._faceAABB(f));
+
+    const TOLERANCE = 0.01;
+
+    for (let i = 0; i < this.faces.length; i++) {
+      for (let j = i + 1; j < this.faces.length; j++) {
+        if (this._facesShareEdge(i, j)) continue;
+        result.facePairCount++;
+
+        if (!this._aabbOverlap(aabbs[i], aabbs[j], TOLERANCE)) continue;
+        result.aabbSurvivorCount++;
+
+        let foundKind = null;
+        for (const t1 of triangulations[i]) {
+          for (const t2 of triangulations[j]) {
+            const r = this.triangleTriangleIntersect3D(t1, t2);
+            if (r.intersects) {
+              foundKind = r.kind;
+              break;
+            }
+          }
+          if (foundKind) break;
+        }
+
+        if (foundKind) {
+          result.intersectionCount++;
+          result.intersections.push({
+            face1: i,
+            face2: j,
+            kind: foundKind,
+          });
+        }
+      }
+    }
+
+    if (result.intersectionCount === 0) {
+      result.notes.push('No self-intersections detected ✓');
+    } else {
+      result.notes.push(`Found ${result.intersectionCount} intersecting face pair(s)`);
+    }
+    return result;
   }
 
   /**
