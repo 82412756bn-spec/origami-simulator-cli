@@ -2458,3 +2458,152 @@ describe('FoldAnalyzer v2.16 - Visualizer (HTML report)', () => {
     expect(html1.replace(/• .*/, '')).toBe(html2.replace(/• .*/, ''));
   });
 });
+
+describe('FoldAnalyzer v2.17 - BVH Acceleration', () => {
+  test('_buildBVH: empty model returns null', () => {
+    const analyzer = new FoldAnalyzer({ vertices_coords: [], edges_vertices: [], faces_vertices: [] });
+    expect(analyzer._buildBVH()).toBe(null);
+  });
+
+  test('_buildBVH: single face tree has 1 face in root', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0]],
+      faces_vertices: [[0,1,2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const bvh = analyzer._buildBVH();
+    expect(bvh).not.toBe(null);
+    expect(bvh.faces).toEqual([0]);  // leaf with single face
+    expect(bvh.left).toBe(null);
+    expect(bvh.right).toBe(null);
+  });
+
+  test('_buildBVH: 4-face tree has correct structure', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],     // face 0
+        [2,0,0],[3,0,0],[2,1,0],     // face 1
+        [0,3,0],[1,3,0],[0,4,0],     // face 2
+        [2,3,0],[3,3,0],[2,4,0],     // face 3
+      ],
+      edges_vertices: [
+        [0,1],[1,2],[2,0],[3,4],[4,5],[5,3],
+        [6,7],[7,8],[8,6],[9,10],[10,11],[11,9],
+      ],
+      faces_vertices: [[0,1,2], [3,4,5], [6,7,8], [9,10,11]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const bvh = analyzer._buildBVH();
+    expect(bvh).not.toBe(null);
+    // Root should be internal (faces=null) with 2 children
+    expect(bvh.faces).toBe(null);
+    expect(bvh.left).not.toBe(null);
+    expect(bvh.right).not.toBe(null);
+  });
+
+  test('_queryBVH: returns overlapping faces', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],     // face 0 at (0,0)-(1,1)
+        [10,0,0],[11,0,0],[10,1,0],  // face 1 at (10,0)-(11,1) — far
+        [0.5,0.5,0],[1.5,0.5,0],[0.5,1.5,0],  // face 2 at (0.5,0.5)-(1.5,1.5) — overlaps face 0
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3],[6,7],[7,8],[8,6]],
+      faces_vertices: [[0,1,2], [3,4,5], [6,7,8]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const bvh = analyzer._buildBVH();
+    // Query with face 0's AABB
+    const queryAABB = analyzer._faceAABB([0,1,2]);
+    const results = analyzer._queryBVH(bvh, queryAABB);
+    // Should include face 0 (self) and face 2 (overlapping)
+    expect(results).toContain(0);
+    expect(results).toContain(2);
+    expect(results).not.toContain(1);  // face 1 is far away
+  });
+
+  test('analyzeSelfIntersectionBVH: gives same result as v2.15 for simple case', () => {
+    // Two triangles in 3D that cross each other
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0.5,1,0],       // face 0
+        [0.5,-0.5,0],[0.5,0.5,0],[0.5,0,1],  // face 1
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]],
+      faces_vertices: [[0,1,2], [3,4,5]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const v15Result = analyzer.analyzeCompleteSelfIntersection();
+    const v17Result = analyzer.analyzeSelfIntersectionBVH();
+    // Both should detect the same intersection
+    expect(v15Result.intersectionCount).toBe(v17Result.intersectionCount);
+    expect(v17Result.intersectionCount).toBe(1);
+    expect(v17Result.method).toBe('BVH (v2.17)');
+  });
+
+  test('analyzeSelfIntersectionBVH: separated faces → 0 intersections', () => {
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],
+        [10,5,10],[11,5,10],[10,6,10],
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]],
+      faces_vertices: [[0,1,2], [3,4,5]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyzeSelfIntersectionBVH();
+    expect(result.intersectionCount).toBe(0);
+  });
+
+  test('analyzeSelfIntersectionBVH: <2 faces skipped', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0]],
+      faces_vertices: [[0,1,2]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyzeSelfIntersectionBVH();
+    expect(result.notes.some(n => n.includes('Fewer than 2 faces'))).toBe(true);
+  });
+
+  test('analyzeSelfIntersectionBVH: 2D model disabled gracefully', () => {
+    // 2D model with 2 faces in xy-plane → BVH exists but is3D check disables
+    const fold = {
+      vertices_coords: [
+        [0,0,0],[1,0,0],[0,1,0],     // face 0
+        [2,0,0],[3,0,0],[2,1,0],     // face 1
+      ],
+      edges_vertices: [[0,1],[1,2],[2,0],[3,4],[4,5],[5,3]],
+      faces_vertices: [[0,1,2], [3,4,5]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyzeSelfIntersectionBVH();
+    expect(result.notes.some(n => n.includes('2D model'))).toBe(true);
+  });
+
+  test('analyzeSelfIntersectionBVH: BVH correctly finds overlapping pairs in dense cluster', () => {
+    // 10 faces in one dense 3D cluster (heavily overlapping AABBs)
+    // Slight z variation to make it 3D
+    const verts = [];
+    const edges = [];
+    const faces = [];
+    let vIdx = 0;
+    for (let i = 0; i < 10; i++) {
+      const z = 0.001;  // small z to pass is3D check
+      verts.push([i*0.1, 0, z], [i*0.1+0.4, 0, z], [i*0.1+0.2, 0.4, z]);
+      faces.push([vIdx, vIdx+1, vIdx+2]);
+      edges.push([vIdx, vIdx+1], [vIdx+1, vIdx+2], [vIdx+2, vIdx]);
+      vIdx += 3;
+    }
+    const fold = { vertices_coords: verts, edges_vertices: edges, faces_vertices: faces };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyzeSelfIntersectionBVH();
+    // 10 faces overlapping along x-axis:
+    //   face 0 overlaps 1,2,3,4 (4 pairs, since 0.4+0.1*3=0.7 vs 0.4+0.1*4=0.8 → 4 faces 1,2,3,4 within)
+    //   face 5 only overlaps 6,7,8,9 (faces 1,2,3,4 don't reach 0.5)
+    //   Total: 4+4+4+4+4+3+2+1+0 = 30 pairs
+    // (vs 45 for O(F²) brute force — BVH correctly skips non-overlapping pairs)
+    expect(result.facePairCount).toBe(30);
+  });
+});
