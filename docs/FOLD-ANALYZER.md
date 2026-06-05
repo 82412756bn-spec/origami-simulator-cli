@@ -49,7 +49,7 @@ The `analyze` command replaces the previous browser-based implementation with a 
 - ❌ Slow (5-10s per analysis)
 - ❌ Failed when offline
 
-**After (v2.0 → v2.8)**:
+**After (v2.0 → v2.9)**:
 - ✅ Pure local computation
 - ✅ Real Kawasaki & Maekawa theorem validation
 - ✅ Symmetry detection (rotational & reflective) — **v2.1: over-detection fixed, v2.2: centroid-relative**
@@ -61,6 +61,7 @@ The `analyze` command replaces the previous browser-based implementation with a 
 - ✅ **v2.6: Self-intersection detection** (3D AABB + segment-segment distance)
 - ✅ **v2.7: Face normal consistency** (divergence ratio) + **complete self-intersection** (vertex-inside, coplanar-overlap)
 - ✅ **v2.8: Holes & boundary loops** (shoelace area + classification)
+- ✅ **v2.9: Fold order topological sequence** (max-of-adjacent-faces heuristic)
 - ✅ Fast (<300ms for typical origami models) — **v2.2: O(V+E) adjacency caching**
 - ✅ Works offline
 - ✅ **v2.1**: Strict mode + largest-independent-group filter (no spurious 5/6/12-fold)
@@ -304,6 +305,15 @@ ls origami-examples/FOLD/Origami/ | head
 
 ## Version History
 
+- **v2.9** (2026-06-05): Fold order topological sequence (feat/v2.9-fold-order branch)
+  - `analyzeFoldOrder()`: produces a topological sequence of M/V folds
+  - Heuristic: each M/V fold's step = max(layer of adjacent faces)
+  - Rationale: higher-layer face sits on top → lower-layer fold must complete first
+  - 2D model fallback: all faces on layer 1
+  - Boundary edges (1 adjacent face) skipped
+  - 7 new unit tests, 98/98 in `fold-analyzer.test.js`
+  - CLI section 🎴 Fold Order (--all only)
+  - **Necessary (not sufficient)** condition for valid fold sequence
 - **v2.8** (2026-06-05): Holes & boundary loops detection
   - Walks boundary edge adjacency graph to form closed loops
   - Shoelace formula for per-loop area

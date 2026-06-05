@@ -82,7 +82,7 @@ function analyzeFile(filePath, options) {
  * Print a human-readable report
  */
 function printReport(filePath, result, options) {
-  const { basic, structure, validation, symmetry, classification, quality, strain, mvConsistency, selfIntersection, faceNormals, holes, warnings } = result;
+  const { basic, structure, validation, symmetry, classification, quality, strain, mvConsistency, selfIntersection, faceNormals, holes, foldOrder, warnings } = result;
 
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
@@ -325,6 +325,24 @@ function printReport(filePath, result, options) {
       console.log(`     ... and ${h.loops.length - 5} more`);
     }
     for (const note of h.notes) {
+      console.log(`   ℹ️  ${note}`);
+    }
+    console.log('');
+  }
+
+  // Fold Order (v2.9)
+  if (options.all && foldOrder) {
+    const fo = foldOrder;
+    console.log('🎴 Fold Order:');
+    console.log(`   M/V folds total:  ${fo.totalFolds}`);
+    console.log(`   Steps required:   ${fo.stepCount}`);
+    for (const step of fo.foldSequence.slice(0, 8)) {
+      console.log(`     step ${step.step}: layer ${step.layer} → ${step.foldCount} fold(s) [edges: ${step.edgeIndices.join(', ')}]`);
+    }
+    if (fo.foldSequence.length > 8) {
+      console.log(`     ... and ${fo.foldSequence.length - 8} more steps`);
+    }
+    for (const note of fo.notes) {
       console.log(`   ℹ️  ${note}`);
     }
     console.log('');

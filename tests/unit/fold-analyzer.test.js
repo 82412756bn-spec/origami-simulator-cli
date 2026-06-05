@@ -1468,3 +1468,147 @@ describe('FoldAnalyzer v2.8 - Holes & Boundary Loops', () => {
     expect(result.holes.loopCount).toBe(1);
   });
 });
+
+describe('FoldAnalyzer v2.9 - Fold Order', () => {
+  test('single layer (all faces on layer 1): 1 step', () => {
+    // Two triangles sharing edge [0,1] (edge 0): face 0 = [0,1,2], face 1 = [0,3,1]
+    // Both on layer 1. 5 edges total, edge 0 is shared (interior, between 2 faces).
+    // Set edge 0 to M (it's the shared fold).
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[1,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,0],[1,3],[3,0]],
+      faces_vertices: [[0,1,2], [0,3,1]],
+      edges_assignment: ['M', 'B', 'B', 'B', 'B'],
+      face_orders: [1, 1],  // both faces on layer 1
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fo = analyzer.analyzeFoldOrder();
+    // The M edge (index 0) is shared + M → at step max(1,1) = 1
+    expect(fo.totalFolds).toBe(1);
+    expect(fo.stepCount).toBe(1);
+    expect(fo.foldSequence[0].step).toBe(1);
+  });
+
+  test('two layers: cross-layer fold at step 2', () => {
+    // Two triangles sharing edge [0,1] (edge 0):
+    //   face 0 = [0,1,2]: vertices (0,0), (1,0), (0,1)
+    //   face 1 = [0,1,3]: vertices (0,0), (1,0), (0,-1)
+    //   shared edge is [0,1] = edge 0
+    // face 0 on layer 1, face 1 on layer 2
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[0,-1,0]],
+      edges_vertices: [
+        [0,1],[1,2],[2,0],  // face 0: shared, top, hypotenuse
+        [0,1],[1,3],[3,0],  // face 1: shared, bottom, hypotenuse
+      ],
+      faces_vertices: [[0,1,2], [0,1,3]],
+      edges_assignment: ['M','B','B','B','B','B'],  // edge 0 is M
+      face_orders: [1, 2],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fo = analyzer.analyzeFoldOrder();
+    // Edge 0 is shared (between face 0 L1 and face 1 L2). M. Step = max(1,2) = 2.
+    expect(fo.totalFolds).toBe(1);
+    expect(fo.stepCount).toBe(1);
+    expect(fo.foldSequence[0].step).toBe(2);
+  });
+
+  test('three layers: step order matches max-layer', () => {
+    // 3 triangles, each pair shares an edge with the next
+    //   face 0 = [0,1,2], face 1 = [0,1,3], face 2 = [0,1,4]
+    //   All share the "spine" edge [0,1]
+    //   face 0 on layer 1, face 1 on layer 2, face 2 on layer 3
+    const fold = {
+      vertices_coords: [
+        [0,0,0],    // 0: shared
+        [1,0,0],    // 1: shared
+        [0,1,0],    // 2: face 0
+        [0,-1,0],   // 3: face 1
+        [1,1,0],    // 4: face 2
+      ],
+      edges_vertices: [
+        // face 0: edges 0,1,2
+        [0,1],[1,2],[2,0],
+        // face 1: edges 0,3,4
+        [0,1],[1,3],[3,0],
+        // face 2: edges 0,5,6
+        [0,1],[1,4],[4,0],
+      ],
+      faces_vertices: [[0,1,2], [0,1,3], [0,1,4]],
+      edges_assignment: ['M','B','B','B','B','B','B','B','B'],
+      face_orders: [1, 2, 3],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fo = analyzer.analyzeFoldOrder();
+    // Edge 0 [0,1] is M, shared by all 3 faces. findAdjacentFaces returns [0,1,2].
+    // 3 layers, step = max(1,2,3) = 3.
+    expect(fo.totalFolds).toBe(1);
+    expect(fo.stepCount).toBe(1);
+    expect(fo.foldSequence[0].step).toBe(3);
+  });
+
+  test('no M/V edges: totalFolds=0', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['B', 'B', 'B', 'B'],  // all boundary
+      face_orders: [1],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fo = analyzer.analyzeFoldOrder();
+    expect(fo.totalFolds).toBe(0);
+  });
+
+  test('boundary edges (only 1 adjacent face) are skipped', () => {
+    // Single square face: 4 boundary edges (no foldable M/V)
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M', 'V', 'M', 'V'],
+      face_orders: [1],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fo = analyzer.analyzeFoldOrder();
+    // All 4 edges are boundary (1 adjacent face each) → skipped
+    expect(fo.totalFolds).toBe(0);
+  });
+
+  test('2D model without face_orders: all faces on layer 1', () => {
+    // Two triangles sharing edge [0,1] (edge 0):
+    //   face 0 = [0,1,2], face 1 = [0,1,3]
+    //   vertices 0,1 are shared between the two faces
+    // No face_orders → fallback all faces to layer 1
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[0,-1,0]],
+      edges_vertices: [
+        [0,1],[1,2],[2,0],  // face 0
+        [0,1],[1,3],[3,0],  // face 1
+      ],
+      faces_vertices: [[0,1,2], [0,1,3]],
+      edges_assignment: ['M','B','B','B','B','B'],  // edge 0 is M, shared
+      // no face_orders
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const fo = analyzer.analyzeFoldOrder();
+    // Both faces on layer 1 (fallback). M edge at step 1.
+    expect(fo.totalFolds).toBe(1);
+    expect(fo.stepCount).toBe(1);
+    expect(fo.foldSequence[0].step).toBe(1);
+  });
+
+  test('integration: analyze() includes foldOrder field', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M', 'V', 'M', 'V'],
+      face_orders: [1],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('foldOrder');
+    expect(result.foldOrder).toHaveProperty('foldSequence');
+  });
+});
