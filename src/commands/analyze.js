@@ -111,7 +111,7 @@ function analyzeFile(filePath, options) {
  * Print a human-readable report
  */
 function printReport(filePath, result, options) {
-  const { basic, structure, validation, symmetry, classification, quality, strain, mvConsistency, selfIntersection, faceNormals, holes, foldOrder, mvAlternation, strictKawasaki, warnings } = result;
+  const { basic, structure, validation, symmetry, classification, quality, strain, mvConsistency, selfIntersection, faceNormals, holes, foldOrder, mvAlternation, strictKawasaki, strictMaekawa, warnings } = result;
 
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
@@ -412,6 +412,25 @@ function printReport(filePath, result, options) {
       }
     }
     for (const note of sk.notes) {
+      console.log(`   ℹ️  ${note}`);
+    }
+    console.log('');
+  }
+
+  // Strict Maekawa (v2.14)
+  if (options.all && strictMaekawa) {
+    const sm = strictMaekawa;
+    console.log('🏔️  Strict Maekawa:');
+    console.log(`   Total checked:     ${sm.totalChecked}`);
+    console.log(`   Within tolerance:  ${sm.withinTolerance} (|M-V| = 2)`);
+    console.log(`   Out of tolerance:  ${sm.outOfTolerance}`);
+    if (sm.topDeviations.length > 0) {
+      console.log(`   Top deviations:`);
+      for (const d of sm.topDeviations.slice(0, 5)) {
+        console.log(`     vertex ${d.vertex}: M=${d.M}/V=${d.V}, |M-V|-2 = ${d.deviation}`);
+      }
+    }
+    for (const note of sm.notes) {
       console.log(`   ℹ️  ${note}`);
     }
     console.log('');

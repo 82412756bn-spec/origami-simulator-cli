@@ -62,6 +62,7 @@ class FoldAnalyzer {
       foldOrder: this.analyzeFoldOrder(),
       mvAlternation: this.analyzeAlternatingMV(),
       strictKawasaki: this.strictKawasaki(),
+      strictMaekawa: this.analyzeMaekawa(),
       warnings: this.collectWarnings(),
     };
   }
@@ -1491,6 +1492,84 @@ class FoldAnalyzer {
       }
     }
     return { coplanar: true, overlap: false, projectionAxis: axis };
+  }
+
+  /**
+   * Strict Maekawa analysis (v2.14) — rank vertices by exact |M - V - 2|.
+   *
+   * Refines the v2.0/v2.5 Maekawa check with detailed diagnostics. For each
+   * internal vertex (≥3 incident M/V edges), reports the exact M count, V
+   * count, |M - V| - 2 deviation, and ranks the top N worst.
+   *
+   * Maekawa's theorem: for a flat-foldable vertex, |M - V| = 2.
+   * Deviation = ||M - V| - 2|. Small = good (0 = perfect).
+   *
+   * @param {number} [topN=10] - Number of worst-deviation vertices to report
+   * @returns {{
+   *   totalChecked: number,
+   *   withinTolerance: number,        // |M-V| = 2
+   *   outOfTolerance: number,
+   *   topDeviations: Array<{ vertex, M, V, MV, deviation }>,
+   *   notes: string[]
+   * }}
+   */
+  analyzeMaekawa(topN = 10) {
+    const result = {
+      totalChecked: 0,
+      withinTolerance: 0,
+      outOfTolerance: 0,
+      topDeviations: [],
+      notes: [],
+    };
+
+    if (this.faces.length === 1) {
+      result.notes.push('Flat dieline — Maekawa check disabled (no 3D fold)');
+      return result;
+    }
+
+    for (let vIdx = 0; vIdx < this.vertices.length; vIdx++) {
+      const incidentEdges = this.getIncidentEdges(vIdx);
+      if (incidentEdges.length < 3) continue;
+
+      let mCount = 0, vCount = 0;
+      for (const eIdx of incidentEdges) {
+        const a = this.assignments[eIdx];
+        if (a === 'M') mCount++;
+        else if (a === 'V') vCount++;
+      }
+
+      const mvDiff = mCount - vCount;        // signed
+      const mvAbs = Math.abs(mvDiff);        // unsigned
+      const deviation = Math.abs(mvAbs - 2);  // ||M-V| - 2|
+
+      result.totalChecked++;
+      if (deviation === 0) {
+        result.withinTolerance++;
+      } else {
+        result.outOfTolerance++;
+        result.topDeviations.push({
+          vertex: vIdx,
+          M: mCount,
+          V: vCount,
+          MV: mvDiff,
+          deviation,
+        });
+      }
+    }
+
+    // Sort by deviation descending, then by vertex index for stability
+    result.topDeviations.sort((a, b) => b.deviation - a.deviation || a.vertex - b.vertex);
+    result.topDeviations = result.topDeviations.slice(0, topN);
+
+    if (result.totalChecked === 0) {
+      result.notes.push('No internal vertices with ≥3 incident edges');
+    } else if (result.outOfTolerance > 0) {
+      const worst = result.topDeviations[0];
+      result.notes.push(`Found ${result.outOfTolerance} vertex/vertices with Maekawa deviation > 0 (worst: vertex ${worst.vertex}, M=${worst.M}/V=${worst.V}, deviation=${worst.deviation})`);
+    } else {
+      result.notes.push(`All ${result.totalChecked} vertex/vertices satisfy |M-V|=2`);
+    }
+    return result;
   }
 
   /**
