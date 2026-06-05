@@ -24,6 +24,7 @@ function registerAnalyzeCommand(program) {
     .option('--symmetry', 'Detect symmetry')
     .option('--quality', 'Check quality issues')
     .option('--strict', 'Use strict symmetry detection (tighter tolerance, filter subgroup over-detection)')
+    .option('--validate-output', 'Validate analyze() output against docs/fold-analyzer-schema.json (ajv, v2.11)')
     .option('--debug', 'Enable debug output')
     .action((file, options) => {
       analyzeFile(file, options);
@@ -70,6 +71,25 @@ function analyzeFile(filePath, options) {
     // Pretty-print mode
     const result = analyzer.analyze(options);
     printReport(filePath, result, options);
+
+    // Optional: validate output against JSON Schema (v2.11)
+    if (options.validateOutput) {
+      console.log('');
+      console.log('✅ JSON Schema Validation (v2.11):');
+      const validation = analyzer.validateAgainstSchema(result);
+      console.log(`   ${validation.summary}`);
+      console.log(`   Output schemaVersion:    ${validation.schemaVersion}`);
+      console.log(`   Expected schemaVersion:   ${validation.expectedSchemaVersion}`);
+      console.log(`   Version match:           ${validation.versionMatch ? '✅' : '⚠️  version mismatch'}`);
+      if (!validation.valid && validation.errors.length > 0) {
+        for (const err of validation.errors.slice(0, 5)) {
+          console.log(`   ❌ ${err.instancePath || '<root>'} — ${err.message} (${err.keyword})`);
+        }
+        if (validation.errors.length > 5) {
+          console.log(`   ... and ${validation.errors.length - 5} more errors`);
+        }
+      }
+    }
 
   } catch (error) {
     console.error(`❌ Error analyzing file: ${error.message}`);
