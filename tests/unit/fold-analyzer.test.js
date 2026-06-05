@@ -2348,3 +2348,113 @@ describe('FoldAnalyzer v2.15 - Complete Self-Intersection (Möller)', () => {
     expect(result.completeSelfIntersection).toHaveProperty('intersections');
   });
 });
+
+describe('FoldAnalyzer v2.16 - Visualizer (HTML report)', () => {
+  test('toVisualReport returns self-contained HTML string', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const html = analyzer.toVisualReport();
+    expect(typeof html).toBe('string');
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('</html>');
+  });
+
+  test('toVisualReport HTML contains all required sections', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const html = analyzer.toVisualReport();
+    expect(html).toContain('<h1>');         // title
+    expect(html).toContain('<h2>Summary');  // summary section
+    expect(html).toContain('<svg');         // SVG visualization
+    expect(html).toContain('Edge Legend');  // legend
+    expect(html).toContain('fold-analyzer'); // footer
+  });
+
+  test('toVisualReport SVG contains edges and vertices', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const html = analyzer.toVisualReport();
+    // Should have at least 4 lines (edges) and 4 circles (vertices)
+    const lineCount = (html.match(/<line /g) || []).length;
+    const circleCount = (html.match(/<circle /g) || []).length;
+    expect(lineCount).toBeGreaterThanOrEqual(4);
+    expect(circleCount).toBeGreaterThanOrEqual(4);
+  });
+
+  test('toVisualReport M/V edges color-coded', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const html = analyzer.toVisualReport();
+    // Should have blue (M) and red (V) colors
+    expect(html).toContain('#2563eb');  // blue
+    expect(html).toContain('#dc2626');  // red
+  });
+
+  test('toVisualReport escapes HTML in title/fileName (XSS safety)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    // Inject malicious content in title
+    const html = analyzer.toVisualReport({ title: '<script>alert("xss")</script>', fileName: '"><img src=x>' });
+    // Should NOT contain raw script tag or unescaped img
+    expect(html).not.toContain('<script>alert');
+    expect(html).toContain('&lt;script&gt;');  // escaped
+    expect(html).toContain('&quot;');  // escaped quote
+  });
+
+  test('toVisualReport works with empty model', () => {
+    const fold = {
+      vertices_coords: [],
+      edges_vertices: [],
+      faces_vertices: [],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const html = analyzer.toVisualReport();
+    expect(html).toContain('<!DOCTYPE html>');
+    // Empty model should still produce valid HTML
+    expect(html).toContain('Summary');
+  });
+
+  test('_escapeHtml handles special characters', () => {
+    const analyzer = new FoldAnalyzer({});
+    expect(analyzer._escapeHtml('<script>')).toBe('&lt;script&gt;');
+    expect(analyzer._escapeHtml('a & b')).toBe('a &amp; b');
+    expect(analyzer._escapeHtml('"quoted"')).toBe('&quot;quoted&quot;');
+    expect(analyzer._escapeHtml(null)).toBe('');
+    expect(analyzer._escapeHtml(undefined)).toBe('');
+  });
+
+  test('integration: toVisualReport accepts pre-computed analyzeResult', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    const html1 = analyzer.toVisualReport();
+    const html2 = analyzer.toVisualReport({}, result);  // pre-computed
+    // Both should have the same content (modulo timestamp in footer)
+    expect(html1.replace(/• .*/, '')).toBe(html2.replace(/• .*/, ''));
+  });
+});

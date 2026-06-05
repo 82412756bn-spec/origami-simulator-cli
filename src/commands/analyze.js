@@ -26,6 +26,7 @@ function registerAnalyzeCommand(program) {
     .option('--strict', 'Use strict symmetry detection (tighter tolerance, filter subgroup over-detection)')
     .option('--validate-output', 'Validate analyze() output against docs/fold-analyzer-schema.json (ajv, v2.11)')
     .option('--summary', 'Output compact summary JSON (v2.13) instead of full report')
+    .option('--visualize <file>', 'Write self-contained HTML visual report to <file> (v2.16)')
     .option('--debug', 'Enable debug output')
     .action((file, options) => {
       analyzeFile(file, options);
@@ -67,6 +68,16 @@ function analyzeFile(filePath, options) {
       const result = analyzer.analyze(options);
       const summary = analyzer.summarize(result);
       console.log(JSON.stringify(summary, null, 2));
+      return;
+    }
+
+    if (options.visualize) {
+      // v2.16: self-contained HTML visual report
+      const outPath = path.resolve(options.visualize);
+      const result = analyzer.analyze(options);
+      const html = analyzer.toVisualReport({ title: `Visual Report: ${path.basename(filePath)}`, fileName: path.basename(filePath) }, result);
+      fs.writeFileSync(outPath, html, 'utf8');
+      console.log(`📊 Visual report written to: ${outPath}  (${html.length} bytes)`);
       return;
     }
 

@@ -2525,6 +2525,183 @@ class FoldAnalyzer {
   }
 
   /**
+   * Generate a self-contained HTML visual report (v2.16).
+   *
+   * Returns a string containing:
+   *   - Header with file metadata + analysis version
+   *   - SVG visualization (vertices + edges) with M/V color-coding
+   *   - Self-intersection highlights (from v2.15)
+   *   - Summary table (from v2.13)
+   *   - Top issues list
+   *   - No external dependencies — pure HTML+CSS+SVG
+   *
+   * @param {Object} [options] - { title?: string, fileName?: string }
+   * @param {Object} [analyzeResult] - Optional pre-computed analyze() output.
+   * @returns {string} HTML string (self-contained, ~5-50KB)
+   */
+  toVisualReport(options = {}, analyzeResult) {
+    const r = analyzeResult || this.analyze();
+    const summary = this.summarize(r);
+    const opts = {
+      title: options.title || 'FOLD Model Visual Report',
+      fileName: options.fileName || '(unknown)',
+      ...options,
+    };
+
+    // SVG dimensions
+    const bbox = r.basic.boundingBox;
+    const padding = 20;
+    const svgWidth = 600;
+    const svgHeight = 400;
+    const scaleX = (svgWidth - 2 * padding) / Math.max(bbox.width, 0.001);
+    const scaleY = (svgHeight - 2 * padding) / Math.max(bbox.height, 0.001);
+    const scale = Math.min(scaleX, scaleY);
+
+    const project = (v) => {
+      const x = padding + (v[0] - bbox.minX) * scale;
+      const y = svgHeight - padding - (v[1] - bbox.minY) * scale;
+      return [x, y];
+    };
+
+    const edgeColor = (a) => {
+      if (a === 'M') return '#2563eb';
+      if (a === 'V') return '#dc2626';
+      if (a === 'F') return '#94a3b8';
+      return '#6b7280';
+    };
+
+    const edgesSvg = this.edges.map((e, idx) => {
+      const a = this.vertices[e[0]] || [0, 0, 0];
+      const b = this.vertices[e[1]] || [0, 0, 0];
+      const [x1, y1] = project(a);
+      const [x2, y2] = project(b);
+      const c = edgeColor(this.assignments[idx]);
+      return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${c}" stroke-width="1.5" />`;
+    }).join('\n      ');
+
+    const verticesSvg = this.vertices.map((v) => {
+      const [x, y] = project(v);
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2" fill="#1f2937" />`;
+    }).join('\n      ');
+
+    // Highlight self-intersection edges
+    const selfIntersect = r.completeSelfIntersection || { intersections: [] };
+    const intersectionEdgeSet = new Set();
+    for (const inter of selfIntersect.intersections) {
+      for (const fIdx of [inter.face1, inter.face2]) {
+        const face = this.faces[fIdx] || [];
+        for (let i = 0; i < face.length; i++) {
+          const a = face[i];
+          const b = face[(i + 1) % face.length];
+          for (let j = 0; j < this.edges.length; j++) {
+            const e = this.edges[j];
+            if ((e[0] === a && e[1] === b) || (e[0] === b && e[1] === a)) {
+              intersectionEdgeSet.add(j);
+              break;
+            }
+          }
+        }
+      }
+    }
+    const highlightSvg = Array.from(intersectionEdgeSet).map(idx => {
+      const e = this.edges[idx];
+      const a = this.vertices[e[0]] || [0, 0, 0];
+      const b = this.vertices[e[1]] || [0, 0, 0];
+      const [x1, y1] = project(a);
+      const [x2, y2] = project(b);
+      return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#f59e0b" stroke-width="4" opacity="0.6" />`;
+    }).join('\n      ');
+
+    const summaryHtml = `
+    <h2>Summary</h2>
+    <table>
+      <tr><th>Schema version</th><td>${summary.schemaVersion}</td></tr>
+      <tr><th>Summary version</th><td>${summary.summaryVersion}</td></tr>
+      <tr><th>Counts</th><td>${summary.counts.vertices} vertices, ${summary.counts.edges} edges, ${summary.counts.faces} faces (${summary.counts.facesByType})</td></tr>
+      <tr><th>Surface</th><td>${summary.surface.type} (Euler χ = ${summary.surface.euler}, genus = ${summary.surface.genus ?? 'N/A'})</td></tr>
+      <tr><th>Kawasaki</th><td>${summary.flatFoldability.kawasaki.checked} checked, ${summary.flatFoldability.kawasaki.passed} passed (${summary.flatFoldability.kawasaki.passRate})</td></tr>
+      <tr><th>Maekawa</th><td>${summary.flatFoldability.maekawa.checked} checked, ${summary.flatFoldability.maekawa.passed} passed</td></tr>
+      <tr><th>Quality</th><td>${summary.quality.errorCount} errors, ${summary.quality.warningCount} warnings</td></tr>
+      <tr><th>MV alternation</th><td>${summary.consistency.mvAlternation.checked} checked, ${summary.consistency.mvAlternation.inconsistent} non-alternating</td></tr>
+      <tr><th>Strict Kawasaki</th><td>${summary.consistency.strictKawasaki.outOfTolerance} out of tolerance</td></tr>
+      <tr><th>Self-intersections</th><td>${selfIntersect.intersectionCount || 0} face pair(s)</td></tr>
+    </table>`;
+
+    const issuesHtml = summary.quality.topIssues.length > 0 ? `
+    <h2>Top Issues</h2>
+    <ul>
+      ${summary.quality.topIssues.map(i => `<li class="issue-${i.severity}">${this._escapeHtml(i.message)}</li>`).join('\n      ')}
+    </ul>` : '';
+
+    const legendHtml = `
+    <h2>Edge Legend</h2>
+    <div class="legend">
+      <span><span class="swatch" style="background:#2563eb"></span> Mountain (M)</span>
+      <span><span class="swatch" style="background:#dc2626"></span> Valley (V)</span>
+      <span><span class="swatch" style="background:#94a3b8"></span> Flat (F)</span>
+      <span><span class="swatch" style="background:#6b7280"></span> Boundary (B)</span>
+      <span><span class="swatch" style="background:#f59e0b"></span> Self-intersection (v2.15)</span>
+    </div>`;
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${this._escapeHtml(opts.title)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 20px; color: #1f2937; }
+    h1 { color: #111827; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }
+    h2 { color: #374151; margin-top: 24px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+    table { border-collapse: collapse; margin: 12px 0; }
+    th { text-align: left; padding: 4px 12px; background: #f3f4f6; border: 1px solid #d1d5db; }
+    td { padding: 4px 12px; border: 1px solid #d1d5db; }
+    .svg-container { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 4px; padding: 12px; margin: 12px 0; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; }
+    .legend span { display: flex; align-items: center; gap: 4px; }
+    .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; }
+    ul { list-style: none; padding-left: 0; }
+    li.issue-error { background: #fee2e2; border-left: 4px solid #dc2626; padding: 6px 10px; margin: 4px 0; }
+    li.issue-warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 6px 10px; margin: 4px 0; }
+    .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+  <h1>${this._escapeHtml(opts.title)}</h1>
+  <p><strong>File:</strong> ${this._escapeHtml(opts.fileName)}</p>
+  <h2>Visualization (top-down 2D projection)</h2>
+  <div class="svg-container">
+    <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="${svgWidth}" height="${svgHeight}" fill="white" />
+      ${edgesSvg}
+      ${highlightSvg}
+      ${verticesSvg}
+    </svg>
+  </div>
+  ${legendHtml}
+  ${summaryHtml}
+  ${issuesHtml}
+  <div class="footer">
+    Generated by fold-analyzer v${r.schemaVersion} (visualizer v2.16) • ${new Date().toISOString()}
+  </div>
+</body>
+</html>`;
+  }
+
+  /**
+   * HTML-escape a string for safe embedding.
+   * @private
+   */
+  _escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /**
    * Generate a compact summary (v2.13) — for scripts/automation/CI use.
    *
    * Unlike `analyze()` (which returns all 16 fields), `summarize()` returns
