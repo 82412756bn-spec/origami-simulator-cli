@@ -1832,3 +1832,138 @@ describe('FoldAnalyzer v2.11 - JSON Schema Validator (ajv)', () => {
     expect(validation.schemaVersion).toBe('2.10');
   });
 });
+
+describe('FoldAnalyzer v2.12 - Strict Kawasaki + Alternating M/V', () => {
+  test('alternating M/V: classic 4-vertex star with M,V,M,V alternation', () => {
+    // Star: 4 edges from center, angles 90° apart, M-V-M-V around
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const ma = analyzer.analyzeAlternatingMV();
+    // Vertex 0 has 4 incident edges, all M/V alternating M,V,M,V
+    // But note: only 3 angles in computeVertexAngles (it uses consecutive pairs)
+    // So we check 3 edges, with M,V,M
+    // Wait — the cyclicOrder from computeVertexAngles returns the angles BETWEEN
+    // consecutive edges. So 4 edges → 4 angles. But our loop has 4 edges, and
+    // we check consecutive M/V pairs in the edge list (4 items).
+    // Pattern: M,V,M,V — no consecutive same. Should pass.
+    expect(ma.totalChecked).toBeGreaterThan(0);
+  });
+
+  test('alternating M/V: non-alternating M,M flagged', () => {
+    // Same star but with M,M,M,M — all same
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','M','M','M'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const ma = analyzer.analyzeAlternatingMV();
+    expect(ma.inconsistent).toBeGreaterThan(0);
+  });
+
+  test('alternating M/V: vertex with <3 edges skipped', () => {
+    // 2 vertices, 1 edge between them
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0]],
+      edges_vertices: [[0,1]],
+      faces_vertices: [],
+      edges_assignment: ['M'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const ma = analyzer.analyzeAlternatingMV();
+    expect(ma.totalChecked).toBe(0);
+  });
+
+  test('alternating M/V: notes when no internal vertices', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[1,1,0],[0,1,0]],
+      edges_vertices: [[0,1],[1,2],[2,3],[3,0]],
+      faces_vertices: [[0,1,2,3]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const ma = analyzer.analyzeAlternatingMV();
+    // No vertex has ≥3 incident edges here, so totalChecked=0
+    expect(ma.notes.some(n => n.includes('No internal'))).toBe(true);
+  });
+
+  test('strictKawasaki: classic 4-edge star with even angles', () => {
+    // Star at 90° angles → alternating sum should be ~180°
+    // M-V-M-V with even 90° angles → all angle pairs sum to 180° → Kawasaki passes
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sk = analyzer.strictKawasaki();
+    // Star with 4 edges at 90° intervals → all even-odd pairs differ by 0
+    // → deviation = 0
+    expect(sk.totalChecked).toBe(1);
+    expect(sk.withinTolerance).toBe(1);
+    expect(sk.outOfTolerance).toBe(0);
+  });
+
+  test('strictKawasaki: topDeviations sorted by deviation desc', () => {
+    // Create multiple vertices with different deviations
+    // Hard to construct directly, so just verify the structure
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sk = analyzer.strictKawasaki();
+    expect(Array.isArray(sk.topDeviations)).toBe(true);
+    // topDeviations should be sorted descending
+    for (let i = 1; i < sk.topDeviations.length; i++) {
+      expect(sk.topDeviations[i - 1].deviation).toBeGreaterThanOrEqual(sk.topDeviations[i].deviation);
+    }
+  });
+
+  test('strictKawasaki: topN parameter limits results', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const sk1 = analyzer.strictKawasaki(1);
+    expect(sk1.topDeviations.length).toBeLessThanOrEqual(1);
+  });
+
+  test('integration: analyze() includes mvAlternation and strictKawasaki fields', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+      edges_assignment: ['M','V','M','V'],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result).toHaveProperty('mvAlternation');
+    expect(result).toHaveProperty('strictKawasaki');
+    expect(result.mvAlternation).toHaveProperty('inconsistencies');
+    expect(result.strictKawasaki).toHaveProperty('topDeviations');
+  });
+
+  test('schemaVersion still "2.10" (no schema bump for v2.12)', () => {
+    const fold = {
+      vertices_coords: [[0,0,0],[1,0,0],[0,1,0],[-1,0,0],[0,-1,0]],
+      edges_vertices: [[0,1],[0,2],[0,3],[0,4]],
+      faces_vertices: [[0,1,2],[0,2,3],[0,3,4],[0,4,1]],
+    };
+    const analyzer = new FoldAnalyzer(fold);
+    const result = analyzer.analyze();
+    expect(result.schemaVersion).toBe('2.10');
+  });
+});
