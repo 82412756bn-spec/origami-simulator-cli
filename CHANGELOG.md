@@ -162,6 +162,38 @@ This is the **fold-analyzer evolution release** — a complete rewrite of the FO
 ### Test Coverage
 - **fold-analyzer.test.js**: 9 tests (v2.0) → 176 tests (v2.19) — **+167 tests, +1856%**
 - All versions unit-tested, real-file verified on hypar.fold
+
+---
+
+## [2.20.0] - 2026-06-07 — "fold-analyzer first-class CLI integration"
+
+The v2.0–v2.19 fold-analyzer was a strong engine but its CLI surface was scattered: the main `analyze` command, plus three hand-rolled inline alias blocks for `summary`/`visualize`/`validate` in `src/index.js`, and four deep validators (v2.12 Strict Kawasaki, v2.14 Strict Maekawa, v2.15 Möller self-intersection, v2.12 Alternating M/V) that were only reachable via `analyze --all`.
+
+This release makes fold-analyzer a first-class citizen of the CLI: every v2.x feature gets its own top-level subcommand, and a shared helper module removes ~110 lines of duplicated file-loading/error-handling code.
+
+### Added
+
+- **`src/commands/fold-helpers.js`** — shared `runWithFold(file, options, body)` wrapper. Centralizes file resolution, extension check (`.fold` only), JSON parse, `FoldAnalyzer` construction, and `--debug`-aware stack traces. Every fold subcommand now uses it.
+- **4 new top-level deep-analysis commands** in `src/commands/fold-deep.js`:
+  - `kawasaki <file>` — v2.12 Strict Kawasaki (ranks vertices by `|evenSum - oddSum|`, ±5° tolerance)
+  - `maekawa <file>` — v2.14 Strict Maekawa (validates `|M-V| = 2`)
+  - `selfintersection <file>` — v2.15 Complete Self-Intersection (Möller triangle-triangle)
+  - `mvalternation <file>` — v2.12 Alternating M/V Pattern
+  - Each supports `--json` for machine output, `--top <n>` (Kawasaki/Maekawa), `--debug`.
+- **3 new subcommand modules** that replaced inline code in `src/index.js`:
+  - `src/commands/fold-summary.js` (v2.13/v2.18)
+  - `src/commands/fold-visualize.js` (v2.16/v2.18)
+  - `src/commands/fold-validate.js` (v2.11/v2.19)
+- **`tests/unit/fold-commands.test.js`** — 23 new unit tests covering all 7 new/refactored subcommands, using a fake-Commander pattern (no child_process, no Playwright, runs in <1s).
+
+### Changed
+
+- `src/index.js` shrunk by 110 lines (1116 → 1006). The 3 inline `summary`/`visualize`/`validate` blocks are now one-line `register*Command(program)` calls.
+- All fold subcommands now share a single error-handling contract: missing file → `❌ File not found: <path>` and `process.exit(1)`; bad extension → `❌ Unsupported file format: <ext>`; malformed JSON → `❌ Failed to parse FOLD JSON: <msg>`. Behavior matches the old hand-rolled blocks but is now consistent and unit-tested.
+
+### Test Coverage
+- **fold-commands.test.js** (new): 23 tests in 0.3s — register, action, JSON output, error paths for all 7 commands
+- **Full unit suite**: 15 suites, 450 tests pass in 1.9s
 - Performance: 200-300ms for typical origami models
 
 ### Performance Characteristics
