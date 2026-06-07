@@ -308,3 +308,46 @@ Bulk FOLD validation with CI-friendly output.
 | v2.22   |   222 |      4 | +4 vscode-origami.test.js |
 | v2.23   |   244 |      5 | +22 fold-batch.test.js |
 | **Total (without preset-constants)** | **495** | **18** | **+486 since v2.0** |
+
+---
+
+## [2.24.0] - 2026-06-07 — "STL export"
+
+Last gap in the design→verify→manufacture pipeline. STL is the de-facto standard for 3D printing (Cura, PrusaSlicer) and CAM software.
+
+### Added
+- `src/utils/fold-stl-exporter.js` — Binary + ASCII STL writer (0 new deps)
+  - Binary: 80-byte header + uint32 tri count + 50 bytes/triangle
+  - ASCII:  human-readable "solid / facet / vertex" blocks
+  - Smart 2D→3D extrusion: quad face → 2 top + 2 bottom + 4 sides × 2 = 12 triangles
+  - True 3D passthrough: z≠0 coordinates used as-is
+  - Inline fan triangulation (matches `faceTriangles()` in fold-analyzer)
+  - Inline normal computation via right-hand-rule cross product
+- `stl <file>` top-level command
+  - `--ascii` ASCII format (default binary)
+  - `--thickness <mm>` sheet thickness (default 1.0)
+  - `--no-extrude` skip extrusion for 3D models
+  - `--flip-normals` reverse all face normals
+  - `--name <name>` custom header name
+- `dieline` command extended: `-f stl` (parse + export), `--ascii`, `--thickness`
+- `tests/unit/fold-stl.test.js` — 22 unit tests (1.4s)
+
+### Verified On
+- Synthetic 50×50mm square: 12 triangles, 684 bytes binary
+- 3D tetrahedron: 4 triangles (1 per face), 0 extrusion
+- `--thickness 3.5` → v1.z = +1.75 (half offset) ✓
+- `--flip-normals` → normal (0,0,1) → (0,0,-1) ✓
+- `dieline export -f stl --ascii` → valid ASCII STL ✓
+
+### Test Coverage Summary (v2.0 → v2.24)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| v2.24   |   266 |      6 | +22 fold-stl.test.js |
+| **Total (without preset-constants)** | **517** | **19** | **+508 since v2.0** |
