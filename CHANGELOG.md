@@ -223,3 +223,88 @@ This release makes fold-analyzer a first-class citizen of the CLI: every v2.x fe
 - hypar.fold (3D origami, 96 vertices / 207 edges)
 - miura-ori, waterbomb, cranes, etc. (origami-examples/FOLD/Origami/)
 - Custom-crafted test cases (unit + integration)
+
+---
+
+## [2.21.0] - 2026-06-07 — "DXF/PDF export for manufacturing"
+
+Closes the 'design → verify → manufacture' loop. The fold-analyzer already had complete geometric data and an SVG exporter; this release adds the two formats that actually drive laser cutters / CNC / print.
+
+### Added
+- `src/utils/dieline-dxf-exporter.js` — AutoCAD R12 ASCII DXF writer
+  - 3 layers: CUT (green, solid), MOUNTAIN (red, dashed), VALLEY (blue, dashed)
+  - `$INSUNITS=4` (millimeters) in header
+  - LWPOLYLINE for face boundaries + LINE for open segments
+  - Output ~12KB for hypar.fold
+- `src/utils/dieline-pdf-exporter.js` — pdf-lib cut-pattern sheet (no new dep)
+  - A4 default, auto-orients landscape when model is wider than tall
+  - Same color/dash conventions as SVG exporter
+  - Face fills at 50% gray
+  - Bottom legend: Cut / Mountain / Valley
+  - Output ~3.4KB for hypar.fold
+- `dieline` command now accepts `-f dxf` and `-f pdf` (in both `parse` and `export` subcommands)
+
+### Tests
+- `tests/unit/dieline-exporters.test.js` — 19 unit tests (1.1s)
+
+---
+
+## [2.22.0] - 2026-06-07 — "VS Code extension"
+
+A thin VS Code wrapper that integrates the fold-analyzer as a first-class editor experience.
+
+### Added
+- `vscode-origami/` — full VS Code extension (no build step, no TypeScript)
+  - 6 commands (editor context menu + Command Palette):
+    - `Origami: Analyze File` — full analyze --all report
+    - `Origami: Visualize` — self-contained HTML in Webview panel
+    - `Origami: Validate Output (Schema)` — ajv validation
+    - `Origami: Summary (Compact JSON)` — compact JSON
+    - `Origami: Strict Kawasaki` — v2.12
+    - `Origami: Strict Maekawa` — v2.14
+  - Settings: `origami.cliPath` (default `"origami"`), `origami.showOutputOnRun`
+  - Activation: onLanguage:json + onCommand:origami.*
+  - Visualize reuses a single WebviewPanel (reveal instead of recreate)
+
+### Tests
+- `tests/unit/vscode-origami.test.js` — 4 unit tests using `jest.mock('vscode')`
+
+### Packaging
+- `cd vscode-origami && vsce package` produces a `.vsix`
+
+---
+
+## [2.23.0] - 2026-06-07 — "batch-analyze + JUnit XML for CI/CD"
+
+Bulk FOLD validation with CI-friendly output.
+
+### Added
+- `batch-analyze <inputs...>` — run fold-analyzer on many .fold files at once
+  - Inputs: file list, comma-list, glob (`*.fold`, `models/**`), directory (recursive)
+  - Actions: `--action analyze|summary|validate|kawasaki|maekawa` (default: `analyze`)
+  - Per-file checks: `basic` + `<action>` + `schema` (skip any with `--no-basic` / `--no-schema`)
+  - Optional JUnit XML output via `--junit <file>` for CI/CD
+  - Exit codes: 0=pass, 1=check failure, 2=input error
+- Inline glob walker + JUnit XML writer (no new deps)
+- `src/commands/fold-batch.js` — 320 lines
+
+### Tests
+- `tests/unit/fold-batch.test.js` — 22 unit tests (1.9s)
+  - expandInputs (file / glob / dir / dedup / non-existent)
+  - toJUnitXML (header, counts, failures, escaping)
+  - CHECKS registry (5 actions × 1 real run on hypar.fold)
+  - CLI end-to-end (good path, bad path, exit codes)
+
+---
+
+## Test Coverage Summary (v2.0 → v2.23)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| **Total (without preset-constants)** | **495** | **18** | **+486 since v2.0** |
