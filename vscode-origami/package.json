@@ -1,0 +1,124 @@
+{
+  "name": "origami",
+  "displayName": "Origami FOLD Analyzer",
+  "description": "Validate, visualize, and analyze origami FOLD files in VS Code. Wraps the origami-simulator-cli fold-analyzer engine.",
+  "version": "2.22.0",
+  "publisher": "origami-simulator-cli",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18.0.0"
+  },
+  "categories": [
+    "Other Tools",
+    "Visualization"
+  ],
+  "keywords": [
+    "origami",
+    "fold",
+    "simulator",
+    "kawasaki",
+    "maekawa",
+    "crease-pattern",
+    "manufacturing"
+  ],
+  "activationEvents": [
+    "onLanguage:json",
+    "onCommand:origami.analyze",
+    "onCommand:origami.visualize",
+    "onCommand:origami.validate",
+    "onCommand:origami.summary",
+    "onCommand:origami.kawasaki",
+    "onCommand:origami.maekawa"
+  ],
+  "main": "extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "origami.analyze",
+        "title": "Origami: Analyze File",
+        "category": "Origami",
+        "description": "Run the full FOLD analyzer on the current file (origami analyze <file>)"
+      },
+      {
+        "command": "origami.visualize",
+        "title": "Origami: Visualize",
+        "category": "Origami",
+        "description": "Generate self-contained HTML report and open in a VS Code Webview"
+      },
+      {
+        "command": "origami.validate",
+        "title": "Origami: Validate Output (Schema)",
+        "category": "Origami",
+        "description": "Run ajv schema validation against the analyzer output"
+      },
+      {
+        "command": "origami.summary",
+        "title": "Origami: Summary (Compact JSON)",
+        "category": "Origami",
+        "description": "Output compact summary JSON for the current file"
+      },
+      {
+        "command": "origami.kawasaki",
+        "title": "Origami: Strict Kawasaki",
+        "category": "Origami",
+        "description": "Strict Kawasaki flat-foldability check (v2.12)"
+      },
+      {
+        "command": "origami.maekawa",
+        "title": "Origami: Strict Maekawa",
+        "category": "Origami",
+        "description": "Strict Maekawa flat-foldability check (v2.14, |M-V| = 2)"
+      }
+    ],
+    "menus": {
+      "editor/context/file": [
+        {
+          "command": "origami.analyze",
+          "when": "resourceExtname == .fold",
+          "group": "origami"
+        },
+        {
+          "command": "origami.visualize",
+          "when": "resourceExtname == .fold",
+          "group": "origami"
+        },
+        {
+          "command": "origami.validate",
+          "when": "resourceExtname == .fold",
+          "group": "origami"
+        },
+        {
+          "command": "origami.summary",
+          "when": "resourceExtname == .fold",
+          "group": "origami"
+        },
+        {
+          "command": "origami.kawasaki",
+          "when": "resourceExtname == .fold",
+          "group": "origami"
+        },
+        {
+          "command": "origami.maekawa",
+          "when": "resourceExtname == .fold",
+          "group": "origami"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Origami",
+      "properties": {
+        "origami.cliPath": {
+          "type": "string",
+          "default": "origami",
+          "description": "Path to the origami CLI executable. Defaults to 'origami' (uses globally installed CLI)."
+        },
+        "origami.showOutputOnRun": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Origami output channel when running a command."
+        }
+      }
+    }
+  }
+}

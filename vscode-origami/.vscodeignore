@@ -1,0 +1,6 @@
+.vscode/
+.git/
+**/*.md.bak
+**/*.log
+**/.DS_Store
+node_modules/
