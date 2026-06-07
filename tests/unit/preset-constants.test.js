@@ -9,6 +9,20 @@ const fs = require('fs');
 
 const CLI_PATH = path.join(__dirname, '../../src/index.js');
 
+// Detect Playwright availability. Tests that launch a real browser
+// (e.g., batch --action screenshot) require it; otherwise they're slow.
+// Set RUN_BROWSER_TESTS=1 to opt in.
+const HAS_BROWSER = (() => {
+  if (process.env.RUN_BROWSER_TESTS === '1') return true;
+  try {
+    require('playwright').chromium;
+    return true;
+  } catch (e) {
+    return false;
+  }
+})();
+const skipIfNoBrowser = HAS_BROWSER ? x => x : x.skip;
+
 async function cli(args) {
   return new Promise((resolve) => {
     const proc = spawn('node', [CLI_PATH, ...args], { cwd: path.dirname(CLI_PATH) });
@@ -76,10 +90,12 @@ describe('Config Command', () => {
 
   test('config should accept valid parameters', async () => {
     const result = await cli(['config', '--axial-stiffness', '0.5', '--crease-stiffness', '0.8']);
-    // May fail due to browser issues, but should not crash
+    // May fail due to browser issues, but should not crash.
+    // Realistic budget: chromium launch (3-8s) + origamisimulator.org page load (5-30s) + 3s wait + JS eval.
+    // 30s was too tight; bumped to 90s to match launchBrowser's default 60s timeout + headroom.
     expect(result).toHaveProperty('exitCode');
     expect(result).toHaveProperty('stdout');
-  }, 30000);
+  }, 90000);
 });
 
 describe('Batch Command', () => {
@@ -99,7 +115,7 @@ describe('Batch Command', () => {
     const result = await cli(['batch', '--preset', 'cranes', '--action', 'screenshot']);
     // Should show batch processing start (may timeout but shouldn't crash)
     expect(result.stdout).toContain('Batch processing') || result.exitCode !== 0;
-  }, 60000);
+  }, 120000);  // 120s timeout: browser launch + page load + screenshot can be slow
 });
 
 describe('Analyze Command', () => {

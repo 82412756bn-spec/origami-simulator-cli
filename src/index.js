@@ -90,8 +90,9 @@ function buildPresetUrl(id) {
   // Get preset file path
   const presetFile = getPresetFile(id);
   if (!presetFile) return null;
-  // Don't use encodeURIComponent - server accepts raw slashes
-  return `${BASE_URL}?model=${presetFile}`;
+  // Use ?demo= with URL-encoded path (the origami simulator server
+  // expects this format for loading preset SVG files)
+  return `${BASE_URL}?demo=${encodeURIComponent(presetFile)}`;
 }
 
 async function launchBrowser(timeout = 60000) {
@@ -134,17 +135,37 @@ program
   .option('-f, --file <path>', 'Path to FOLD/SVG file')
   .option('-p, --preset <name>', 'Preset model name')
   .action(async (options) => {
+    // Validate inputs FIRST (before launching browser — browser launch is 3-8s)
+    if (options.preset) {
+      const presetFile = getPresetFile(options.preset);
+      if (!presetFile) {
+        console.error(`❌ Unknown preset: ${options.preset}`);
+        console.log('Use "origami list" to see available presets.');
+        process.exit(1);
+      }
+    } else if (options.file) {
+      const filePath = path.resolve(options.file);
+      if (!fs.existsSync(filePath)) {
+        console.error(`❌ File not found: ${filePath}`);
+        process.exit(1);
+      }
+      const ext = path.extname(filePath).toLowerCase();
+      if (ext !== '.fold' && ext !== '.svg') {
+        console.error(`❌ Unsupported file format: ${ext}`);
+        console.error('   Supported formats: .fold, .svg');
+        process.exit(1);
+      }
+    } else {
+      console.log('No file or preset specified');
+      console.log('Usage: origami load --preset <name> OR origami load --file <path>');
+      process.exit(0);
+    }
+
     const { browser, page } = await launchBrowser();
     try {
       if (options.preset) {
-        // Get preset file path
-        const presetFile = getPresetFile(options.preset);
-        if (!presetFile) {
-          console.error(`❌ Unknown preset: ${options.preset}`);
-          console.log('Use "origami list" to see available presets.');
-          process.exit(1);
-        }
         // Load preset via demo file URL parameter
+        const presetFile = getPresetFile(options.preset);
         const presetUrl = `${BASE_URL}?demo=${encodeURIComponent(presetFile)}`;
         await page.goto(presetUrl);
         await waitForPageReady(page);
@@ -153,18 +174,6 @@ program
       } else if (options.file) {
         // Load file via file input
         const filePath = path.resolve(options.file);
-
-        if (!fs.existsSync(filePath)) {
-          console.error(`❌ File not found: ${filePath}`);
-          process.exit(1);
-        }
-
-        const ext = path.extname(filePath).toLowerCase();
-        if (ext !== '.fold' && ext !== '.svg') {
-          console.error(`❌ Unsupported file format: ${ext}`);
-          console.error('   Supported formats: .fold, .svg');
-          process.exit(1);
-        }
 
         // Find the hidden file input and upload the file
         const fileInput = await page.locator('input#fileSelector');
@@ -176,6 +185,7 @@ program
 
         console.log(`✅ Loaded file: ${options.file}`);
       } else {
+        // Should not reach here due to early validation
         console.log('No file or preset specified');
         console.log('Usage: origami load --preset <name> OR origami load --file <path>');
       }
@@ -332,18 +342,19 @@ program
   .option('-m, --mode <mode>', 'View mode', 'simulation')
   .option('-p, --preset <name>', 'Preset model name')
   .action(async (options) => {
+    // Validate mode FIRST (before launching browser — browser launch is 3-8s)
+    const validModes = ['pattern', 'simulation', 'folded', 'strain'];
+    if (!validModes.includes(options.mode)) {
+      console.error(`❌ Invalid view mode: ${options.mode}`);
+      console.error(`   Valid modes: ${validModes.join(', ')}`);
+      process.exit(1);
+    }
+
     const { browser, page } = await launchBrowser();
     try {
       if (options.preset) {
         await page.goto(buildPresetUrl(options.preset));
         await waitForPageReady(page);
-      }
-
-      const validModes = ['pattern', 'simulation', 'folded', 'strain'];
-      if (!validModes.includes(options.mode)) {
-        console.error(`❌ Invalid view mode: ${options.mode}`);
-        console.error(`   Valid modes: ${validModes.join(', ')}`);
-        process.exit(1);
       }
 
       // Try to switch view mode via globals
@@ -405,17 +416,18 @@ program
   .option('--file <path>', 'Model file path')
   .option('--filename <name>', 'Filename for export (without extension)')
   .action(async (options) => {
+    // Validate format FIRST (before launching browser — browser launch is 3-8s)
+    const format = options.format.toLowerCase();
+    const validFormats = ['fold', 'stl', 'obj', 'png', 'svg'];
+    if (!validFormats.includes(format)) {
+      console.error(`❌ Invalid format: ${format}`);
+      console.error(`   Valid formats: ${validFormats.join(', ')}`);
+      process.exit(1);
+    }
+
     const { browser, context } = await launchBrowser();
     const page = await context.newPage();
     try {
-      const format = options.format.toLowerCase();
-      const validFormats = ['fold', 'stl', 'obj', 'png', 'svg'];
-      if (!validFormats.includes(format)) {
-        console.error(`❌ Invalid format: ${format}`);
-        console.error(`   Valid formats: ${validFormats.join(', ')}`);
-        process.exit(1);
-      }
-
       // Load model if specified
       if (options.preset) {
         await page.goto(buildPresetUrl(options.preset));
