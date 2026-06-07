@@ -989,6 +989,7 @@ const {
   registerSelfintersectionCommand,
   registerMvalternationCommand,
 } = require('./commands/fold-deep');
+const { registerBatchAnalyzeCommand } = require('./commands/fold-batch');
 
 registerSummaryCommand(program);
 registerVisualizeCommand(program);
@@ -997,6 +998,7 @@ registerKawasakiCommand(program);
 registerMaekawaCommand(program);
 registerSelfintersectionCommand(program);
 registerMvalternationCommand(program);
+registerBatchAnalyzeCommand(program);
 
 
 // Only parse when run directly (not when imported as module for testing)
