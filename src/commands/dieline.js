@@ -21,7 +21,7 @@ function registerDielineCommand(program) {
     .command('parse <file>')
     .description('Parse a dieline file (PDF/EPS/AI/SVG/FOLD) and output as FOLD JSON')
     .option('-o, --output <file>', 'Output file path (default: stdout)')
-    .option('-f, --format <format>', 'Output format: fold, svg (default: fold)')
+    .option('-f, --format <format>', 'Output format: fold, svg, dxf, pdf (default: fold)')
     .option('--scale <number>', 'Scale factor for coordinates', '100')
     .option('--debug', 'Enable debug output')
     .action(async (file, options) => {
@@ -31,9 +31,9 @@ function registerDielineCommand(program) {
   // dieline export command
   dieline
     .command('export <file>')
-    .description('Export parsed dieline to different format')
+    .description('Export parsed dieline to different format (fold, svg, dxf, pdf)')
     .option('-o, --output <file>', 'Output file path (required)')
-    .option('-f, --format <format>', 'Output format: fold, svg (required)')
+    .option('-f, --format <format>', 'Output format: fold, svg, dxf, pdf (required)')
     .option('--scale <number>', 'Scale factor for coordinates', '100')
     .option('--debug', 'Enable debug output')
     .action(async (file, options) => {
@@ -92,6 +92,22 @@ async function parseDieline(inputFile, options) {
       if (options.format === 'svg') {
         parser.exportToSVG(options.output, foldData);
         console.log(`✅ Exported SVG: ${options.output}`);
+      } else if (options.format === 'dxf') {
+        // v2.21: AutoCAD R12 DXF
+        const { DielineDXFExporter } = require('../utils/dieline-dxf-exporter');
+        const dxf = new DielineDXFExporter({ debug: options.debug });
+        fs.writeFileSync(options.output, dxf.export(foldData), 'utf8');
+        console.log(`✅ Exported DXF: ${options.output}`);
+      } else if (options.format === 'pdf') {
+        // v2.21: PDF cut pattern
+        const { DielinePDFExporter } = require('../utils/dieline-pdf-exporter');
+        const pdf = new DielinePDFExporter({
+          title: `FOLD Dieline: ${path.basename(inputFile)}`,
+          debug: options.debug,
+        });
+        const bytes = await pdf.export(foldData);
+        fs.writeFileSync(options.output, bytes);
+        console.log(`✅ Exported PDF: ${options.output}`);
       } else {
         parser.exportToFold(options.output, foldData);
         console.log(`✅ Exported FOLD: ${options.output}`);
@@ -123,9 +139,9 @@ async function exportDieline(inputFile, options) {
     process.exit(1);
   }
 
-  if (!['fold', 'svg'].includes(options.format)) {
+  if (!['fold', 'svg', 'dxf', 'pdf'].includes(options.format)) {
     console.error(`❌ Invalid format: ${options.format}`);
-    console.error('   Supported formats: fold, svg');
+    console.error('   Supported formats: fold, svg, dxf, pdf');
     process.exit(1);
   }
 
@@ -144,6 +160,21 @@ async function exportDieline(inputFile, options) {
 
     if (options.format === 'svg') {
       parser.exportToSVG(options.output, foldData);
+    } else if (options.format === 'dxf') {
+      // v2.21: AutoCAD R12 DXF export for laser cutters / CNC
+      const { DielineDXFExporter } = require('../utils/dieline-dxf-exporter');
+      const dxf = new DielineDXFExporter({ debug: options.debug });
+      const content = dxf.export(foldData);
+      fs.writeFileSync(options.output, content, 'utf8');
+    } else if (options.format === 'pdf') {
+      // v2.21: PDF cut-pattern sheet via pdf-lib
+      const { DielinePDFExporter } = require('../utils/dieline-pdf-exporter');
+      const pdf = new DielinePDFExporter({
+        title: `FOLD Dieline: ${path.basename(inputFile)}`,
+        debug: options.debug,
+      });
+      const bytes = await pdf.export(foldData);
+      fs.writeFileSync(options.output, bytes);
     } else {
       parser.exportToFold(options.output, foldData);
     }

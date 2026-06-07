@@ -1,6 +1,6 @@
 {
   "name": "origami-simulator-cli",
-  "version": "2.20.0",
+  "version": "2.21.0",
   "description": "CLI tool for OrigamiSimulator.org - Simulate origami folding patterns via command line",
   "main": "src/index.js",
   "bin": {
