@@ -31,10 +31,12 @@ function registerDielineCommand(program) {
   // dieline export command
   dieline
     .command('export <file>')
-    .description('Export parsed dieline to different format (fold, svg, dxf, pdf)')
+    .description('Export parsed dieline to different format (fold, svg, dxf, pdf, stl)')
     .option('-o, --output <file>', 'Output file path (required)')
-    .option('-f, --format <format>', 'Output format: fold, svg, dxf, pdf (required)')
+    .option('-f, --format <format>', 'Output format: fold, svg, dxf, pdf, stl (required)')
     .option('--scale <number>', 'Scale factor for coordinates', '100')
+    .option('--thickness <mm>', 'Sheet thickness for STL extrusion (default: 1.0mm)', (v) => parseFloat(v), 1.0)
+    .option('--ascii', 'Output ASCII STL (only for -f stl; default is binary)')
     .option('--debug', 'Enable debug output')
     .action(async (file, options) => {
       await exportDieline(file, options);
@@ -108,6 +110,16 @@ async function parseDieline(inputFile, options) {
         const bytes = await pdf.export(foldData);
         fs.writeFileSync(options.output, bytes);
         console.log(`✅ Exported PDF: ${options.output}`);
+      } else if (options.format === 'stl') {
+        // v2.24: STL (3D printing / laser cutting with thickness)
+        const { FoldSTLExporter } = require('../utils/fold-stl-exporter');
+        const stl = new FoldSTLExporter({
+          thickness: parseFloat(options.thickness) || 1.0,
+          format: options.ascii ? 'ascii' : 'binary',
+          debug: options.debug,
+        });
+        fs.writeFileSync(options.output, stl.export(foldData));
+        console.log(`✅ Exported STL: ${options.output}`);
       } else {
         parser.exportToFold(options.output, foldData);
         console.log(`✅ Exported FOLD: ${options.output}`);
@@ -139,9 +151,9 @@ async function exportDieline(inputFile, options) {
     process.exit(1);
   }
 
-  if (!['fold', 'svg', 'dxf', 'pdf'].includes(options.format)) {
+  if (!['fold', 'svg', 'dxf', 'pdf', 'stl'].includes(options.format)) {
     console.error(`❌ Invalid format: ${options.format}`);
-    console.error('   Supported formats: fold, svg, dxf, pdf');
+    console.error('   Supported formats: fold, svg, dxf, pdf, stl');
     process.exit(1);
   }
 
@@ -174,6 +186,16 @@ async function exportDieline(inputFile, options) {
         debug: options.debug,
       });
       const bytes = await pdf.export(foldData);
+      fs.writeFileSync(options.output, bytes);
+    } else if (options.format === 'stl') {
+      // v2.24: STL (3D printing / laser cutting with thickness)
+      const { FoldSTLExporter } = require('../utils/fold-stl-exporter');
+      const stl = new FoldSTLExporter({
+        thickness: parseFloat(options.thickness) || 1.0,
+        format: options.ascii ? 'ascii' : 'binary',
+        debug: options.debug,
+      });
+      const bytes = stl.export(foldData);
       fs.writeFileSync(options.output, bytes);
     } else {
       parser.exportToFold(options.output, foldData);
