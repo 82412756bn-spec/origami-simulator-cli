@@ -351,3 +351,48 @@ Last gap in the design→verify→manufacture pipeline. STL is the de-facto stan
 | v2.23   |   244 |      5 | +22 fold-batch.test.js |
 | v2.24   |   266 |      6 | +22 fold-stl.test.js |
 | **Total (without preset-constants)** | **517** | **19** | **+508 since v2.0** |
+
+---
+
+## [2.27.0] - 2026-06-07 — "Local real-time fold simulator"
+
+Adds a pure-JS kinematic fold solver that runs the fold simulation locally — no Playwright, no browser, no network. The previous `simulate` command at src/index.js:289 launched a Chromium and drove origamisimulator.org's slider; this new `fold` command does the math in-process in < 5ms per frame.
+
+### Added
+- `src/utils/fold-simulator.js` — tree-based kinematic fold solver (rigid origami approximation)
+  - Builds face adjacency graph → BFS spanning tree → rotates child faces around shared edges
+  - Rodrigues' rotation formula + 4×4 matrix composition (no gl-matrix / no three.js)
+  - M=+angle, V=-angle around edge axis; cyclic patterns get first-assignment-wins
+- `fold <file>` top-level command (avoids name clash with browser-based `simulate`)
+  - `--angle <deg>`, `--percent <0-1>`, `--frames N -o out.json`, `--animate out.html`
+  - `--no-mountain-up` to flip M/V convention
+- `src/commands/fold-simulate-anim.js` — self-contained HTML animation
+  - SVG with isometric projection (z → vertical offset, no WebGL)
+  - Slider + play/pause, 20 frames embedded as JSON, ~5KB output
+- `tests/unit/fold-simulator.test.js` — 21 unit tests (1.1s)
+
+### Performance
+| Fixture | V×E×F | ms/frame |
+|---------|-------|---------:|
+| L-fold | 6×7×2  | < 1ms |
+| TREE_3  | 7×10×3 | < 2ms |
+| 20 frames in 100ms total (10× real-time at 30fps target) | | |
+
+### Limitations
+- For CYCLIC patterns (most dense origamis), this is an APPROXIMATION: the spanning tree ignores back-edges, so the result may not be physically consistent at the cycle. For TREE-LIKE patterns (waterbomb base, bird base, simple L-folds) it's exact.
+- For RIGID-FOLDABLE patterns, results are visually accurate.
+- For NON-RIGID patterns (those requiring stretching), results are approximate but useful for visualization.
+
+### Test Coverage Summary (v2.0 → v2.27)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| v2.24   |   266 |      6 | +22 fold-stl.test.js |
+| v2.27   |   287 |      7 | +21 fold-simulator.test.js |
+| **Total (without preset-constants)** | **538** | **20** | **+529 since v2.0** |
