@@ -994,6 +994,7 @@ const { registerStlCommand } = require('./commands/fold-stl');
 const { registerFoldCommand } = require('./commands/fold-simulate');
 const { registerDiffCommand } = require('./commands/fold-diff');
 const { registerServeCommand } = require('./commands/serve');
+const { registerMcpCommand } = require('./commands/mcp');
 
 registerSummaryCommand(program);
 registerVisualizeCommand(program);
@@ -1007,6 +1008,7 @@ registerStlCommand(program);
 registerFoldCommand(program);
 registerDiffCommand(program);
 registerServeCommand(program);
+registerMcpCommand(program);
 
 
 // Only parse when run directly (not when imported as module for testing)
