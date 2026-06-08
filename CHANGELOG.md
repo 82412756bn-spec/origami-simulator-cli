@@ -432,3 +432,42 @@ Adds a Position-Based Dynamics (PBD) fold solver that handles cyclic patterns co
 | v2.27   |   287 |      7 | +21 fold-simulator.test.js |
 | v2.28   |   304 |      8 | +17 spring-mass-solver.test.js |
 | **Total (without preset-constants)** | **555** | **21** | **+546 since v2.0** |
+
+---
+
+## [2.29.0] - 2026-06-08 — "Full cyclic PBD solver"
+
+Fixes v2.28's documented cyclic limitation: v2.28's bend-once + relax only folded M-edges incident to the root face; v2.29's per-iteration dihedral constraint handles ALL M-edges, including inner-cyclic ones between two non-root faces, producing a physically-consistent solution for cyclic patterns.
+
+### Added
+- `cyclic: true` mode in `SpringMassSolver` (default: false for v2.28 compat)
+- Per-iteration bend CONSTRAINT (replaces v2.28's one-shot bend)
+  - Computes CURRENT dihedral via cross-product face normals + atan2
+  - Applies rotation = (target - current) * stiffness per outer-face vert
+- `cross()` and `projectPerp()` math helpers
+- `--solver spring-mass-cyclic` CLI flag
+- `tests/unit/cyclic-solver.test.js` — 6 unit tests (0.2s)
+
+### Verified
+- square-into-4-triangles fixture (5V, 8E, 4F, cyclic):
+  - v2.28: V2/V3 partial folds only. Inner-cyclic M-edges skipped.
+  - v2.29: V2/V3 fully folded to z=±5.5. ALL 4 M-edges active.
+
+### Performance
+< 5ms for 200 iterations on 5V/8E/4F.
+
+### Test Coverage Summary (v2.0 → v2.29)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| v2.24   |   266 |      6 | +22 fold-stl.test.js |
+| v2.27   |   287 |      7 | +21 fold-simulator.test.js |
+| v2.28   |   304 |      8 | +17 spring-mass-solver.test.js |
+| v2.29   |   310 |      9 | +6 cyclic-solver.test.js |
+| **Total (without preset-constants)** | **561** | **22** | **+552 since v2.0** |
