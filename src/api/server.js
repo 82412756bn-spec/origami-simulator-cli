@@ -81,6 +81,15 @@ class OrigamiAPIServer {
   start() {
     return new Promise((resolve, reject) => {
       this._server = http.createServer((req, res) => this.handle(req, res));
+      // Handle WebSocket upgrades (v2.36+)
+      this._server.on('upgrade', (req, socket, head) => {
+        const { handleWebSocketUpgrade } = require('./ws-fold');
+        const handled = handleWebSocketUpgrade(req, socket, head, this);
+        if (!handled) {
+          socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+          socket.destroy();
+        }
+      });
       this._server.on('error', reject);
       this._server.listen(this.options.port, this.options.host, () => {
         resolve(this);
@@ -124,6 +133,9 @@ class OrigamiAPIServer {
     try {
       if (method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
         return this.handleRoot(res);
+      }
+      if (method === 'GET' && (pathname === '/demo' || pathname === '/demo.html')) {
+        return this.handleDemo(res);
       }
       if (method === 'GET' && pathname === '/health') {
         return this.handleHealth(res);
@@ -195,6 +207,21 @@ Content-Type: application/json
 </body></html>`;
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(html);
+  }
+
+  /**
+   * GET /demo — Serve the WebSocket browser client (v2.36)
+   */
+  handleDemo(res) {
+    const demoPath = path.join(__dirname, 'ws-fold-client.html');
+    if (fs.existsSync(demoPath)) {
+      const html = fs.readFileSync(demoPath, 'utf8');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('Demo file not found');
+    }
   }
 
   /**
