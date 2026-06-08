@@ -517,3 +517,47 @@ Adds structural + spatial diff between two FOLD files. Useful for version contro
 | v2.29   |   310 |      9 | +6 cyclic-solver.test.js |
 | v2.31   |   329 |     10 | +19 fold-diff.test.js |
 | **Total (without preset-constants)** | **580** | **23** | **+571 since v2.0** |
+---
+
+## [2.32.0] - 2026-06-08 — "REST API service"
+
+Adds a pure-Node HTTP server that exposes every origami CLI command as a JSON-in/JSON-out REST endpoint. Zero new dependencies (uses built-in `http` + `child_process`).
+
+### Architecture
+Server is a thin shell — each request is dispatched by spawning the existing CLI as a subprocess and capturing stdout/stderr/exit. This means every endpoint behaves identically to its CLI counterpart, with no code duplication.
+
+### Endpoints (POST /api/v1/{command})
+- `analyze`, `summary`, `visualize`, `kawasaki`, `maekawa`, `selfintersection`, `mvalternation`, `validate`
+- `stl` — STL export (returns file path)
+- `fold` — fold simulator (solver option: kinematic/spring-mass/spring-mass-cyclic)
+- `diff` — requires `foldA` + `foldB` in body
+- `batch-analyze` — requires `inputs` array (paths or FOLD objects)
+
+### Plus
+- `GET /health` — version + uptime + request count
+- `GET /` — HTML API docs
+- `GET /api/v1/files/:name` — download generated file (path-traversal blocked)
+- `OPTIONS /api/v1/*` — CORS preflight
+
+### CLI
+- `origami serve` → 127.0.0.1:3000
+- `origami serve --port 8080`
+- `origami serve --host 0.0.0.0`
+
+### Test Coverage Summary (v2.0 → v2.32)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| v2.24   |   266 |      6 | +22 fold-stl.test.js |
+| v2.27   |   287 |      7 | +21 fold-simulator.test.js |
+| v2.28   |   304 |      8 | +17 spring-mass-solver.test.js |
+| v2.29   |   310 |      9 | +6 cyclic-solver.test.js |
+| v2.31   |   329 |     10 | +19 fold-diff.test.js |
+| v2.32   |   347 |     11 | +18 api-server.test.js |
+| **Total (without preset-constants)** | **598** | **24** | **+589 since v2.0** |
