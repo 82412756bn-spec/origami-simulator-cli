@@ -39,7 +39,7 @@ function registerFoldCommand(program) {
     .option('--percent <pct>', 'Fold percentage 0-1 (default: 1.0 = fully folded)', (v) => parseFloat(v), 1.0)
     .option('--frames <n>', 'Output N frames from 0% to 100% (writes JSON array of FOLDs to stdout or -o)', (v) => parseInt(v, 10), 0)
     .option('--animate <file>', 'Write self-contained HTML animation with slider to <file>')
-    .option('--solver <solver>', 'Solver: "kinematic" (v2.27 fast tree-fold, default) or "spring-mass" (v2.28 PBD, handles cycles)', 'kinematic')
+    .option('--solver <solver>', 'Solver: kinematic (v2.27, default), spring-mass (v2.28), or spring-mass-cyclic (v2.29 — full cyclic PBD)', 'kinematic')
     .option('--iterations <n>', 'Max PBD iterations for spring-mass solver (default: 100)', (v) => parseInt(v, 10), 100)
     .option('--edge-stiffness <k>', 'Edge spring stiffness 0-1 (spring-mass, default: 0.3)', (v) => parseFloat(v), 0.3)
     .option('--bending-stiffness <k>', 'Bending stiffness 0-1 (spring-mass, default: 1.0)', (v) => parseFloat(v), 1.0)
@@ -49,9 +49,9 @@ function registerFoldCommand(program) {
     .action((file, options) => {
       runWithFold(file, options, (_analyzer, fullPath, foldData) => {
         const solver = options.solver;
-        if (solver !== 'kinematic' && solver !== 'spring-mass') {
+        if (!['kinematic', 'spring-mass', 'spring-mass-cyclic'].includes(solver)) {
           console.error(`❌ Invalid solver: ${solver}`);
-          console.error(`   Valid solvers: kinematic, spring-mass`);
+          console.error(`   Valid solvers: kinematic, spring-mass, spring-mass-cyclic`);
           process.exit(2);
         }
 
@@ -73,6 +73,7 @@ function registerFoldCommand(program) {
             maxIterations: options.iterations,
             edgeStiffness: options.edgeStiffness,
             bendingStiffness: options.bendingStiffness,
+            cyclic: solver === 'spring-mass-cyclic',
           });
           frameFn = (pct) => sim.simulate(pct);
         }

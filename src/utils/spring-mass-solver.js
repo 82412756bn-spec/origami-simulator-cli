@@ -52,6 +52,10 @@ class SpringMassSolver {
       rootFace: options.rootFace !== undefined ? options.rootFace : 0,
       // Sign convention
       mountainUp: options.mountainUp !== false,
+      // v2.29: CYCLIC MODE — use per-iteration dihedral constraints instead
+      // of the v2.28 bend-once + relax. Slower but handles cyclic patterns
+      // (M-edges between two non-root faces) consistently.
+      cyclic: options.cyclic || false,
       // Progress callback (called after each iteration with current state)
       onProgress: options.onProgress || null,
       // Debug
@@ -86,16 +90,66 @@ class SpringMassSolver {
     const positions = this.vertices.map(v => v.slice());
     const restLengths = this.edges.map(([a, b]) => this.dist(positions[a], positions[b]));
 
-    // Pre-compute fold edges
+    // Pre-compute fold edges (with target angle, etc.)
     const foldEdgeInfo = this.computeFoldEdges(positions);
 
     // Pinned vertices: root face
     const pinned = new Set(this.faces[this.options.rootFace] || []);
 
-    // 1. Apply full bending rotation ONCE (not per-iteration — that would
-    //    oscillate because each step adds another 90° rotation).
+    if (this.options.cyclic) {
+      // v2.29 cyclic mode: per-iteration bend constraint using actual dihedral
+      // This handles cyclic patterns (M-edges between two non-root faces)
+      // consistently. Slower (computes normals + dihedrals each iteration)
+      // but produces a physically-consistent solution.
+      let iterations = 0;
+      let converged = false;
+      let maxResidual = Infinity;
+      for (let iter = 0; iter < this.options.maxIterations; iter++) {
+        iterations = iter + 1;
+        const beforePositions = positions.map(p => p.slice());
+
+        // Bend: for each M-edge, compute current dihedral, rotate outer
+        // face vertices by (target - current) * stiffness around the edge.
+        for (const fe of foldEdgeInfo) {
+          // Scale target by percent and stiffness
+          const target = fe.targetAngle * percent;
+          this.projectBendConstraint(
+            positions,
+            fe.v1, fe.v2,
+            fe.face1OtherVerts[0],   // representative vertex of face 1
+            fe.face2OtherVerts[0],   // representative vertex of face 2
+            target,
+            this.options.bendingStiffness,
+            fe.face2OtherVerts,
+            pinned,
+          );
+        }
+
+        // Edge length constraints
+        for (let i = 0; i < this.edges.length; i++) {
+          const [a, b] = this.edges[i];
+          this.projectEdgeLength(positions, a, b, restLengths[i], this.options.edgeStiffness);
+        }
+
+        // Pin root face
+        for (const vIdx of pinned) {
+          positions[vIdx] = this.vertices[vIdx].slice();
+        }
+
+        maxResidual = this.maxMovement(beforePositions, positions);
+        if (maxResidual < this.options.tolerance) {
+          converged = true;
+          break;
+        }
+        if (this.options.onProgress) {
+          this.options.onProgress({ iteration: iter, maxResidual });
+        }
+      }
+      return { vertices: positions, iterations, converged, maxResidual };
+    }
+
+    // v2.28 mode: bend-once + edge relax (faster, but skips cyclic edges)
     for (const fe of foldEdgeInfo) {
-      // Scaled angle: 0 at percent=0, full targetAngle at percent=1
       const angle = fe.targetAngle * percent * Math.PI / 180 * this.options.bendingStiffness;
       this.applyBendingRotation(
         positions,
@@ -106,7 +160,6 @@ class SpringMassSolver {
       );
     }
 
-    // 2. Iterate edge constraints to relax the geometry
     let iterations = 0;
     let converged = false;
     let maxResidual = Infinity;
@@ -115,13 +168,11 @@ class SpringMassSolver {
       iterations = iter + 1;
       const beforePositions = positions.map(p => p.slice());
 
-      // Edge length constraints
       for (let i = 0; i < this.edges.length; i++) {
         const [a, b] = this.edges[i];
         this.projectEdgeLength(positions, a, b, restLengths[i], this.options.edgeStiffness);
       }
 
-      // Pin root face
       for (const vIdx of pinned) {
         positions[vIdx] = this.vertices[vIdx].slice();
       }
@@ -131,7 +182,6 @@ class SpringMassSolver {
         converged = true;
         break;
       }
-
       if (this.options.onProgress) {
         this.options.onProgress({ iteration: iter, maxResidual });
       }
@@ -233,6 +283,69 @@ class SpringMassSolver {
     }
   }
 
+  /**
+   * v2.29: Per-iteration bend CONSTRAINT using actual dihedral computation.
+   *
+   * For each M-edge, computes the CURRENT dihedral angle between the two
+   * faces, then applies a small rotation to the outer face's vertices to
+   * bring the dihedral toward the target. This is the proper PBD approach
+   * that handles cyclic patterns (M-edges between two non-root faces)
+   * consistently — unlike v2.28's bend-once + relax which only handled
+   * root-incident edges.
+   *
+   * Algorithm:
+   *   1. Compute face A normal: nA = (v1-a) × (v2-a), normalized
+   *   2. Compute face B normal: nB = (v1-b) × (v2-b), normalized
+   *   3. Project both normals onto plane perpendicular to the edge axis
+   *   4. Compute current dihedral angle θ_current = atan2((nA⊥ × nB⊥) · e, nA⊥ · nB⊥)
+   *   5. Compute deviation: Δθ = target - θ_current
+   *   6. Apply rotation: outer verts around edge by Δθ * stiffness
+   */
+  projectBendConstraint(positions, v1, v2, innerVert, outerVert, targetDeg, stiffness, outerVerts, pinned) {
+    if (outerVerts.length === 0 || !outerVert || outerVert === undefined) return;
+
+    const p1 = positions[v1], p2 = positions[v2];
+    const pa = positions[innerVert], pb = positions[outerVert];
+
+    // Edge axis (unit vector)
+    const axis = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+    const axisLen = Math.hypot(axis[0], axis[1], axis[2]);
+    if (axisLen < 1e-9) return;
+    const e = [axis[0] / axisLen, axis[1] / axisLen, axis[2] / axisLen];
+
+    // Face A normal: from edge (v1→v2) and (v1→innerVert)
+    const a1 = [pa[0] - p1[0], pa[1] - p1[1], pa[2] - p1[2]];
+    const a2 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+    const nA = cross(a2, a1);  // (v2-v1) × (inner-v1)
+
+    // Face B normal: from edge (v1→v2) and (v1→outerVert)
+    const b1 = [pb[0] - p1[0], pb[1] - p1[1], pb[2] - p1[2]];
+    const nB = cross(a2, b1);
+
+    // Project normals to plane perpendicular to edge axis
+    const nA_perp = projectPerp(nA, e);
+    const nB_perp = projectPerp(nB, e);
+
+    const nA_mag = Math.hypot(nA_perp[0], nA_perp[1], nA_perp[2]);
+    const nB_mag = Math.hypot(nB_perp[0], nB_perp[1], nB_perp[2]);
+    if (nA_mag < 1e-9 || nB_mag < 1e-9) return;
+
+    // Compute dihedral: cos = dot, sin = (nA × nB) · e
+    const cosD = (nA_perp[0] * nB_perp[0] + nA_perp[1] * nB_perp[1] + nA_perp[2] * nB_perp[2])
+      / (nA_mag * nB_mag);
+    const crossN = cross(nA_perp, nB_perp);
+    const sinD = (crossN[0] * e[0] + crossN[1] * e[1] + crossN[2] * e[2])
+      / (nA_mag * nB_mag);
+    const currentDihedral = Math.atan2(sinD, cosD);  // radians
+
+    // Deviation: target - current (in degrees, then to radians)
+    const targetRad = targetDeg * Math.PI / 180;
+    const deltaRad = (targetRad - currentDihedral) * stiffness;
+
+    // Apply rotation by deltaRad around the edge
+    this.applyBendingRotation(positions, v1, v2, outerVerts, deltaRad, pinned);
+  }
+
   // ────────────────────────────────────────────────────────────────────
   // Pre-processing
   // ────────────────────────────────────────────────────────────────────
@@ -317,6 +430,27 @@ class SpringMassSolver {
     }
     return max;
   }
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Free-standing math helpers (v2.29)
+// ────────────────────────────────────────────────────────────────────
+
+function cross(a, b) {
+  return [
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0],
+  ];
+}
+
+/**
+ * Project vector v onto the plane perpendicular to unit vector e.
+ * Result = v - (v · e) * e
+ */
+function projectPerp(v, e) {
+  const dot = v[0] * e[0] + v[1] * e[1] + v[2] * e[2];
+  return [v[0] - dot * e[0], v[1] - dot * e[1], v[2] - dot * e[2]];
 }
 
 module.exports = { SpringMassSolver };
