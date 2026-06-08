@@ -595,3 +595,49 @@ Adds a WebSocket endpoint that streams fold simulation frames in real-time to a 
 | v2.32   |   347 |     11 | +18 api-server.test.js |
 | v2.36   |   361 |     12 | +14 ws-fold.test.js |
 | **Total (without preset-constants)** | **612** | **25** | **+603 since v2.0** |
+---
+
+## [2.40.0] - 2026-06-08 — "MCP tool exposure"
+
+Exposes origami commands as MCP tools so AI assistants (Claude, etc.) can call them directly. Communication: JSON-RPC 2.0 over stdio.
+
+### 10 tools
+- `analyze_fold` — full FOLD analysis
+- `summarize_fold` — compact summary (9 fields)
+- `kawasaki_check` — v2.12 Strict Kawasaki
+- `maekawa_check` — v2.14 Strict Maekawa
+- `fold_simulate` — fold simulator (3 solvers)
+- `diff_folds` — compare two FOLD files
+- `stl_export` — STL export
+- `validate_fold` — ajv schema validation
+- `selfintersection_check` — v2.15 Möller
+- `mvalternation_check` — v2.12 Alternating M/V
+
+### For Claude Code / Claude Desktop integration
+```json
+{
+  "mcpServers": {
+    "origami": { "command": "origami", "args": ["mcp"] }
+  }
+}
+```
+
+### Test Coverage Summary (v2.0 → v2.40)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| v2.24   |   266 |      6 | +22 fold-stl.test.js |
+| v2.27   |   287 |      7 | +21 fold-simulator.test.js |
+| v2.28   |   304 |      8 | +17 spring-mass-solver.test.js |
+| v2.29   |   310 |      9 | +6 cyclic-solver.test.js |
+| v2.31   |   329 |     10 | +19 fold-diff.test.js |
+| v2.32   |   347 |     11 | +18 api-server.test.js |
+| v2.36   |   361 |     12 | +14 ws-fold.test.js |
+| v2.40   |   379 |     13 | +18 mcp-server.test.js |
+| **Total (without preset-constants)** | **630** | **26** | **+621 since v2.0** |
