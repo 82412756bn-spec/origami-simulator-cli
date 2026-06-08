@@ -561,3 +561,37 @@ Server is a thin shell — each request is dispatched by spawning the existing C
 | v2.31   |   329 |     10 | +19 fold-diff.test.js |
 | v2.32   |   347 |     11 | +18 api-server.test.js |
 | **Total (without preset-constants)** | **598** | **24** | **+589 since v2.0** |
+---
+
+## [2.36.0] - 2026-06-08 — "WebSocket real-time fold animation"
+
+Adds a WebSocket endpoint that streams fold simulation frames in real-time to a connected client. Zero new dependencies — uses Node's built-in `http.upgrade` event + a hand-rolled minimal WebSocket protocol implementation.
+
+### Protocol
+1. Client opens WebSocket to `GET /api/v1/ws/fold`
+2. Server sends `101 Switching Protocols`
+3. Client sends first text frame: `{"fold": {...}, "options": {...}}`
+4. Server streams frames: `ack` → N × `frame` → `done` (or `error`)
+5. Either side closes to terminate
+
+### Browser client
+`/demo` (v2.36) serves a self-contained HTML+JS+SVG client that connects to the WebSocket, picks a solver, and animates the fold. No build step.
+
+### Test Coverage Summary (v2.0 → v2.36)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| v2.24   |   266 |      6 | +22 fold-stl.test.js |
+| v2.27   |   287 |      7 | +21 fold-simulator.test.js |
+| v2.28   |   304 |      8 | +17 spring-mass-solver.test.js |
+| v2.29   |   310 |      9 | +6 cyclic-solver.test.js |
+| v2.31   |   329 |     10 | +19 fold-diff.test.js |
+| v2.32   |   347 |     11 | +18 api-server.test.js |
+| v2.36   |   361 |     12 | +14 ws-fold.test.js |
+| **Total (without preset-constants)** | **612** | **25** | **+603 since v2.0** |
