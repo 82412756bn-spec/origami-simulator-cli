@@ -471,3 +471,49 @@ Fixes v2.28's documented cyclic limitation: v2.28's bend-once + relax only folde
 | v2.28   |   304 |      8 | +17 spring-mass-solver.test.js |
 | v2.29   |   310 |      9 | +6 cyclic-solver.test.js |
 | **Total (without preset-constants)** | **561** | **22** | **+552 since v2.0** |
+
+---
+
+## [2.31.0] - 2026-06-08 — "FOLD file diff"
+
+Adds structural + spatial diff between two FOLD files. Useful for version control, code review, and tracking iterative design changes.
+
+### Added
+- `src/utils/fold-diff.js` — diff engine (340 lines, 0 new deps)
+  - Match vertices by spatial proximity (closest-unmatched B within tolerance)
+  - Match edges by (mapped-A, mapped-B) vertex pair
+  - Match faces by translated vertex-set signature
+  - Diff metadata fields
+- `src/commands/fold-diff.js` — `diff <old> <new>` CLI (80 lines)
+- 3 output modes: text (default), JSON, HTML (color-coded)
+- `tests/unit/fold-diff.test.js` — 19 unit tests (1.3s)
+
+### Two separate thresholds (split during dev to fix test fixture conflict)
+- `vertexTolerance` (default 1e-3 mm): matching threshold — max distance to consider two vertices "the same"
+- `moveThreshold` (default 0): reporting threshold — matched vertices with distance > this are reported as "moved"
+
+### CLI
+- `origami diff <old> <new>` — text
+- `origami diff <old> <new> --json` — JSON
+- `origami diff <old> <new> --html out.html` — HTML
+- `origami diff <old> <new> --exact` — match by index (no spatial)
+- `origami diff <old> <new> --tolerance 0.5` — match within 0.5 mm
+- `origami diff <old> <new> --move-threshold 1` — report moves > 1 mm
+- `origami diff <old> <new> --exit-code` — 0=no changes, 1=changes (for CI/CD)
+
+### Test Coverage Summary (v2.0 → v2.31)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| v2.24   |   266 |      6 | +22 fold-stl.test.js |
+| v2.27   |   287 |      7 | +21 fold-simulator.test.js |
+| v2.28   |   304 |      8 | +17 spring-mass-solver.test.js |
+| v2.29   |   310 |      9 | +6 cyclic-solver.test.js |
+| v2.31   |   329 |     10 | +19 fold-diff.test.js |
+| **Total (without preset-constants)** | **580** | **23** | **+571 since v2.0** |
