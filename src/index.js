@@ -993,6 +993,7 @@ const { registerBatchAnalyzeCommand } = require('./commands/fold-batch');
 const { registerStlCommand } = require('./commands/fold-stl');
 const { registerFoldCommand } = require('./commands/fold-simulate');
 const { registerDiffCommand } = require('./commands/fold-diff');
+const { registerServeCommand } = require('./commands/serve');
 
 registerSummaryCommand(program);
 registerVisualizeCommand(program);
@@ -1005,6 +1006,7 @@ registerBatchAnalyzeCommand(program);
 registerStlCommand(program);
 registerFoldCommand(program);
 registerDiffCommand(program);
+registerServeCommand(program);
 
 
 // Only parse when run directly (not when imported as module for testing)
