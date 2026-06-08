@@ -396,3 +396,39 @@ Adds a pure-JS kinematic fold solver that runs the fold simulation locally — n
 | v2.24   |   266 |      6 | +22 fold-stl.test.js |
 | v2.27   |   287 |      7 | +21 fold-simulator.test.js |
 | **Total (without preset-constants)** | **538** | **20** | **+529 since v2.0** |
+
+---
+
+## [2.28.0] - 2026-06-08 — "Spring-mass / PBD solver"
+
+Adds a Position-Based Dynamics (PBD) fold solver that handles cyclic patterns correctly. v2.27's tree-based kinematic solver was O(F) and deterministic but approximated cyclic patterns; v2.28 iteratively relaxes edge-length + bending constraints toward a consistent state.
+
+### Added
+- `src/utils/spring-mass-solver.js` — PBD solver (280 lines, 0 new deps)
+  - Algorithm: bend-once + relax (apply full bending rotation once, then iterate edge constraints)
+  - NOT per-iteration bending (that oscillates: rotate 90° every step → never converge)
+- `fold <file> --solver spring-mass` flag (kinematic remains default for back-compat)
+- `--edge-stiffness 0.3`, `--bending-stiffness 1.0`, `--iterations 100` options
+- `tests/unit/spring-mass-solver.test.js` — 17 unit tests (0.3s)
+
+### Bug fixed during dev
+- Per-iteration bending oscillates → moved bending to one-shot pre-step
+- Root face detection was too loose ("any root vertex" was true for both faces due to shared M-edge vertices) → changed to set-equality
+
+### Limitations (documented in code)
+- For CYCLIC patterns, v2.28 only folds edges incident to the root face. Edges between two non-root faces (cyclic inner edges) are skipped. Fully consistent cyclic fold is a v2.29+ goal.
+
+### Test Coverage Summary (v2.0 → v2.28)
+
+| Version | Tests | Suites | Notable |
+|---------|------:|-------:|---------|
+| v2.0    |     9 |      1 | fold-analyzer.test.js initial |
+| v2.19   |   176 |      1 | +167 tests across v2.1-v2.19 |
+| v2.20   |   199 |      2 | +23 fold-commands.test.js |
+| v2.21   |   218 |      3 | +19 dieline-exporters.test.js |
+| v2.22   |   222 |      4 | +4 vscode-origami.test.js |
+| v2.23   |   244 |      5 | +22 fold-batch.test.js |
+| v2.24   |   266 |      6 | +22 fold-stl.test.js |
+| v2.27   |   287 |      7 | +21 fold-simulator.test.js |
+| v2.28   |   304 |      8 | +17 spring-mass-solver.test.js |
+| **Total (without preset-constants)** | **555** | **21** | **+546 since v2.0** |
