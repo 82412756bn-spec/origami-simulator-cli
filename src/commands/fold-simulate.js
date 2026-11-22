@@ -45,14 +45,25 @@ function registerFoldCommand(program) {
     .option('--bending-stiffness <k>', 'Bending stiffness 0-1 (spring-mass, default: 1.0)', (v) => parseFloat(v), 1.0)
     .option('--no-mountain-up', 'Reverse convention: M folds down, V folds up')
     .option('--root-face <n>', 'Index of the face to use as the root (default: 0)', (v) => parseInt(v, 10), 0)
+    .option('--gpu', 'Use WebGPU-accelerated PBD solver (requires browser with WebGPU support)')
     .option('--debug', 'Show stack traces on error')
-    .action((file, options) => {
-      runWithFold(file, options, (_analyzer, fullPath, foldData) => {
+    .action(async (file, options) => {
+      runWithFold(file, options, async (_analyzer, fullPath, foldData) => {
         const solver = options.solver;
+
+        // Check for GPU mode
+        const useGPU = options.gpu && (solver === 'spring-mass' || solver === 'spring-mass-cyclic');
+
+        // Validate solver
         if (!['kinematic', 'spring-mass', 'spring-mass-cyclic'].includes(solver)) {
           console.error(`❌ Invalid solver: ${solver}`);
           console.error(`   Valid solvers: kinematic, spring-mass, spring-mass-cyclic`);
           process.exit(2);
+        }
+
+        // Warn if --gpu is used with unsupported solver
+        if (options.gpu && solver === 'kinematic') {
+          console.warn(`⚠️  --gpu flag ignored: kinematic solver doesn't support GPU acceleration`);
         }
 
         let sim, frameFn;
@@ -64,6 +75,36 @@ function registerFoldCommand(program) {
             rootFace: options.rootFace,
           });
           frameFn = (pct) => sim.simulate(pct);
+        } else if (useGPU) {
+          // Try GPU solver
+          const { GPUPBDSolver } = require('../utils/gpu-pbd-solver');
+
+          // Check WebGPU support
+          if (!GPUPBDSolver.isSupported()) {
+            console.warn(`⚠️  WebGPU not available in this environment, falling back to CPU`);
+            const { SpringMassSolver } = require('../utils/spring-mass-solver');
+            sim = new SpringMassSolver(foldData, {
+              foldAngle: options.angle,
+              mountainUp: options.mountainUp !== false,
+              rootFace: options.rootFace,
+              maxIterations: options.iterations,
+              edgeStiffness: options.edgeStiffness,
+              bendingStiffness: options.bendingStiffness,
+              cyclic: solver === 'spring-mass-cyclic',
+            });
+            frameFn = (pct) => sim.simulate(pct);
+          } else {
+            sim = new GPUPBDSolver(foldData, {
+              foldAngle: options.angle,
+              mountainUp: options.mountainUp !== false,
+              rootFace: options.rootFace,
+              maxIterations: options.iterations,
+              edgeStiffness: options.edgeStiffness,
+              bendingStiffness: options.bendingStiffness,
+              cyclic: solver === 'spring-mass-cyclic',
+            });
+            frameFn = async (pct) => await sim.simulate(pct);
+          }
         } else {
           const { SpringMassSolver } = require('../utils/spring-mass-solver');
           sim = new SpringMassSolver(foldData, {
@@ -82,9 +123,14 @@ function registerFoldCommand(program) {
           // Multi-frame output
           const t0 = Date.now();
           const frames = [];
+          const isAsync = useGPU && GPUPBDSolver && GPUPBDSolver.isSupported();
           for (let i = 0; i < options.frames; i++) {
             const pct = options.frames === 1 ? 1.0 : i / (options.frames - 1);
-            frames.push(frameFn(pct));
+            if (isAsync) {
+              frames.push(await frameFn(pct));
+            } else {
+              frames.push(frameFn(pct));
+            }
           }
           const t1 = Date.now();
           const out = {
@@ -110,28 +156,36 @@ function registerFoldCommand(program) {
           // HTML animation
           const t0 = Date.now();
           const frames = [];
+          const isAsync = useGPU && GPUPBDSolver && GPUPBDSolver.isSupported();
           for (let i = 0; i < 20; i++) {
             const pct = i / 19;
-            frames.push(frameFn(pct));
+            if (isAsync) {
+              frames.push(await frameFn(pct));
+            } else {
+              frames.push(frameFn(pct));
+            }
           }
           const t1 = Date.now();
           const html = renderAnimation(frames, { title: path.basename(fullPath) });
           const outPath = path.resolve(options.animate);
           fs.writeFileSync(outPath, html, 'utf8');
-          console.log(`🎬 HTML animation written to: ${outPath}  (${html.length} bytes, ${frames.length} frames, ${t1 - t0}ms compute) [${solver}]`);
+          const solverLabel = useGPU && GPUPBDSolver.isSupported() ? `${solver} (GPU)` : solver;
+          console.log(`🎬 HTML animation written to: ${outPath}  (${html.length} bytes, ${frames.length} frames, ${t1 - t0}ms compute) [${solverLabel}]`);
           return;
         }
 
         // Single-frame output
         const t0 = Date.now();
-        const result = frameFn(options.percent);
+        const isAsync = useGPU && GPUPBDSolver && GPUPBDSolver.isSupported();
+        const result = isAsync ? await frameFn(options.percent) : frameFn(options.percent);
         const t1 = Date.now();
         const outPath = options.output
           ? path.resolve(options.output)
           : fullPath.replace(/\.fold$/, '') + '-folded.fold';
         fs.writeFileSync(outPath, JSON.stringify(result, null, 2));
         const zRange = computeZRange(result.vertices_coords);
-        console.log(`📐 Folded FOLD written to: ${outPath}  (${t1 - t0}ms, z=[${zRange[0].toFixed(2)}, ${zRange[1].toFixed(2)}]) [${solver}]`);
+        const solverLabel = useGPU && GPUPBDSolver && GPUPBDSolver.isSupported() ? `${solver} (GPU)` : solver;
+        console.log(`📐 Folded FOLD written to: ${outPath}  (${t1 - t0}ms, z=[${zRange[0].toFixed(2)}, ${zRange[1].toFixed(2)}]) [${solverLabel}]`);
       });
     });
 }

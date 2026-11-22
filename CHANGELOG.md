@@ -4,6 +4,203 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.43.0] - 2026-06-08
+
+### Added
+
+- **WebGL 3D Preview** — Interactive Three.js visualization
+  - New file: `src/commands/fold-webgl.js` (300+ lines)
+  - Browser-based 3D rendering with Three.js
+  - Orbit controls: rotate (left-drag), pan (right-drag), zoom (scroll)
+  - Mountain (red) / Valley (blue) / Boundary (green) color coding
+  - Material colors from v2.0 format (`faces_color`)
+  - Animation support with `--frames` and `--auto-fold`
+  - Wireframe overlay toggle
+  - Customizable canvas size and background
+- **CLI Command**:
+  - `origami webgl <file>` — Generate 3D preview
+  - `origami webgl <file> -o preview.html` — Custom output
+  - `origami webgl <file> --frames` — Include animation frames
+  - `origami webgl <file> --auto-fold` — Auto-play animation
+
+### Usage
+
+```bash
+# Basic 3D preview
+origami webgl model.fold
+
+# With animation
+origami webgl model.fold --frames --auto-fold
+
+# Custom size
+origami webgl model.fold --width 1200 --height 800
+
+# Wireframe mode
+origami webgl model.fold --wireframe
+```
+
+### Features
+
+- Three.js from CDN (no local dependency)
+- Real-time rendering with 60fps
+- Info panel with model stats
+- Play/Pause animation controls
+- Reset camera button
+
+---
+
+## [2.45.0] - 2026-06-08
+
+### Added
+
+- **OBJ/MTL Export** — High-fidelity 3D model export
+  - New file: `src/utils/fold-obj.js` (300+ lines)
+  - Wavefront OBJ format with vertex/face export
+  - MTL material support with Kd/Ka/Ks/Ns
+  - Faces color: `faces_color` → RGB values
+  - Faces material: `faces_material` → named materials
+  - Auto-triangulation of non-triangular faces
+- **CLI Command**:
+  - `origami obj <file>` — Export to OBJ
+  - `origami obj <file> -o model.obj` — Custom output
+  - `origami obj <file> --mtl materials.mtl` — Custom MTL
+  - `origami obj <file> --no-mtl` — OBJ only
+  - `origami obj <file> --separate-faces` — Per-face objects
+
+### Usage
+
+```bash
+# Basic export
+origami obj model.fold
+
+# With materials
+origami obj model.fold -o model.obj --mtl model.mtl
+
+# No MTL file
+origami obj model.fold --no-mtl
+```
+
+### Verification
+
+```
+$ origami obj test/merge/colored.fold
+📦 OBJ written to: test/merge/colored.obj
+🎨 MTL written to: test/merge/colored.mtl
+   Materials: 1
+   Vertices: 4
+   Faces: 1
+```
+
+---
+
+## [2.44.0] - 2026-06-08
+
+### Added
+
+- **FOLD v2.0 Format Support** — Extended format for advanced features
+  - New file: `src/utils/fold-v2.js` (300+ lines)
+  - Material properties: `faces_color`, `faces_material`, `faces_texture`
+  - Physics properties: `edges_stiffness`, `faces_density`, `vertices_mass`
+  - Animation: `animation_keyframes`, `animation_interpolation`
+  - Extension namespace: `extensions` for custom metadata
+- **CLI Commands** (4 new):
+  - `origami v2detect <file>` — Detect format version
+  - `origami v2validate <file>` — Validate v2.0 format
+  - `origami v2upgrade <file> -o out.fold` — Upgrade to v2.0
+  - `origami v2downgrade <file> -o out.fold` — Downgrade to v1.1
+
+### Technical Details
+
+- Backward compatible: works with v1.1, v1.2, and v2.0
+- Auto-detection of format version
+- Validation with detailed error/warning messages
+- Upgrade/downgrade preserves data integrity
+
+### Usage
+
+```bash
+# Detect format
+origami v2detect model.fold
+
+# Validate
+origami v2validate model.fold
+
+# Upgrade
+origami v2upgrade v1.fold -o v2.fold
+
+# Downgrade
+origami v2downgrade v2.fold -o v1.fold
+```
+
+---
+
+## [2.42.0] - 2026-06-08
+
+### Added
+
+- **3-Way FOLD Merge** — Complete version control workflow
+  - New file: `src/utils/fold-merge.js` (350+ lines)
+  - Three-way geometric alignment (Base, Ours, Theirs)
+  - Conflict detection (opposite vertex movements)
+  - Auto-merge for non-conflicting changes
+  - CLI command: `origami merge <base> <ours> <theirs>`
+  - Options: `--output`, `--json`, `--conflict-only`, `--tolerance`
+
+### Technical Details
+
+- Reuses spatial vertex matching from FoldDiff (v2.31)
+- Direction similarity check using dot product
+- Edge assignment merge logic (M/V/B)
+- Face vertex mapping through vertex maps
+
+### Usage
+
+```bash
+# Basic merge
+origami merge base.fold ours.fold theirs.fold -o merged.fold
+
+# Conflict report only
+origami merge base.fold ours.fold theirs.fold --conflict-only
+
+# JSON output for CI/CD
+origami merge base.fold ours.fold theirs.fold --json --exit-code
+```
+
+### Related
+
+- v2.31: FoldDiff (2-way comparison)
+- v2.42: FoldMerge (3-way merge) ← NEW
+
+---
+
+## [2.41.0] - 2026-06-08
+
+### Added
+
+- **GPU PBD Solver** — WebGPU-accelerated Position-Based Dynamics simulation
+  - New file: `src/utils/gpu-pbd-solver.js` (450+ lines)
+  - Edge constraint compute shader (parallel processing)
+  - Bend constraint compute shader (dihedral angle)
+  - Fallback to CPU when WebGPU unavailable
+- **CLI Integration** — `--gpu` flag for fold command
+  - `origami fold <file> --solver spring-mass --gpu`
+  - `origami fold <file> --solver spring-mass-cyclic --gpu`
+  - Auto-detects WebGPU support and falls back gracefully
+
+### Performance
+
+- Expected: 10-50ms/frame (CPU) → <5ms/frame (GPU)
+- Requires browser with WebGPU support (Chrome 113+, Edge 113+)
+
+### Technical Details
+
+- WebGPU Compute Shaders for parallel edge/bend constraints
+- GPU buffer management: positions, rest lengths, edge indices
+- Bind groups for shader input/output
+- Async initialization with lazy device request
+
+---
+
 ## [0.1.0] - 2026-04-16
 
 ### Added

@@ -1,0 +1,59 @@
+{
+  "file_spec": 1.1,
+  "file_creator": "test + simulated (v2.27)",
+  "frame_title": "base (simulated)",
+  "vertices_coords": [
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      0
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "M",
+    "B",
+    "B"
+  ],
+  "faces_vertices": [
+    [
+      0,
+      1,
+      2,
+      3
+    ]
+  ]
+}

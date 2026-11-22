@@ -993,6 +993,11 @@ const { registerBatchAnalyzeCommand } = require('./commands/fold-batch');
 const { registerStlCommand } = require('./commands/fold-stl');
 const { registerFoldCommand } = require('./commands/fold-simulate');
 const { registerDiffCommand } = require('./commands/fold-diff');
+const { registerMergeCommand } = require('./commands/fold-merge');
+const { registerV2Commands } = require('./commands/fold-v2');
+const { registerOBJCommand } = require('./commands/fold-obj');
+const { registerCraneWebGLCommand } = require('./commands/fold-crane');
+const { registerWebGLCommand } = require('./commands/fold-webgl');
 const { registerServeCommand } = require('./commands/serve');
 const { registerMcpCommand } = require('./commands/mcp');
 
@@ -1007,6 +1012,11 @@ registerBatchAnalyzeCommand(program);
 registerStlCommand(program);
 registerFoldCommand(program);
 registerDiffCommand(program);
+registerMergeCommand(program);
+registerV2Commands(program);
+registerOBJCommand(program);
+registerCraneWebGLCommand(program);
+registerWebGLCommand(program);
 registerServeCommand(program);
 registerMcpCommand(program);
 
