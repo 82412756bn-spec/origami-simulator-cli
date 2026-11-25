@@ -10,6 +10,10 @@ coverage/
 *.lcov
 .nyc_output
 
+# CLI 运行产物（跑命令生成的输出，不入库）
+src/origami-screenshot.png
+src/batch-output/
+
 # OS files
 .DS_Store
 ._.DS_Store

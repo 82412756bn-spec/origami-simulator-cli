@@ -6,6 +6,15 @@
   "bin": {
     "origami": "./src/index.js"
   },
+  "files": [
+    "src/",
+    "docs/",
+    "examples/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md"
+  ],
   "scripts": {
     "start": "node src/index.js",
     "test": "jest tests/unit",
