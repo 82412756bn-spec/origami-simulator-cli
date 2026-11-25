@@ -33,7 +33,7 @@ const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
 
-const VERSION = '2.32.0';
+const { VERSION } = require('../version');
 const TMP_DIR = path.join(os.tmpdir(), 'origami-api');
 
 // Endpoints that produce file output

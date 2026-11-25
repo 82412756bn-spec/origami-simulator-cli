@@ -28,7 +28,8 @@ describe('Exported Constants', () => {
   });
 
   test('should export VERSION', () => {
-    expect(exports.VERSION).toBe('0.2.0');
+    // 单一真相源：对外版本必须等于 package.json，不再写死字面量
+    expect(exports.VERSION).toBe(require('../../package.json').version);
   });
 
   test('should export BASE_URL', () => {

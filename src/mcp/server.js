@@ -27,7 +27,7 @@ const os = require('os');
 const { spawn } = require('child_process');
 
 const SERVER_NAME = 'origami-fold-analyzer';
-const SERVER_VERSION = '2.40.0';
+const { VERSION: SERVER_VERSION } = require('../version');
 const TMP_DIR = path.join(os.tmpdir(), 'origami-mcp');
 
 if (!fs.existsSync(TMP_DIR)) {

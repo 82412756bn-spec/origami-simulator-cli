@@ -14,7 +14,7 @@ const { registerBindCommand } = require('./commands/bind');
 const { registerRenderCommand } = require('./commands/render');
 const { registerTemplateCommand } = require('./commands/template');
 
-const VERSION = '0.2.0';
+const { VERSION } = require('./version');
 const BASE_URL = 'https://origamisimulator.org/';
 
 // Complete preset list from origamisimulator.org

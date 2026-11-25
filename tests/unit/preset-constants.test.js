@@ -235,7 +235,8 @@ describe('Version and Help', () => {
   test('should show version', async () => {
     const result = await cli(['--version']);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('0.2.0');
+    // 单一真相源：--version 必须等于 package.json.version
+    expect(result.stdout.trim()).toBe(require('../../package.json').version);
   });
 
   test('should show help', async () => {
