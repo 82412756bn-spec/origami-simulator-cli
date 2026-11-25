@@ -1,120 +1,134 @@
-# OrigamiSimulator CLI
+# origami-simulator-cli
 
-**版本**: v0.2.0
-**状态**: ✅ 功能完成
+**从 FOLD 到成品的折纸 / 纸艺工具链** —— 分析、校验、渲染、导出，一条命令走完；
+既能人在终端用，也能直接交给 agent 调用（CLI / MCP / REST / Skill 四种入口）。
 
-CLI tool for [origamisimulator.org](https://origamisimulator.org/) - Simulate origami folding patterns via command line.
+它解决的是「手工折一张纸」到「批量产出一批成品」之间那一段：给一个 FOLD 文件，
+告诉你**能不能折平**、**哪里会自交**、**折完是什么形状**，并直接导出成 STL / OBJ /
+图片 / 视频，或生成可打印的刀模与包装盒型。
 
-## Status
+> **它不是** origamisimulator.org 网页版的替代品（那是浏览器里的交互式模拟器），
+> **也不是**图形编辑器。它是那一层之下的**批处理 / CI / agent 通道**：
+> 无头浏览器跑、可脚本化、可进流水线。
 
-✅ **Production Ready** - All core features implemented and tested.
+---
 
-## Features
+## 安装
 
-- 27 preset models (origami, bases, tessellations, curved, pleating)
-- Load models from file (FOLD/SVG) or presets
-- Run folding simulations with configurable parameters
-- Capture screenshots (PNG)
-- Export models (PNG, STL, OBJ, FOLD, SVG)
-- Record animations (GIF, WebM, MP4) via Playwright + FFmpeg
-- Analyze model geometry
-- Batch processing
-- Claude Code Skill integration
+```bash
+npm install -g origami-simulator-cli
+npx playwright install chromium   # 需要截图 / 录屏 / 渲染时才用得上
+```
 
-## Installation
+Node ≥ 18。纯本地的命令（`analyze` / `kawasaki` / `stl` / `diff` …）不需要浏览器，也不需要联网。
+
+---
+
+## 第一条命令
+
+```bash
+# 1. 看有什么 —— 27 个内置 preset，9 个类别
+origami list
+
+# 2. 拿一个文件做本地分析（不开浏览器、不联网、毫秒级）
+origami analyze examples/sample-crane.fold
+
+# 3. 出成品 —— 折叠动画 / 截图（需要 chromium + ffmpeg）
+origami record --preset cranes --format mp4 -o crane.mp4
+```
+
+装完包后 `examples/sample-crane.fold` 在 `node_modules/origami-simulator-cli/examples/`。
+
+---
+
+## 三块能力
+
+### 一、FOLD 格式工具链（纯本地，学术级）
+
+```bash
+origami analyze <file.fold>          # 12 个分析字段：应变 / 自交 / M-V 一致性 / ...
+origami kawasaki <file.fold>         # 严格 Kawasaki 定理：每个顶点能否折平
+origami maekawa <file.fold>          # 严格 Maekawa 定理：|M-V| = 2
+origami selfintersection <file.fold> # Möller (1997) 三角-三角自交检测
+origami mvalternation <file.fold>    # 内部顶点的 M/V 必须交替
+origami diff a.fold b.fold           # 两个文件的差异（text / JSON / HTML）
+origami merge base ours theirs       # 三方合并
+origami v2detect|v2validate|v2upgrade|v2downgrade <file.fold>   # FOLD v1.x ↔ v2.0
+origami batch-analyze "models/*.fold" --junit   # 批量分析，出 JUnit XML 进 CI
+origami validate <file.fold>         # 对照 JSON Schema 校验
+origami summary <file.fold>          # 压缩 JSON
+origami visualize <file.fold> -o report.html   # 自带样式的 HTML 报告
+```
+
+### 二、折纸模拟与出图（浏览器驱动，可无头）
+
+```bash
+origami list                         # 27 个 preset / 9 类
+origami load --preset cranes         # 载入模型
+origami simulate --preset cranes     # 跑折叠仿真
+origami view --mode strain           # 切视图：pattern / simulation / folded / strain
+origami screenshot -o crane.png      # 截图
+origami record -o crane.mp4          # 录动画（GIF / WebM / MP4）
+origami export --format stl          # 导出 FOLD / STL / OBJ / PNG / SVG
+origami stl <file.fold>              # FOLD → STL（3D 打印 / 激光切割）
+origami obj <file.fold>              # FOLD → OBJ / MTL
+origami webgl <file.fold>            # Three.js 交互式 3D 预览
+origami crane <file.fold>            # 传统仙鹤的 3D 预览（带边着色）
+origami batch --models "cranes,miura-ori" --action screenshot --output-dir out/
+```
+
+### 三、给 agent 用的接口
+
+```bash
+origami mcp                          # MCP server（JSON-RPC over stdio）
+origami serve                        # REST API（默认 127.0.0.1:3000）
+```
+
+仓库自带 `.claude/skills/SKILL.md`（中英双语触发条件），agent 可直接按 SKILL 描述调用。
+
+> 另外还带有包装刀模相关的命令（`dieline` 刀模→FOLD/DXF、`template` 5 种盒型 + 8 种材料、
+> `bind` 版面绑定、`render` Three.js PBR 渲染）。**不主推但也不删**，细节见
+> [`docs/COMMAND-REFERENCE.md`](docs/COMMAND-REFERENCE.md)。
+
+---
+
+## 质量（实测数字，2026-11-26）
+
+| 项 | 结果 |
+|---|---|
+| 单元测试 | **27 suites / 660 tests 全过** |
+| e2e（Jest 车道） | **20/20 全过** |
+| e2e（Playwright 车道） | **11/11 全过** |
+| 覆盖率 | 语句 **42.85%**（3689/8608）· 分支 39.03% · 函数 53.33% · 行 42.24% |
+| 源码规模 | 56 个 .js / 20,638 行 · 36 个功能命令 |
+| 运行时依赖 | 9 个 · 锁文件入库 |
+
+复现覆盖率：
+
+```bash
+npx jest tests/unit --coverage --coverageReporters=text-summary
+```
+
+三条测试车道：
+
+```bash
+npm test              # 单测（660）
+npm run test:e2e      # e2e · Jest 车道；外网不可达时网络用例显式 skip
+npm run test:e2e:browser   # e2e · Playwright 车道
+```
+
+---
+
+## 开发
 
 ```bash
 npm install
-npx playwright install chromium  # Install Chromium
+npm test
+npm run lint
 ```
 
-## Usage
-
-### List all presets
-
-```bash
-node src/index.js list
-```
-
-### Load a preset model
-
-```bash
-node src/index.js load --preset miura-ori
-```
-
-### Take a screenshot
-
-```bash
-node src/index.js screenshot --preset miura-ori -o output.png
-```
-
-### Record animation
-
-```bash
-node src/index.js record --preset miura-ori -o animation.gif
-```
-
-### Run simulation
-
-```bash
-node src/index.js simulate --percent 0.5 --preset miura-ori
-```
-
-### Analyze model
-
-```bash
-node src/index.js analyze --preset miura-ori --all
-```
-
-### Export model
-
-```bash
-node src/index.js export -f stl --preset miura-ori -o model.stl
-```
-
-### Global options
-
-- `-V, --version` - Show version number
-- `-h, --help` - Show help
-
-## Available Presets (27)
-
-| Category | Presets |
-|----------|---------|
-| origami | cranes, flapping-bird, flat-crane, hypar, square-twist, airplane, lang-cardinal, lang-orchid |
-| bases | bird-base, boat-base, frog-base, square-base, waterbomb-base |
-| tessellations | miura-ori, waterbomb, flower-tower, lang-honeycomb, huffman-extruded |
-| curved | leafy-opus, shell14, rotating-star |
-| pleating | box-pleat-tess, box-pleat-pyramid |
-| other | kirigami-triangle, popup-simple, bistable-curved, polygami-cross |
-
-## Project Structure
-
-```
-origami-simulator-cli/
-├── src/
-│   └── index.js          # Main CLI entry (877 lines)
-├── docs/                  # Documentation
-├── tests/                # Tests
-├── examples/             # Example files
-├── .opencli/            # OpenCLI adapter config
-├── .claude/skills/      # Claude Code Skill
-├── package.json
-└── README.md
-```
-
-## Technology Stack
-
-- **Node.js** (≥18) - Runtime
-- **Playwright** - Browser automation
-- **Commander.js** - CLI framework
-- **FFmpeg** - Video encoding
-
-## Links
-
-- [OrigamiSimulator.org](https://origamisimulator.org/)
-- [OrigamiSimulator GitHub](https://github.com/amandaghassaei/OrigamiSimulator)
-- [AI Partner Project](../) - Parent project
+版本号以 `package.json` 为**唯一真相源**（`src/version.js` 统一读取），
+`origami --version`、REST `/health`、MCP `serverInfo.version` 三处输出恒等。
 
 ## License
 

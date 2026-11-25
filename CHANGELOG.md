@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.47.0] - 2026-11-26
+
+> 说明：本仓库的变更记录在 2.43.0 之后中断，2.44 / 2.45 / 2.46 三个版本此前没有条目
+> （2.45 新增 OBJ/MTL 导出，2.46 新增批量折纸命令与 GPU PBD 求解器）。
+> 本条把「叙述与交付漂移」一次性收口。
+
+### Fixed
+
+- **版本号单一真相源**（新增 `src/version.js`）：`origami --version`、REST `/health`、
+  MCP `serverInfo.version` 三处全部改为读 `package.json`。此前源码里有 3 处硬编码版本
+  —— `src/index.js` 的 `0.2.0`、`src/api/server.js` 的 `2.32.0`、`src/mcp/server.js` 的
+  `2.40.0` —— 与 `package.json` 的 `2.46.0` 全部不一致；文档里另有 4 处 `0.2.0`。
+- **e2e 判据分诊**：`tests/e2e/screenshot.test.js` 原用 Playwright 的 test API 编写，
+  却被 Jest 的 `testMatch` 收走，Playwright 直接抛错拒绝执行（该 suite 从未真正跑过）。
+  按官方建议拆成两个目录：`tests/e2e/`（Jest 车道）与 `tests/playwright/`（Playwright 车道）。
+- **6 处陈旧判据**：写死「恰好 8 个 preset」（实际 27）· 断言已改名的日文 preset
+  `富士山`/`爆弾`（旧别名降级为 `LEGACY_PRESETS` 兼容映射，另补一条用例锁住）·
+  `analyze --preset`（该命令从来只接受文件位置参数）· 三处写死版本字面量的断言。
+
+### Added
+
+- **网络类失败的信号**：`tests/helpers/network.js`（外网探针）+ `tests/helpers/cli.js`
+  （只对网络类特征失败重试的调用器）。外网不可达时网络用例整组**显式 skip**
+  （明确跳过，不是静默通过）；外网抖动时重试，但确定性失败一次都不重试 —— 不用重试掩盖真 bug。
+- **`files` 白名单**：发布包从 215 文件 / 5.6 MB 降到 **71 文件 / 205 kB**。
+
+### Changed
+
+- **测试分三条车道**：`npm test`（660 单测）· `npm run test:e2e`（Jest e2e 20 例）·
+  `npm run test:e2e:browser`（Playwright e2e 11 例）。
+- **README 重写**：定位从「origamisimulator.org 的 CLI」改为「从 FOLD 到成品的折纸/纸艺
+  工具链」，并补上负定义（不是网页版的替代品，不是图形编辑器）。
+- **覆盖率改为实测**：语句 42.85%（3689/8608）· 分支 39.03% · 函数 53.33% · 行 42.24%。
+  （此前仓库里唯一的覆盖率产物只有 4 个文件 / 21.3%，且未入库。）
+
+### Removed
+
+- 运行产物 `src/origami-screenshot.png` 与 `src/batch-output/` 不再入库（已进 `.gitignore`）。
+
 ## [2.43.0] - 2026-06-08
 
 ### Added

@@ -1,7 +1,7 @@
 # Testing Guide
 
-**文档版本**: 0.2.0
-**更新日期**: 2026-04-16
+**文档版本**: 2.47.0
+**更新日期**: 2026-11-26
 
 ---
 
@@ -184,16 +184,41 @@ module.exports = {
 
 ## 覆盖率报告
 
-最近一次覆盖率报告:
+最近一次覆盖率报告（2026-11-26 实跑，`npx jest tests/unit --coverage --coverageReporters=text-summary`）:
 
 ```
-File            | % Stmts | % Branch | % Funcs | % Lines
-src/utils       |   93.82 |    87.87 |      96 |   93.42
- browser.js    |    91.3 |      100 |      80 |    91.3
- file-utils.js |   91.89 |    83.33 |     100 |   91.89
- presets.js    |     100 |      100 |     100 |     100
+Statements   : 42.85% ( 3689/8608 )
+Branches     : 39.03% ( 1795/4598 )
+Functions    : 53.33% (  488/915  )
+Lines        : 42.24% ( 3230/7645 )
 ```
+
+> 此前本文件里那张表只有 4 个文件（src/utils 93.82% ...），是旧产物，已删除。
+> 完整口径必须用上面的命令现跑，不要抄表。
 
 ---
 
-**最后更新**: 2026-04-16
+## 三条测试车道
+
+| 命令 | 跑什么 | 规模 | 依赖网络 |
+|---|---|---|---|
+| `npm test` | 单元测试（`tests/unit/`） | 27 suites / 660 tests | 否 |
+| `npm run test:e2e` | e2e · Jest 车道（`tests/e2e/`） | 20 用例 | 部分 |
+| `npm run test:e2e:browser` | e2e · Playwright 车道（`tests/playwright/`） | 11 用例 | 部分 |
+
+**为什么分两个 e2e 目录**：Playwright 的 test API 不能在 Jest 进程内运行，会直接抛
+"Playwright Test needs to be invoked via 'npx playwright test'"。官方建议是 Playwright
+与 Jest 各占一个目录。
+
+**网络用例的信号契约**：
+
+- `load --preset` / `screenshot` 都要开无头浏览器访问 origamisimulator.org
+  （实测单例耗时 15-65s，随外网波动）。
+- 外网**不可达** → 网络用例整组标记为 **skipped**（明确跳过，不是静默通过）。
+- 外网**可达但抖动** → 失败按网络类特征重试；确定性失败（File not found /
+  Unsupported file format / Unknown preset）一次都不重试。
+- e2e 单例超时上限 180s（`--testTimeout=180000`），单测仍为 60s。
+
+---
+
+**最后更新**: 2026-11-26
