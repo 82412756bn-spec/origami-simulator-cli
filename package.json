@@ -18,8 +18,9 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "jest tests/unit",
-    "test:e2e": "jest tests/e2e",
-    "test:all": "jest",
+    "test:e2e": "node tests/e2e/run-e2e.js",
+    "test:e2e:browser": "playwright test",
+    "test:all": "jest --testTimeout=180000",
     "lint": "eslint src/"
   },
   "keywords": [
