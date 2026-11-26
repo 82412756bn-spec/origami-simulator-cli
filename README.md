@@ -30,7 +30,7 @@ npx playwright install chromium   # 需要截图 / 录屏 / 渲染时才用得�
 
 > **只通过 GitHub 分发，不发 npm**（2026-11-26 决策，理由见 `docs/RELEASE-CHECKLIST.md`）。
 > 安装用 `npx github:82412756bn-spec/origami-simulator-cli`，或下载 GitHub Releases 里的
-> tgz（`npm install -g ./origami-simulator-cli-2.47.1.tgz`）。
+> tgz（`npm install -g ./origami-simulator-cli-2.47.2.tgz`）。
 
 Node ≥ 18。纯本地的命令（`analyze` / `kawasaki` / `stl` / `diff` …）不需要浏览器，也不需要联网。
 
@@ -39,6 +39,9 @@ Node ≥ 18。纯本地的命令（`analyze` / `kawasaki` / `stl` / `diff` …�
 ## 第一条命令
 
 ```bash
+# 0. 预取 27 个 preset 到本地（约 4 MB；之后不再依赖站点的资源路径）
+npx github:82412756bn-spec/origami-simulator-cli presets sync
+
 # 1. 看有什么 —— 27 个内置 preset，9 个类别
 npx github:82412756bn-spec/origami-simulator-cli list
 
@@ -78,6 +81,8 @@ origami visualize <file.fold> -o report.html   # 自带样式的 HTML 报告
 
 ```bash
 origami list                         # 27 个 preset / 9 类
+origami presets status               # 本地缓存状态（哪些已离线可用）
+origami presets sync                 # 预取全部 27 个到 ~/.origami/presets
 origami load --preset cranes         # 载入模型
 origami simulate --preset cranes     # 跑折叠仿真
 origami view --mode strain           # 切视图：pattern / simulation / folded / strain
@@ -132,6 +137,14 @@ npm run test:e2e:browser   # e2e · Playwright 车道
 ```
 
 ---
+
+## 已知约束
+
+- **preset 缓存只消除「资源」这一层依赖，不消除「模拟器本体」**：`load` / `screenshot`
+  仍要打开 `origamisimulator.org` 加载网页应用。缓存防的是「站点可达但资源路径变了 / 个别资源拿不到」
+  （27 个 preset 的 SVG/FOLD 实测分散在 `/assets/<file>`，根路径是 404），**不是「整站下线也能用」**。
+- 27 个 preset 里 **25 个是 `.svg`、2 个是 `.fold`**（`box-pleat-tess` / `box-pleat-pyramid`），
+  缓存按扩展名分别校验 —— 路径错时站点会返回 200 的 HTML 错误页，校验能挡住。
 
 ## 开发
 

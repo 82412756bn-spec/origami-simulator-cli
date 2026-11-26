@@ -13,6 +13,7 @@ const { registerDielineCommand } = require('./commands/dieline');
 const { registerBindCommand } = require('./commands/bind');
 const { registerRenderCommand } = require('./commands/render');
 const { registerTemplateCommand } = require('./commands/template');
+const presetCache = require('./utils/preset-cache');
 
 const { VERSION } = require('./version');
 const BASE_URL = 'https://origamisimulator.org/';
@@ -164,13 +165,26 @@ program
     const { browser, page } = await launchBrowser();
     try {
       if (options.preset) {
-        // Load preset via demo file URL parameter
+        // 本地缓存优先（站点抖动/离线也能用），未命中才走 ?demo= 远程加载
+        const resolvedId = LEGACY_PRESETS[options.preset] || options.preset;
         const presetFile = getPresetFile(options.preset);
-        const presetUrl = `${BASE_URL}?demo=${encodeURIComponent(presetFile)}`;
-        await page.goto(presetUrl);
-        await waitForPageReady(page);
-        const preset = getPresetById(LEGACY_PRESETS[options.preset] || options.preset);
-        console.log(`✅ Loaded preset: ${options.preset}${preset ? ` (${preset.name})` : ''}`);
+        const preset = getPresetById(resolvedId);
+        if (presetCache.hasCache(resolvedId, presetFile)) {
+          const fileInput = await page.locator('input#fileSelector');
+          await fileInput.setInputFiles(presetCache.cachePath(resolvedId, presetFile));
+          await page.waitForTimeout(2000);
+          await waitForPageReady(page);
+          console.log(`✅ Loaded preset: ${options.preset}${preset ? ` (${preset.name})` : ''} [本地缓存]`);
+        } else {
+          const presetUrl = `${BASE_URL}?demo=${encodeURIComponent(presetFile)}`;
+          await page.goto(presetUrl);
+          await waitForPageReady(page);
+          console.log(`✅ Loaded preset: ${options.preset}${preset ? ` (${preset.name})` : ''}`);
+          // 顺手暖缓存（失败不影响主流程，所以不 await）
+          presetCache.download(resolvedId, presetFile).then((r) => {
+            if (r.ok && !r.cached) console.log(`   （已缓存到 ${presetCache.cachePath(resolvedId, presetFile)}）`);
+          }).catch(() => {});
+        }
       } else if (options.file) {
         // Load file via file input
         const filePath = path.resolve(options.file);
@@ -244,6 +258,44 @@ program
   });
 
 // ============================================================================
+// Presets Command - 本地缓存管理（status / sync）
+// ============================================================================
+program
+  .command('presets [action]')
+  .description('Manage the local preset cache (action: status | sync)')
+  .option('-f, --force', 'Re-download presets even if already cached')
+  .action(async (action = 'status', options = {}) => {
+    const act = String(action).toLowerCase();
+
+    if (act === 'sync') {
+      console.log(`同步 ${PRESETS.length} 个 preset → ${presetCache.CACHE_DIR}`);
+      let fresh = 0; let hit = 0; let fail = 0;
+      for (const p of PRESETS) {
+        const r = await presetCache.download(p.id, p.file, { force: Boolean(options.force) });
+        if (r.ok && r.cached) { hit += 1; console.log(`  = ${p.id.padEnd(22)} 已有缓存 (${r.bytes} B)`); }
+        else if (r.ok) { fresh += 1; console.log(`  + ${p.id.padEnd(22)} 下载 ${r.bytes} B`); }
+        else { fail += 1; console.log(`  ! ${p.id.padEnd(22)} 失败：${r.reason}`); }
+      }
+      console.log(`\n完成：新下载 ${fresh} / 已有 ${hit} / 失败 ${fail}`);
+      if (fail > 0) process.exitCode = 1;
+      return;
+    }
+
+    if (act !== 'status') {
+      console.error(`未知 action: ${action}（可用：status | sync）`);
+      process.exit(1);
+    }
+
+    let have = 0;
+    for (const p of PRESETS) {
+      const ok = presetCache.hasCache(p.id, p.file);
+      if (ok) have += 1;
+      console.log(`  ${ok ? '✓' : '·'} ${p.id.padEnd(22)} ${ok ? presetCache.cachePath(p.id, p.file) : '未缓存'}`);
+    }
+    console.log(`\n${have}/${PRESETS.length} 已缓存　目录：${presetCache.CACHE_DIR}`);
+  });
+
+// ============================================================================
 // Screenshot Command - Take screenshot
 // ============================================================================
 program
@@ -257,8 +309,19 @@ program
     try {
       // Load model if specified
       if (options.preset) {
-        await page.goto(buildPresetUrl(options.preset));
-        await waitForPageReady(page);
+        const resolvedId = LEGACY_PRESETS[options.preset] || options.preset;
+        const presetFile = getPresetFile(options.preset);
+        if (presetCache.hasCache(resolvedId, presetFile)) {
+          const fileInput = await page.locator('input#fileSelector');
+          await fileInput.setInputFiles(presetCache.cachePath(resolvedId, presetFile));
+          await page.waitForTimeout(2000);
+          await waitForPageReady(page);
+          console.log(`   （preset 来自本地缓存）`);
+        } else {
+          await page.goto(buildPresetUrl(options.preset));
+          await waitForPageReady(page);
+          presetCache.download(resolvedId, presetFile).catch(() => {});
+        }
       } else if (options.file) {
         const filePath = path.resolve(options.file);
         if (fs.existsSync(filePath)) {

@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.47.2] - 2026-11-26
+
+### Added
+- **preset 本地缓存**（`src/utils/preset-cache.js` + `origami presets` 命令）
+  - `origami presets sync`：把 27 个 preset 预取到 `~/.origami/presets/`（纯 HTTP，不需要浏览器）
+  - `origami presets status`：列出哪些已缓存
+  - `load --preset` / `screenshot --preset` **缓存优先**，未命中才回落到 `?demo=` 远程加载；
+    远程加载成功后会顺手暖缓存（失败不影响主流程）
+- 新增 12 个单元测试（`tests/unit/preset-cache.test.js`）
+
+### Fixed
+- **27 个 preset 全部依赖站点资源路径**（产品级脆弱点）。实测资源真实路径是 `/assets/<file>`，
+  根路径 `/<file>` 返回 404。原先只要站点改动资源路径，27 个 preset 就全废。
+- 发现并处理 **preset 不是同一类格式**：25 个 `.svg` + **2 个 `.fold`**（`box-pleat-tess` /
+  `box-pleat-pyramid`）。缓存按扩展名分别校验（SVG 查 `<svg`，FOLD 查 JSON 且有几何字段）——
+  因为站点在路径错时返回的 **HTML 错误页也是 HTTP 200**，不校验就会把错误页存成缓存、静默坏掉。
+
+### 能力边界（写清楚，不夸大）
+缓存只消除「preset 资源」这一层依赖，**不消除「模拟器前端」的依赖**：`launchBrowser()`
+仍要访问 origamisimulator.org 加载网页应用。要「整站下线也能用」得把前端整个 vendor 进来（未做）。
+
 ## [2.47.1] - 2026-11-26
 
 ### Fixed
