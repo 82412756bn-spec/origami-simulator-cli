@@ -15,10 +15,22 @@
 
 ## 安装
 
+**不需要安装就能跑**（从 GitHub 直接执行）：
+
 ```bash
-npm install -g origami-simulator-cli
+npx github:82412756bn-spec/origami-simulator-cli list
+```
+
+或全局安装：
+
+```bash
+npm install -g github:82412756bn-spec/origami-simulator-cli
 npx playwright install chromium   # 需要截图 / 录屏 / 渲染时才用得上
 ```
+
+> **npm 包尚未发布**（`npm publish` 未执行）。当前正式分发通道是 GitHub：
+> `github:82412756bn-spec/origami-simulator-cli`，以及 GitHub Releases 里挂的 tgz
+> （`npm install -g ./origami-simulator-cli-2.47.0.tgz`）。后续补发 npm 不改变用法。
 
 Node ≥ 18。纯本地的命令（`analyze` / `kawasaki` / `stl` / `diff` …）不需要浏览器，也不需要联网。
 
@@ -28,16 +40,18 @@ Node ≥ 18。纯本地的命令（`analyze` / `kawasaki` / `stl` / `diff` …�
 
 ```bash
 # 1. 看有什么 —— 27 个内置 preset，9 个类别
-origami list
+npx github:82412756bn-spec/origami-simulator-cli list
 
-# 2. 拿一个文件做本地分析（不开浏览器、不联网、毫秒级）
-origami analyze examples/sample-crane.fold
+# 2. 拿你自己的 .fold 文件做本地分析（不开浏览器、不联网、毫秒级）
+npx github:82412756bn-spec/origami-simulator-cli analyze <你的文件.fold>
 
-# 3. 出成品 —— 折叠动画 / 截图（需要 chromium + ffmpeg）
-origami record --preset cranes --format mp4 -o crane.mp4
+# 3. 出成品 —— 截图 / 折叠动画（需要 chromium + ffmpeg）
+npx github:82412756bn-spec/origami-simulator-cli screenshot --preset cranes -o crane.png
+npx github:82412756bn-spec/origami-simulator-cli record --preset cranes --format mp4 -o crane.mp4
 ```
 
-装完包后 `examples/sample-crane.fold` 在 `node_modules/origami-simulator-cli/examples/`。
+全局装过之后，把 `npx github:…` 换成 `origami` 即可。示例文件随包发布：全局安装后在
+`$(npm root -g)/origami-simulator-cli/examples/sample-crane.fold`。
 
 ---
 
