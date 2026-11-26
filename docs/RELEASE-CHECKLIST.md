@@ -107,7 +107,9 @@ node src/index.js --version  →  2.47.0
 2. ✅ GitHub 仓库转公开 + 自打星（2026-11-26）
 3. ✅ **发布 v2.47.1**（GitHub Release，附件 `origami-simulator-cli-2.47.1.tgz`）
 4. ✅ 观测器已装（`scripts/origami-signals.js`），Day 0 = 2026-11-26
-5. ⬜ `npm publish` —— **未执行**（npm 账号创建被 Cloudflare 人机验证挡住：代理 IP `185.220.238.181` 与直连 IP `218.10.107.59` 均被 challenge；且 npm 已关闭 legacy auth 创建）。**不影响 14 天证伪**，见下。
+5. ❌ **`npm publish` —— 决定不发**（2026-11-26 用户裁定，已记入主项目 `research/DECISIONS-NOT-DOING-2026-11-19.md` 决策 ⑦）。
+   原因：npm 账号创建被 Cloudflare 人机验证挡住（代理 IP `185.220.238.181` 与直连 IP `218.10.107.59` 均被 challenge），
+   且 npm 已关闭 legacy auth 创建。**不影响 14 天证伪** —— 三条判据没有一条依赖 npm。
 
 ---
 
