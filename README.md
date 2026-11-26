@@ -30,7 +30,7 @@ npx playwright install chromium   # 需要截图 / 录屏 / 渲染时才用得�
 
 > **只通过 GitHub 分发，不发 npm**（2026-11-26 决策，理由见 `docs/RELEASE-CHECKLIST.md`）。
 > 安装用 `npx github:82412756bn-spec/origami-simulator-cli`，或下载 GitHub Releases 里的
-> tgz（`npm install -g ./origami-simulator-cli-2.47.2.tgz`）。
+> tgz（`npm install -g ./origami-simulator-cli-2.47.3.tgz`）。
 
 Node ≥ 18。纯本地的命令（`analyze` / `kawasaki` / `stl` / `diff` …）不需要浏览器，也不需要联网。
 
@@ -145,6 +145,14 @@ npm run test:e2e:browser   # e2e · Playwright 车道
   （27 个 preset 的 SVG/FOLD 实测分散在 `/assets/<file>`，根路径是 404），**不是「整站下线也能用」**。
 - 27 个 preset 里 **25 个是 `.svg`、2 个是 `.fold`**（`box-pleat-tess` / `box-pleat-pyramid`），
   缓存按扩展名分别校验 —— 路径错时站点会返回 200 的 HTML 错误页，校验能挡住。
+
+## 已知约束（跨平台）
+
+- **canvas（原生模块）只服务 `origami render`**，且是 **`optionalDependencies`** ——
+  装不上时安装不会失败，只有 render 的纹理降级为空。预编译覆盖 5 个平台
+  （linux-x64/arm64、darwin-x64/arm64、win32-x64），**win32-arm64 与 Alpine(musl) 会退回源码编译**。
+  详见 [`docs/CANVAS-PLATFORM.md`](docs/CANVAS-PLATFORM.md)。
+- CI 在 ubuntu / windows / macos 三个平台跑单测并显式验证 canvas 能加载。
 
 ## 开发
 

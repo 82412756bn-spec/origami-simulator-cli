@@ -7,8 +7,22 @@ on:
     branches: [main, master]
 
 jobs:
+  # 单元测试 + 跨平台安装验证（2026-11-26 加 matrix）
+  #
+  # 为什么要 matrix：canvas 是原生模块，陌生人装包时能不能装上，
+  # 取决于平台有没有预编译产物。实测 canvas 3.2.3 的 prebuild 覆盖
+  # linux-x64 / linux-arm64 / darwin-x64 / darwin-arm64 / win32-x64（均 napi-v7，
+  # 自带 cairo/pango 等系统库），但**没有 win32-arm64，也没有 linux-musl**。
+  # 之前 CI 只跑 ubuntu，等于「跨平台可用」只是声称、从不验证。
+  # 现在每次提交都会在这 3 个平台真的 npm ci + 跑测试 —— 装不上就会红。
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['20']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
 
     steps:
       - uses: actions/checkout@v4
@@ -16,21 +30,22 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ matrix.node }}
 
       - name: Install dependencies
-        run: |
-          npm ci
+        run: npm ci
 
-      - name: Install Playwright browsers
-        run: |
-          npx playwright install chromium --with-deps
+      - name: Verify native canvas loaded
+        # 明确验证 canvas 能真正加载（require 只是加载；这一步会真正建一块画布）
+        run: node -e "const {createCanvas}=require('canvas');const c=createCanvas(8,8);console.log('canvas ok', c.width+'x'+c.height)"
 
       - name: Run tests
-        run: |
-          npm test
+        run: npm test
 
-  # Integration tests with browser (may timeout in CI due to network)
+  # 集成测试（需浏览器；依赖外网 origamisimulator.org，CI 上可能因网络延迟失败）
+  # 保留 || echo：不因外网抖动把整条流水线标红，但失败会打在日志里。
+  # TODO(2026-11-26)：这条「失败不算失败」的约定是 R2（e2e 红无人当信号）的残留。
+  # 待 14 天证伪窗有结论后，把外网依赖拆成独立 job 并硬失败。
   browser-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -44,13 +59,10 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: |
-          npm ci
+        run: npm ci
 
       - name: Install Playwright browsers
-        run: |
-          npx playwright install chromium --with-deps
+        run: npx playwright install chromium --with-deps
 
       - name: Run browser tests
-        run: |
-          npm run test:e2e || echo "Browser tests may fail in CI due to network latency"
+        run: npm run test:e2e || echo "Browser tests may fail in CI due to network latency"

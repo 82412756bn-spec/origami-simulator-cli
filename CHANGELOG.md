@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.47.3] - 2026-11-26
+
+### Fixed
+- **canvas 从硬依赖改为可选依赖**（`dependencies` → `optionalDependencies`）。
+  跨平台取证发现：canvas 3.2.3 的预编译只覆盖 linux-x64/arm64、darwin-x64/arm64、win32-x64，
+  **win32-arm64 与 Alpine(musl) 会退回源码编译**。作为硬依赖时，那两类机器
+  `npm install` 整个失败 → 36 个命令全部用不了；改成可选后安装成功，只有 `origami render` 降级。
+  降级路径是**代码本来就有的**（10 处 `createCanvas()` 调用全部有 `if (!canvas) return null` 守卫，
+  `commercial-renderer.js` 注释原文 *"If texture generation fails (e.g., no canvas), return null"*）。
+- **CI 加 windows / macos 矩阵**：此前 CI 只跑 ubuntu，「跨平台可用」只是声称、从不验证。
+  现在每次提交都在 3 个平台 `npm ci` + 跑单测，并加一步**显式验证 canvas 真能加载**
+  （`npm ci` 成功 ≠ canvas 能加载）。
+
+### Added
+- `docs/CANVAS-PLATFORM.md`：canvas 跨平台取证报告（预编译矩阵 / 系统库自带证据 / 降级路径核对）。
+- 新增 6 个单测（`tests/unit/canvas-optional-degradation.test.js`）锁住 canvas 缺失时的降级行为。
+
+### 取证要点（详见 docs/CANVAS-PLATFORM.md）
+- prebuild 全部是 `napi-v7` → 一个二进制跨 node 版本通用（N-API 向后兼容）
+- prebuild **自带** cairo/pango/libpng/pixman 等库 → Linux 用户无需 apt 装系统依赖
+- 唯一使用点：`src/utils/procedural-texture.js:63`（只服务 `origami render`）
+
 ## [2.47.2] - 2026-11-26
 
 ### Added
