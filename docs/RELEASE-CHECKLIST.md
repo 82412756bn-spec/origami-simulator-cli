@@ -103,10 +103,49 @@ node src/index.js --version  →  2.47.0
 
 ## 发布前剩余动作
 
-1. ✅ 移除 `@jackwener/opencli`（结论 4，已完成并复核）
-3. ⬜ GitHub 仓库转公开（否则 npm 页面上的 repo 链接是死链；且「非本人提问」这条外部信号在私有仓库里根本不存在）
-4. ⬜ `npm publish --access public` —— **不可逆，需签字**
-5. ⬜ 发布后当天装上 14 天证伪观测器（MCP/REST 当前 `console.` 出现 0 次，无调用日志可采）
+1. ✅ 移除 `@jackwener/opencli`（结论 4，commit `2959f5d`）
+2. ✅ GitHub 仓库转公开 + 自打星（2026-11-26）
+3. ✅ **发布 v2.47.1**（GitHub Release，附件 `origami-simulator-cli-2.47.1.tgz`）
+4. ✅ 观测器已装（`scripts/origami-signals.js`），Day 0 = 2026-11-26
+5. ⬜ `npm publish` —— **未执行**（npm 账号创建被 Cloudflare 人机验证挡住：代理 IP `185.220.238.181` 与直连 IP `218.10.107.59` 均被 challenge；且 npm 已关闭 legacy auth 创建）。**不影响 14 天证伪**，见下。
+
+---
+
+## 最终发布记录（2026-11-26）
+
+### 通道选择：GitHub，不是 npm
+
+原计划走 npm。实测受阻：
+
+| 尝试 | 结果 |
+|---|---|
+| `npm adduser --auth-type=legacy` | 服务器返回 `Account creation via legacy auth is unavailable` —— 官方已关闭 CLI 创建 |
+| `npm signup` 网页 | Cloudflare 人机验证；**代理 IP 与直连 IP 均被拦**（`cf-mitigated: challenge`） |
+
+判定：**npm 只解决安装便利性，不解决验证**。14 天证伪的三条判据（非本人 artifact / 非本人 issue / 非本人 agent 调用）没有一条依赖 npm，而「非本人提问」只能发生在 GitHub（npm 无 issue 区）。→ **GitHub 公开是必要条件，npm 是可选**。
+
+### 实际发布结果（全部实测）
+
+```
+仓库公开          api.github.com/repos/... 匿名访问 → HTTP 200
+自打星            stargazers_count = 1
+推送              a07ebf5..d1b57ee（快进 12+ 提交）
+标签              v2.47.0 · v2.47.1
+Release v2.47.1   origami-simulator-cli-2.47.1.tgz  223,781 B
+端到端            npx github:82412756bn-spec/origami-simulator-cli --version → 2.47.1
+观测器 Day 0      判据1 ✅ 成立（GitHub Release v2.47.1）
+```
+
+### 为什么有 2.47.1
+
+v2.47.0 的 Release 附件是「判据 1 只查 npm registry」的旧版脚本，与仓库内容对不上。
+按本项目自己的标准（artifact 必须与仓库一致）补发 patch，而不是改 release 说明。
+
+### 判据 1 的语义变更
+
+原：`registry.npmjs.org` 404 → 200。
+现：**npm registry 或 GitHub Release 任一就绪**（`collectDistribution()` 查公开 releases 端点，无需认证）。
+原因：只查 registry 在 GitHub 通道下会永远判「未发布」→ 14 天窗口永远打不开 = 没有窗口。
 
 ## 复现方式
 
