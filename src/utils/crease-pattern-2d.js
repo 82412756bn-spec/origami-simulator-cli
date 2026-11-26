@@ -429,79 +429,48 @@ function vertexAngles(vertices, edges, vertexIdx, incidentEdges) {
  * @returns {Object} report
  */
 function checkLocalFlatFoldability(foldData, options = {}) {
-  const tolerance = options.kawasakiToleranceDegrees ?? KAWASAKI_TOLERANCE_DEGREES;
-  const vertices = foldData.vertices_coords || [];
-  const edges = foldData.edges_vertices || [];
-  const assignments = foldData.edges_assignment || [];
+    // 单一真相源（2026-11-26）：判定逻辑全部委托给 FoldAnalyzer 的
+    // strictKawasaki() / analyzeMaekawa() —— 与 origami kawasaki / maekawa 命令
+    // 以及 analyze --all 的 validation 块**完全同一套口径**。
+    // 此前这里自己实现了一套（用扇区角、含边界顶点），导致同一份产物
+    // 在 origami generate 的判据 C 与 origami kawasaki 里给出互相矛盾的结论。
+    const { FoldAnalyzer } = require('./fold-analyzer');
+    const analyzer = new FoldAnalyzer(foldData);
+    const sk = analyzer.strictKawasaki();
+    const sm = analyzer.analyzeMaekawa();
+    const interiorVertices = analyzer.getInternalCreaseVertices().length;
 
-  const interior = computeInteriorVertices(foldData);
-
-  const kawasakiFailures = [];
-  const maekawaFailures = [];
-  let kawasakiChecked = 0;
-  let maekawaChecked = 0;
-
-  for (const item of interior.detail) {
-    const v = item.vertex;
-    const angles = vertexAngles(vertices, edges, v, item.edges);
-    if (angles.length >= 2) {
-      const even = angles.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0);
-      const odd = angles.filter((_, i) => i % 2 === 1).reduce((a, b) => a + b, 0);
-      const deviation = Math.abs(even - odd);
-      kawasakiChecked++;
-      if (deviation > tolerance) {
-        kawasakiFailures.push({
-          vertex: v,
-          deviation: Number(deviation.toFixed(4)),
-          evenSum: Number(even.toFixed(4)),
-          oddSum: Number(odd.toFixed(4)),
-          degree: item.degree,
-        });
-      }
-    }
-
-    const diff = Math.abs(item.mountain - item.valley);
-    maekawaChecked++;
-    if (diff !== MAEKawa_TARGET_DIFFERENCE) {
-      maekawaFailures.push({
-        vertex: v,
-        mountain: item.mountain,
-        valley: item.valley,
-        difference: item.mountain - item.valley,
-        deviation: Math.abs(diff - MAEKawa_TARGET_DIFFERENCE),
-        degree: item.degree,
-        oddDegree: item.degree % 2 !== 0,
-      });
-    }
+    const kawasaki = {
+      toleranceDegrees: 5.0,
+      interiorVertices,
+      checked: sk.totalChecked,
+      passCount: sk.withinTolerance,
+      failCount: sk.outOfTolerance,
+      skippedOddValence: sk.skippedOddValence || 0,
+      failures: (sk.topDeviations || []).map((d) => ({
+        vertex: d.vertex,
+        deviation: d.deviation,
+        evenSum: d.evenSum,
+        oddSum: d.oddSum,
+      })),
+    };
+    const maekawa = {
+      checked: sm.totalChecked,
+      passCount: sm.withinTolerance,
+      failCount: sm.outOfTolerance,
+      failures: (sm.topDeviations || []).map((d) => ({
+        vertex: d.vertex,
+        deviation: d.deviation,
+        m: d.m,
+        v: d.v,
+      })),
+    };
+    return {
+      pass: kawasaki.failCount === 0 && maekawa.failCount === 0,
+      kawasaki,
+      maekawa,
+    };
   }
-
-  const kawasakiPass = kawasakiFailures.length === 0;
-  const maekawaPass = maekawaFailures.length === 0;
-
-  return {
-    scope: 'local-necessary-conditions-only (Kawasaki + Maekawa)',
-    note: 'Passing these does NOT mean the pattern folds flat; global flat-foldability is NP-hard and out of scope.',
-    kawasaki: {
-      toleranceDegrees: tolerance,
-      interiorVertices: interior.indices.length,
-      checked: kawasakiChecked,
-      passCount: kawasakiChecked - kawasakiFailures.length,
-      failCount: kawasakiFailures.length,
-      pass: kawasakiPass,
-      failures: kawasakiFailures,
-    },
-    maekawa: {
-      target: MAEKawa_TARGET_DIFFERENCE,
-      interiorVertices: interior.indices.length,
-      checked: maekawaChecked,
-      passCount: maekawaChecked - maekawaFailures.length,
-      failCount: maekawaFailures.length,
-      pass: maekawaPass,
-      failures: maekawaFailures,
-    },
-    pass: kawasakiPass && maekawaPass,
-  };
-}
 
 // ────────────────────────────────────────────────────────────────────
 // Splitting creases at their crossing points

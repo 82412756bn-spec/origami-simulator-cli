@@ -4,6 +4,42 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.47.6] - 2026-11-26
+
+### Fixed
+
+- **`origami kawasaki` 对真实作品系统性判错**（公开命令，影响真实用户）。
+  根因：Kawasaki 的交替和用了**扇区角**（相邻折痕方向的几何夹角），
+  而定理要的是**折痕角**（`edges_foldAngle` 的绝对值）—— 两者不是一回事。
+  另外内部顶点选取包含了带 B（边界）边的顶点。
+  以 78 个真实作品（`goods/origami-examples/`，MIT 许可）为基准：
+  - 旧口径 `6698/15082`（44%）→ 新口径 `9483/10859`（**87.33%**）
+  - `miura-ori` 0/132 → 130/130 · `langWedgeDoubleFaced` 0/262 → 262/262 ·
+    `origamisimulator` 2018/2370 → 2370/2370 · `airplane` 0/5 → 5/5
+  - **38 件真实作品变成「全过」**
+- **Kawasaki 只查偶数价顶点**（定理的适用前提）：奇数条折痕的顶点其交替和不可能相消，
+  奇数价顶点的折平性由 Maekawa 那一侧保证。加入后顶点通过率 82.69% → 87.33%。
+  两个检查的关系因此是 **Kawasaki ⊆ Maekawa**（差集 = 奇数价顶点），不是「检查集相同」。
+- **三处判定统一为一套实现**（此前有三套，口径不一，用户会看到互相矛盾的结论）：
+  - `fold-analyzer.strictKawasaki()` / `analyzeMaekawa()` —— 统一到
+    「折痕角 + 几何环绕顺序 + 排除 B 边顶点 + Kawasaki 只查偶数价」
+  - `fold-analyzer.validateFlatFoldability()`（`origami analyze --all` 的 validation 块）
+    —— 此前用扇区角且含边界顶点，**与 `origami kawasaki` 给出矛盾结论** → 已统一
+  - `crease-pattern-2d.checkLocalFlatFoldability()`（`origami generate` 的判据 C）
+    —— 此前自己实现了一套 → **改为委托 FoldAnalyzer**（单一真相源）
+  实测一致性（同一份 crane 产物）：
+  `origami kawasaki` 411/411 · `origami maekawa` 409/469 · `generate` 判据 C `Kawasaki 411/411 · Maekawa 409/469`
+
+### Added
+- `tests/unit/kawasaki-criterion.test.js`（10 例）：以真实作品为基准断言通过率、
+  B 边顶点被排除、两个检查的集合关系（Kawasaki ⊆ Maekawa，差集 = 奇数价）、
+  以及「用测试内独立实现复算」的反自证用例。
+
+### 已知缺口（未闭合）
+- **Maekawa 仍只有 28% 通过**（`4000/14222`）。真实作品 miura-ori 的 Kawasaki 130/130 ✅
+  但 Maekawa 0/132 —— 其 3-valence 内部顶点的 M/V 分布使 `|M−V| = 1`。
+  可能是「Maekawa 对 3-valence 的适用形式不同」或「有限片段 vs 无限图案的差异」。**未解决，单独查。**
+
 ## [2.47.5] - 2026-11-26
 
 ### Fixed

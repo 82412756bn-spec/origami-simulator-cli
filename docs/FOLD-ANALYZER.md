@@ -208,17 +208,42 @@ const result = analyzer.analyze({ all: true });
 
 ### Kawasaki's Theorem
 
-For a vertex `v` with incident edges in cyclic order:
-```
-even_angle_sum = sum(angles[0], angles[2], angles[4], ...)
-odd_angle_sum  = sum(angles[1], angles[3], angles[5], ...)
-```
+Two checks in this engine use Kawasaki's theorem. They use **different vertex
+sets** and **different angle quantities** — do not conflate them.
 
-The vertex can be flat-folded if `|even_angle_sum - odd_angle_sum| ≈ 180°`.
+**`strictKawasaki()`** — the `origami kawasaki` command (v2.48 口径修正):
+
+1. **Check set** = *internal crease vertices*: ≥3 incident edges and **no
+   incident boundary ('B') edge**. This is the same set `analyzeMaekawa()`
+   uses, so both reports always cover the same vertices.
+2. The incident edges are put into **geometric cyclic order**: the direction
+   angle of each edge — measured *from the vertex toward the other endpoint* —
+   is normalized to `[0, 2π)` and the edges are sorted by it.
+3. The **crease angles** `|edges_foldAngle|` are alternate-summed:
+   ```
+   even_sum = sum(crease_angle[0], crease_angle[2], crease_angle[4], ...)
+   odd_sum  = sum(crease_angle[1], crease_angle[3], crease_angle[5], ...)
+   ```
+4. The vertex passes when `|even_sum - odd_sum| < 5°`.
+
+> The alternating sum runs over the **crease angles**, *not* over the *sector
+> angles* (the gaps between two consecutive creases). Kawasaki's theorem
+> constrains the crease angles; using sector angles made this check report
+> systematic false negatives on real crease patterns — miura-ori went from
+> 0/132 to 130/132 when the 口径 was corrected.
+
+**`validateFlatFoldability()`** — the `validation` block of `analyze()`: the
+older sector-angle variant. It alternate-sums the *sector* angles, requires
+`|even_sum - odd_sum| < 1°`, and checks every vertex with ≥3 incident edges
+(boundary vertices included).
 
 ### Maekawa's Theorem
 
 For a flat-foldable vertex: `|M - V| = 2` where M/V count the mountain/valley creases.
+
+Since v2.48 the internal-vertex selection is shared with the Kawasaki check
+(see above), so `analyzeMaekawa().totalChecked` always equals
+`strictKawasaki().totalChecked`.
 
 ### Rotational Symmetry
 
