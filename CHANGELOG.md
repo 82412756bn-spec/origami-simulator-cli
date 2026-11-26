@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.48.1] - 2026-11-26
+
+### Added
+
+- **以官方 78 个真实折痕图为基准的验证器**（`scripts/verify-against-official.js`，可复现）：
+  三层验证 —— ① 还原保真度（官方几何经规范化管线后是否被破坏）
+  ② 覆盖矩阵（8 个内置生成器能否覆盖官方形态）③ 逆向拟合（官方形态能否被「模板 + 参数」复现）。
+
+- **验证报告**（`docs/VERIFICATION-AGAINST-OFFICIAL.md`，随包发布）。
+
+### 验证结论（2026-11-26 实测）
+
+| 验证 | 结果 |
+|---|---|
+| ① 还原保真度 | **弧长保持 75/75**（另 3 件官方 FOLD 本身为空，不适用）· **几何覆盖率 75/75** |
+| ② 覆盖矩阵（8 个内置生成器） | **0/78** —— 结构指纹最近距离也有 1.086，**一个都没覆盖到** |
+| ③ 逆向拟合（模板 + 参数） | **63/78（81%）** |
+
+**路线判断**：模板模式 63/78 远胜内置生成器 0/78 —— 「硬编码几个经典图案的生成器」
+在官方形态的多样性面前几乎不成立；「以真实作品作模板 + 对称变换」才是「按意图生成」的可用载体。
+典型：`traditionalCrane → flappingBird copies=4`（用拍翅鸟做 4 份阵列即逼近传统飞鹤）。
+
+### Changed
+
+- **模板库按官方基准重筛并扩充**（11 → 12 件）：规范化后 Kawasaki 与 Maekawa 全过的优先，
+  几何完好但平面判定不适用的（曲面折痕 / 剪纸 / 无限图案的有限片段）保留并标注 `known_limitations`。
+  `templates/manifest.json` 记录了每件的来源、判定结果与官方基准数据。
+
 ## [2.48.0] - 2026-11-26
 
 ### Added
