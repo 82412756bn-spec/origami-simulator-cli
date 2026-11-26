@@ -46,7 +46,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@jackwener/opencli": "^1.7.0",
     "ajv": "^8.20.0",
     "canvas": "^3.2.3",
     "commander": "^14.0.3",
