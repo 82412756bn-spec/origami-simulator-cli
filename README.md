@@ -98,6 +98,33 @@ origami batch --models "cranes,miura-ori" --action screenshot --output-dir out/
 
 ### 三、按意图生成折痕图（`generate`）
 
+**两种模式**：
+
+```bash
+# 模式 A：内置生成器（5 种经典图案，参数化）
+origami generate crane --output-dir ./out
+origami generate star --seed 42 --thickness 1.0
+
+# 模式 B：模板模式 —— 用真实折痕图作模板，按参数做对称变换
+origami generate --template Bases-birdBase --copies 3 --rotate 120 --output-dir ./out
+origami generate --template Origami-flat_crane --copies 6 --rotate 60
+```
+
+模板模式可用 id（`templates/manifest.json`）：
+
+```
+Bases-birdBase            Bases-openSinkBase      Bases-pinwheelBase
+Bases-squareBase          Bases-waterbombBase     Curved-curvedcrease2
+Origami-flat_crane        Curved-CircularPleat-antiFacet
+Kirigami-honeycombKiri    Origami-flappingBird    Tessellations-huffmanWaterbomb
+```
+
+**模式 B 的保证**：对称变换**保持折平性** —— 变换后的产物在
+Kawasaki 与 Maekawa 上与模板同样成立。实测真实 birdBase 做 1/2/3/4/6 份旋转阵列，
+判定全部全过（4/4 → 24/24）。其中 **7/11 件模板在 copies=3 × rotate=120 下
+A–F 六项判据全过**，其余 4 件的原因与实测数据见 `templates/manifest.json`。
+
+
 ```bash
 # 生成一对产物：.fold（可验证）+ .svg（可打印 / 可渲染 / 可上传 origamisimulator.org）
 origami generate crane --output-dir ./out

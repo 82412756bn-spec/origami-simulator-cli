@@ -4,6 +4,49 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.48.0] - 2026-11-26
+
+### Added
+
+- **模板模式：`origami generate --template <id> [--copies N] [--rotate DEG] [--scale S]`**
+
+  「按意图生成」的真正形态：**意图 = 选一件真实折痕图模板 + 给参数**。
+  模板来自 origamisimulator.org 的真实作品（MIT，见 `templates/LICENSE`），
+  经**对称变换**（旋转 + 阵列 + 缩放）生成新折痕图。
+
+  **为什么是对称变换**：对称变换**保持折平性** —— 不改变每个内部顶点的 M/V 计数，
+  也不改变折痕角的交替和（Kawasaki）与 M/V 差（Maekawa）。
+  实测：真实 birdBase 做 1/2/3/4/6 份旋转阵列，判定全部全过（4/4 → 24/24）；
+  真实 flat_crane 同样全过（42/42 → 252/252）。
+
+- **`templates/` 模板库（11 件，319 KB）**：每件一个 `.fold` + `manifest.json`（含来源、
+  判定结果、已知限制）+ `LICENSE`（站点 MIT 原文 —— MIT 再分发的硬条件）。
+  模板经三道筛：① 77 个同名 SVG+FOLD 配对 ② M/V 计数与 SVG 红/蓝一致（21 件可信）
+  ③ Kawasaki 与 Maekawa 全部通过（11 件）。
+  **7/11 件在 copies=3 × rotate=120 下完全合格**；其余 4 件各有明确形态原因
+  （曲面折痕 / 剪纸 / 无限图案的有限片段 / SVG 输出精度），已在 manifest 里逐件登记。
+
+- **模板规范化管线**（`splitCreasesAtCrossings` → `balanceMountainValley` → `dedupeVertices`）：
+  模板来自 SVG→FOLD 转换，而 **SVG 在折痕交汇处没有顶点标记** → 转换出的 FOLD 在那里
+  是两条独立边相交（proper crossing），几何不完整。规范化后 **11/11 件交叉归零**，
+  8/11 件折平性完全合格。
+
+### Fixed
+
+- **判据 B 的合法 assignment 集合**：此前只认 `B/M/V`，把 **F（平折）与 U（未指定）**
+  误判成非法（FOLD 规范 f-u-gram 允许这两个值）。实测 flat_crane 的 12 个 `U` 被误报。
+- **判据 F 的重复顶点判定口径统一**：SVG 侧与 FOLD 侧此前用不同精度（6 位 vs 4 位），
+  浮点表示差异会被误报成重复顶点 → 两侧统一到 4 位。
+
+### 已知限制
+
+- **SVG 输出精度 0.01 单位**（`toFixed(2)`）会让相距极近的顶点粘连 → 少数模板的判据 F 报警。
+  尝试把精度提到 4 位，**实测打挂了判据 E（SVG↔FOLD 匹配）**（匹配链对坐标精度敏感：
+  `SVG_MATCH_TOLERANCE=0.05` / `TRANSFORM_RESIDUAL_TOLERANCE=0.5`）→ **已回滚**，
+  该项作为已知限制登记，不为显示精度 destabilize 整条匹配链。
+- 4 件模板在 copies=3 × rotate=120 下不是完全合格（曲面 / 剪纸 / 镶嵌片段 / 上述精度项），
+  原因与实测数据见 `templates/manifest.json`。
+
 ## [2.47.7] - 2026-11-26
 
 ### Fixed

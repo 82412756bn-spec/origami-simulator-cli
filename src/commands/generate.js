@@ -43,6 +43,7 @@ const { normalizeCreasePattern, dedupeVertices } = require('../utils/crease-patt
 const { detectCreaseCrossings, checkLocalFlatFoldability } = require('../utils/crease-pattern-2d');
 const { matchSvgToFold, checkSvgGeometry, ASSIGNMENT_COLORS } = require('../utils/svg-crease-parser');
 const { parseXml } = require('../utils/xml-lite');
+const { findTemplate, loadTemplateFold, transformTemplate } = require('../utils/template-transform');
 const CreasePatternGeneratorV3 = require('../crease-pattern-generator-v3');
 const {
   PATTERNS,
@@ -85,6 +86,16 @@ function withMutedConsole(fn) {
  * @param {string} message
  * @param {string} [hint]
  */
+/** 模板 id 列表（给错误提示用） */
+function loadManifestNames() {
+  try {
+    const { loadManifest } = require('../utils/template-transform');
+    return (loadManifest().templates || []).map((t) => t.id).join(', ');
+  } catch (e) {
+    return '(清单不可读)';
+  }
+}
+
 function fail(message, hint) {
   console.error(`❌ ${message}`);
   if (hint) console.error(`   ${hint}`);
@@ -221,6 +232,88 @@ function generatePattern(patternName, options = {}) {
 }
 
 /**
+ * 从一份现成的 foldData 落盘产物并验证（模板模式用）。
+ *
+ * 与 generatePattern 共用同一套落盘与判据逻辑（A-F），只是**不再调用生成器**，
+ * 而是用模板经对称变换得到的 foldData。
+ */
+function generateFromFoldData(baseName, foldDataIn, options = {}) {
+  const format = String(options.format || 'both').toLowerCase();
+  if (!FORMATS.includes(format)) {
+    fail(`Invalid format: "${options.format}"`, `Valid formats: ${FORMATS.join(', ')}`);
+  }
+  const thickness = parseNumericOption('thickness', options.thickness, 1.0);
+  if (thickness <= 0) {
+    fail(`Invalid value for --thickness: "${options.thickness}" (expected a positive number)`);
+  }
+
+  // 顶点去重（与 generatePattern 同一处理）
+  const deduped = dedupeVertices(foldDataIn);
+  const removed = (foldDataIn.vertices_coords || []).length -
+    (deduped.vertices_coords || []).length;
+  const foldDataFinal = deduped;
+  if (removed > 0) {
+    console.log(`   （去重 ${removed} 个重复顶点）`);
+  }
+
+  // 面片重算（模板的 faces 为空 → 判据 B 会报 F=0）。用生成器自带的 computeFaces。
+  try {
+    const gen = new CreasePatternGeneratorV3();
+    const faces = gen.computeFaces(
+      foldDataFinal.vertices_coords || [],
+      foldDataFinal.edges_vertices || [],
+      foldDataFinal.edges_assignment || []
+    );
+    if (Array.isArray(faces) && faces.length > 0) {
+      foldDataFinal.faces_vertices = faces;
+    }
+  } catch (e) {
+    console.log(`   （面片重算跳过：${e.message}）`);
+  }
+
+  const outputDir = path.resolve(options.outputDir || './generated');
+  const foldPath = path.join(outputDir, `${baseName}.fold`);
+  const svgPath = path.join(outputDir, `${baseName}.svg`);
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  const svgText = withMutedConsole(() =>
+    new CreasePatternGeneratorV3().generateSVG(foldDataFinal, SVG_CANVAS));
+
+  const artifacts = { fold: null, svg: null };
+  if (format === 'fold' || format === 'both') {
+    fs.writeFileSync(foldPath, JSON.stringify(foldDataFinal, null, 2), 'utf8');
+    artifacts.fold = foldPath;
+  }
+  if (format === 'svg' || format === 'both') {
+    fs.writeFileSync(svgPath, svgText, 'utf8');
+    artifacts.svg = svgPath;
+  }
+
+  const verification = verifyArtifacts({
+    patternName: baseName,
+    params: { template: baseName, ...(foldDataFinal.metadata && foldDataFinal.metadata.template_transform) },
+    seed: parseNumericOption('seed', options.seed, 42),
+    thickness,
+    foldData: foldDataFinal,
+    svgText,
+    artifacts,
+    format,
+  });
+
+  return {
+    pattern: baseName,
+    params: { template: baseName },
+    seed: parseNumericOption('seed', options.seed, 42),
+    thickness,
+    artifacts,
+    verification,
+    foldData: foldDataFinal,
+    svgText,
+    normalizeReport: null,
+  };
+}
+
+/**
  * Run criteria A-F over the generated artifacts.
  *
  * @param {Object} context
@@ -243,7 +336,11 @@ function verifyArtifacts(context) {
 
   // ── B: FOLD legality ──────────────────────────────────────────────
   const assignments = foldData.edges_assignment || [];
-  const badAssignments = assignments.filter((a) => !['B', 'M', 'V'].includes(String(a).toUpperCase()));
+  // FOLD 规范（f-u-gram）允许的 edges_assignment 取值：
+  //   M 山折 / V 谷折 / B 边界 / F 平折 / U 未指定
+  // 此前只认 B/M/V → 把 F 与 U 误判成非法（实测 flat_crane 的 12 个 U 被误报）
+  const VALID_ASSIGNMENTS = ['B', 'M', 'V', 'F', 'U'];
+  const badAssignments = assignments.filter((a) => !VALID_ASSIGNMENTS.includes(String(a).toUpperCase()));
   const vertices = foldData.vertices_coords || [];
   const edges = foldData.edges_vertices || [];
   const faces = foldData.faces_vertices || [];
@@ -380,7 +477,9 @@ function printReport(result) {
  */
 function registerGenerateCommand(program) {
   program
-    .command('generate <pattern>')
+    // 位置参数改为可选：模板模式（--template）不需要位置参数；
+    // 「两者都不给」与「两者都给」由 action 里的校验给出清晰错误。
+    .command('generate [pattern]')
     .description('Generate a crease pattern as a .fold + .svg pair')
     .option('-o, --output-dir <path>', 'Output directory', './generated')
     .option('-f, --format <fmt>', 'Output format: fold | svg | both', 'both')
@@ -401,6 +500,10 @@ function registerGenerateCommand(program) {
     .option('--spike-count <n>', 'Modular: number of spikes')
     .option('--unit-length <n>', 'Modular: unit length')
     .option('--paper-size <n>', 'Unit: paper edge length')
+    .option('--template <id>', 'Use a real crease pattern from templates/ as the base (MIT, see templates/LICENSE)')
+    .option('--copies <n>', 'Template mode: how many rotated copies (1-64)')
+    .option('--rotate <deg>', 'Template mode: rotation step between copies in degrees (-360..360)')
+    .option('--scale <s>', 'Template mode: overall scale factor (0.01..100)')
     .addHelpText('after', `
 Patterns:
 ${describePatterns()}
@@ -411,6 +514,67 @@ Notes:
     passing them does NOT mean the pattern folds flat.
 `)
     .action((pattern, options) => {
+      // ── 模板模式 ──────────────────────────────────────────────
+      const hasTemplate = options.template !== undefined;
+      const isPositional = pattern !== undefined && pattern !== null && pattern !== '';
+      if (hasTemplate && isPositional) {
+        fail('同时给了位置参数（pattern）和 --template，两者互斥',
+             '用 `origami generate --template <id>` 或 `origami generate <pattern>`，二选一。');
+        return;
+      }
+      if (!hasTemplate && !isPositional) {
+        fail('缺少目标：给一个 pattern 名或 --template <id>',
+             '可用 pattern: ' + Object.keys(require('../utils/crease-pattern-factory').PATTERN_SPECS || {}).join(', ')
+             + '；模板见 templates/manifest.json');
+        return;
+      }
+      if (hasTemplate) {
+        let found;
+        try {
+          found = findTemplate(options.template);
+        } catch (err) {
+          fail(`模板清单不可用：${err.message}`, '重新安装本包（templates/ 是包的一部分）。');
+          return;
+        }
+        if (!found.template) {
+          if (found.candidates.length > 1) {
+            fail(`模板名 "${options.template}" 匹配到多个：${found.candidates.join(', ')}`, '请写得更具体。');
+          } else {
+            fail(`未知模板 "${options.template}"`, '可用模板见 templates/manifest.json（' + loadManifestNames() + '）。');
+          }
+          return;
+        }
+        const copies = parseNumericOption('--copies', options.copies, 1);
+        const rotate = parseNumericOption('--rotate', options.rotate, 0);
+        const scale = parseNumericOption('--scale', options.scale, 1);
+        if (copies < 1 || copies > 64) {
+          fail(`--copies 超出范围：${copies}`, '允许 1-64。');
+          return;
+        }
+        if (rotate < -360 || rotate > 360) {
+          fail(`--rotate 超出范围：${rotate}`, '允许 -360..360。');
+          return;
+        }
+        if (scale <= 0 || scale > 100) {
+          fail(`--scale 超出范围：${scale}`, '允许 0.01..100。');
+          return;
+        }
+        try {
+          const loaded = loadTemplateFold(found.template);
+          const base = loaded.foldData;
+          const transformed = transformTemplate(base, { copies, rotate, scale });
+          const sr = loaded.report && loaded.report.split;
+          if (sr && sr.detected) {
+            console.log(`   （模板规范化：在 ${sr.detected} 处折痕交汇点建共享顶点，拆成 ${sr.edgesAfter} 条边）`);
+          }
+          const result = generateFromFoldData(found.template.id, transformed, options);
+          printReport(result);
+        } catch (err) {
+          fail(`模板生成失败：${err.message}`);
+        }
+        return;
+      }
+
       const result = generatePattern(pattern, options);
 
       if (options.json) {

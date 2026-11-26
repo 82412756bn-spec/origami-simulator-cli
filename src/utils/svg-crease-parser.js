@@ -425,7 +425,12 @@ function checkSvgGeometry(svgText, foldData = null) {
   const circles = collectByTag(doc.root, 'circle');
   const positions = new Map();
   for (const c of circles) {
-    const key = `${String(c.attrs.cx)},${String(c.attrs.cy)}`;
+    // 用 toFixed(6) 归一（与 FOLD 侧的 duplicateVertices 检查同一口径）——
+    // 此前用原始字符串，浮点表示差异（1440 vs 1440.0000000001）会被误判成重复顶点
+    // 判定精度取 4 位（= SVG 输出精度 toFixed(2) 的 0.01 单位之上留一位余量）：
+    // SVG 的 circle 是 toFixed(2) 输出的，相差 <0.01 的不同顶点会在画布上重合 ——
+    // 用 6 位判重会把它们误报成「重复顶点」。FOLD 侧同样口径。
+    const key = `${Number(c.attrs.cx).toFixed(4)},${Number(c.attrs.cy).toFixed(4)}`;
     positions.set(key, (positions.get(key) || 0) + 1);
   }
   for (const count of positions.values()) {
@@ -436,7 +441,7 @@ function checkSvgGeometry(svgText, foldData = null) {
   if (foldData && Array.isArray(foldData.vertices_coords)) {
     const seen = new Map();
     for (const v of foldData.vertices_coords) {
-      const key = `${Number(v[0]).toFixed(6)},${Number(v[1]).toFixed(6)}`;
+      const key = `${Number(v[0]).toFixed(4)},${Number(v[1]).toFixed(4)}`;   // 与 SVG 侧同口径
       seen.set(key, (seen.get(key) || 0) + 1);
     }
     for (const count of seen.values()) {

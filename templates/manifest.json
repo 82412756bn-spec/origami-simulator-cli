@@ -1,0 +1,287 @@
+{
+  "schema": "origami-template-library/1",
+  "purpose": "「按意图生成」的模板库：每个模板是折平性合格的真实折痕图，经旋转/阵列等对称变换后仍保证可折平。",
+  "source": {
+    "site": "https://origamisimulator.org/",
+    "license": "MIT License, Copyright (c) 2018 Amanda Ghassaei（见 ./LICENSE）",
+    "note": "这些是第三方几何数据的副本，按 MIT 再分发，条件是随副本附上 LICENSE（已附）。"
+  },
+  "selection_rule": "在 21 件「FOLD 的 M/V 计数与同名 SVG 红/蓝一致」的可信语料中，再筛出 Kawasaki 与 Maekawa **全部通过**者（曲面折痕与无限图案片段被排除）。",
+  "verified_at": "2026-11-26",
+  "templates": [
+    {
+      "id": "Bases-birdBase",
+      "source": "origamisimulator.org/Bases/birdBase",
+      "file": "Bases-birdBase.fold",
+      "vertices": 12,
+      "edges": 20,
+      "kawasaki": "4/4",
+      "maekawa": "4/4",
+      "bytes": 2383,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F"
+        ],
+        "criteria_failed": [],
+        "kawasaki": "15/15",
+        "maekawa": "15/15",
+        "fully_qualified": true
+      }
+    },
+    {
+      "id": "Bases-openSinkBase",
+      "source": "origamisimulator.org/Bases/openSinkBase",
+      "file": "Bases-openSinkBase.fold",
+      "vertices": 12,
+      "edges": 17,
+      "kawasaki": "4/4",
+      "maekawa": "4/4",
+      "bytes": 2335,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F"
+        ],
+        "criteria_failed": [],
+        "kawasaki": "15/15",
+        "maekawa": "15/15",
+        "fully_qualified": true
+      }
+    },
+    {
+      "id": "Bases-pinwheelBase",
+      "source": "origamisimulator.org/Bases/pinwheelBase",
+      "file": "Bases-pinwheelBase.fold",
+      "vertices": 12,
+      "edges": 16,
+      "kawasaki": "4/4",
+      "maekawa": "4/4",
+      "bytes": 2286,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F"
+        ],
+        "criteria_failed": [],
+        "kawasaki": "12/12",
+        "maekawa": "12/12",
+        "fully_qualified": true
+      }
+    },
+    {
+      "id": "Bases-squareBase",
+      "source": "origamisimulator.org/Bases/squareBase",
+      "file": "Bases-squareBase.fold",
+      "vertices": 8,
+      "edges": 7,
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "bytes": 1573,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F"
+        ],
+        "criteria_failed": [],
+        "kawasaki": "3/3",
+        "maekawa": "3/3",
+        "fully_qualified": true
+      }
+    },
+    {
+      "id": "Bases-waterbombBase",
+      "source": "origamisimulator.org/Bases/waterbombBase",
+      "file": "Bases-waterbombBase.fold",
+      "vertices": 8,
+      "edges": 8,
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "bytes": 1625,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F"
+        ],
+        "criteria_failed": [],
+        "kawasaki": "3/3",
+        "maekawa": "3/3",
+        "fully_qualified": true
+      }
+    },
+    {
+      "id": "Curved-CircularPleat-antiFacet",
+      "source": "origamisimulator.org/Curved/CircularPleat-antiFacet",
+      "file": "Curved-CircularPleat-antiFacet.fold",
+      "vertices": 1601,
+      "edges": 3200,
+      "kawasaki": "700/700",
+      "maekawa": "700/700",
+      "bytes": 243760,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "D"
+        ],
+        "criteria_failed": [
+          "C",
+          "E",
+          "F"
+        ],
+        "kawasaki": "6132/10167",
+        "maekawa": "6135/10167",
+        "fully_qualified": false
+      },
+      "known_limitations": "折平局部必要条件未全过；SVG 与 FOLD 未完全对齐；SVG 良构性未过（多为输出精度导致的顶点粘连）"
+    },
+    {
+      "id": "Curved-curvedcrease2",
+      "source": "origamisimulator.org/Curved/curvedcrease2",
+      "file": "Curved-curvedcrease2.fold",
+      "vertices": 46,
+      "edges": 105,
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "bytes": 9300,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F"
+        ],
+        "criteria_failed": [],
+        "kawasaki": "0/0",
+        "maekawa": "0/0",
+        "fully_qualified": true
+      }
+    },
+    {
+      "id": "Kirigami-honeycombKiri",
+      "source": "origamisimulator.org/Kirigami/honeycombKiri",
+      "file": "Kirigami-honeycombKiri.fold",
+      "vertices": 191,
+      "edges": 158,
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "bytes": 17435,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "D",
+          "E",
+          "F"
+        ],
+        "criteria_failed": [
+          "C"
+        ],
+        "kawasaki": "0/363",
+        "maekawa": "363/363",
+        "fully_qualified": false
+      },
+      "known_limitations": "折平局部必要条件未全过"
+    },
+    {
+      "id": "Origami-flappingBird",
+      "source": "origamisimulator.org/Origami/flappingBird",
+      "file": "Origami-flappingBird.fold",
+      "vertices": 23,
+      "edges": 32,
+      "kawasaki": "7/7",
+      "maekawa": "7/7",
+      "bytes": 3518,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E"
+        ],
+        "criteria_failed": [
+          "F"
+        ],
+        "kawasaki": "42/42",
+        "maekawa": "42/42",
+        "fully_qualified": false
+      },
+      "known_limitations": "SVG 良构性未过（多为输出精度导致的顶点粘连）"
+    },
+    {
+      "id": "Origami-flat_crane",
+      "source": "origamisimulator.org/Origami/flat_crane",
+      "file": "Origami-flat_crane.fold",
+      "vertices": 64,
+      "edges": 133,
+      "kawasaki": "42/42",
+      "maekawa": "50/50",
+      "bytes": 10518,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "C",
+          "D",
+          "E",
+          "F"
+        ],
+        "criteria_failed": [],
+        "kawasaki": "126/126",
+        "maekawa": "150/150",
+        "fully_qualified": true
+      }
+    },
+    {
+      "id": "Tessellations-huffmanWaterbomb",
+      "source": "origamisimulator.org/Tessellations/huffmanWaterbomb",
+      "file": "Tessellations-huffmanWaterbomb.fold",
+      "vertices": 390,
+      "edges": 216,
+      "kawasaki": "0/0",
+      "maekawa": "0/12",
+      "bytes": 32031,
+      "baseline_at_copies3_rotate120": {
+        "criteria_passed": [
+          "A",
+          "B",
+          "D"
+        ],
+        "criteria_failed": [
+          "C",
+          "E",
+          "F"
+        ],
+        "kawasaki": "2052/2052",
+        "maekawa": "2052/2352",
+        "fully_qualified": false
+      },
+      "known_limitations": "折平局部必要条件未全过；SVG 与 FOLD 未完全对齐；SVG 良构性未过（多为输出精度导致的顶点粘连）"
+    }
+  ],
+  "total_bytes": 326764,
+  "verification_note": "baseline_at_copies3_rotate120 是用仓库当前判定口径实测的结果（2026-11-26）。完全合格的模板可直接用于生成；其余模板各有明确的形态/几何原因（曲面折痕、剪纸、无限图案的有限片段等），命令输出会逐条报出判据结果，不掩盖。"
+}
