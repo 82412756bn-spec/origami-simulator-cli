@@ -6,6 +6,14 @@
   "bin": {
     "origami": "./src/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/82412756bn-spec/origami-simulator-cli.git"
+  },
+  "homepage": "https://github.com/82412756bn-spec/origami-simulator-cli#readme",
+  "bugs": {
+    "url": "https://github.com/82412756bn-spec/origami-simulator-cli/issues"
+  },
   "files": [
     "src/*.js",
     "src/commands/",
