@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.47.5] - 2026-11-26
+
+### Fixed
+
+- **Valley 颜色对齐标准**：折痕图系统的 Valley 由 `#0000FF` 改为 **`#0066cc`**
+  （QUALITY-STANDARDS v1.5 §9 原文：`| Valley | 蓝色 (#0066cc) | 短虚线 (2,2) | 谷折 |`）。
+  改 5 处：`crease-pattern-generator-v3.js` 的 4 处（常量 / style / 图例）+ `svg-crease-parser.js` 的 1 处。
+  代码里自称「官方标准」的注释已改为指向标准出处。
+  （**包装刀模的 `dieline-svg-exporter.js` 是另一个子系统，颜色规则不同，未动。**）
+
+- **顶点重复去重**（新增 `dedupeVertices()`，接在 normalize 之后、出 SVG/FOLD 之前）：
+  生成器的 `idx(i,j)` 映射会让同一坐标被 push 两次 → 实测 crane 1500 顶点里 **15 组重复**、
+  tiger **12 组**，SVG 侧出现重复圆点。去重后按坐标合并顶点并重映射 edges/faces 的下标。
+  实测：crane 1500→1485、tiger 去重 6；**全部 pattern 重复坐标 = 0、越界边 = 0、assignment 长度 = 边数**。
+
+- **earcut 从 3.x 降到 2.2.4（CJS）**：
+  - earcut 3.x 是纯 ESM，Jest 不支持 `require(ESM)` → 生成器 `require('earcut').default`
+    在 Jest 里抛 "Must use import to load ES Module" → 走 catch 分支 → **fallback 三角剖分路径在单测里从未执行**
+    （测试环境 ≠ 生产环境）。降级后 Jest 与 Node 都能加载。
+  - 顺带修好一个**原本就坏**的调用：生成器用的是**扁平坐标**（`boundaryCoords.push(coord[0], coord[1])`），
+    那是 earcut **2.x** 的 API，而 3.x 期望嵌套数组 → 这条 fallback 从装上 3.x 起就是坏的。
+    同时补上 earcut 2.x 的完整签名 `earcut(vertices, holeIndices, dimensions)`。
+  - 新增 `tests/unit/earcut-in-jest.test.js`（2 例）断言 earcut 在 Jest 里真的能剖分。
+
+### 已知缺口（仍未闭合）
+
+- `crane` / `tiger` 的 **C 条（折平局部必要条件）** 仍不通过
+  （crane: Kawasaki 30/469、Maekawa 409/469；tiger: Kawasaki 2/240）。
+  去重把 crane 的 Kawasaki 从 29/469 提到 30/469 —— 改善极小，说明**问题在生成器的几何本身，
+  不在顶点重复**。这 5 个生成器从未被验证过，需重新审视其几何构造。
+- 共线重叠边（crane 28 段）未处理 —— 折痕图里连续同向折痕共线可能是合法的，故只报告不修。
+
 ## [2.47.4] - 2026-11-26
 
 ### Added

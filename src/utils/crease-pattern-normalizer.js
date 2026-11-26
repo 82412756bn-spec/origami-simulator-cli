@@ -399,6 +399,73 @@ function balanceMountainValley(foldData, options = {}) {
  * @param {boolean} [options.recomputeFaces]  - default true
  * @returns {Object} { foldData, report }
  */
+/**
+ * 顶点去重 + 索引重映射（2026-11-26）
+ *
+ * 为什么需要：生成器用 idx(i,j) 映射格点，某些坐标会被 push 两次
+ * （实测 crane 1500 顶点里 15 组重复、tiger 12 组）→ SVG 侧出现重复圆点。
+ *
+ * 做法：按坐标合并顶点 → 把 edges / faces 里的顶点下标重映射到合并后的索引。
+ * 折叠角（±180°）与 assignment 一并保留，边的语义不变。
+ */
+function dedupeVertices(foldData, epsilon = 1e-9) {
+  if (!foldData || !Array.isArray(foldData.vertices_coords)) return foldData;
+  const verts = foldData.vertices_coords;
+  const remap = new Array(verts.length);
+  const kept = [];
+  const keyOf = (v) => (Array.isArray(v) ? v : [0, 0, 0])
+    .slice(0, 3).map((c) => Math.round(c / epsilon) * epsilon).join(',');
+  const index = new Map();
+  for (let i = 0; i < verts.length; i++) {
+    const k = keyOf(verts[i]);
+    if (index.has(k)) {
+      remap[i] = index.get(k);
+    } else {
+      index.set(k, kept.length);
+      remap[i] = kept.length;
+      kept.push(verts[i]);
+    }
+  }
+  const mapEdges = (edges) => (Array.isArray(edges) ? edges : []).map((e) => {
+    if (!Array.isArray(e) || e.length !== 2) return e;
+    const a = remap[e[0]];
+    const b = remap[e[1]];
+    return a === b ? null : [a, b];
+  }).filter(Boolean);
+  const out = Object.assign({}, foldData, { vertices_coords: kept });
+  const ev = mapEdges(foldData.edges_vertices);
+  out.edges_vertices = ev;
+  if (Array.isArray(foldData.faces_vertices)) {
+    out.faces_vertices = foldData.faces_vertices.map((f) => {
+      if (!Array.isArray(f)) return f;
+      const mapped = [];
+      for (const v of f) {
+        const m = remap[v];
+        if (mapped[mapped.length - 1] !== m) mapped.push(m);
+      }
+      return mapped.length >= 3 ? mapped : f;
+    });
+  }
+  // edges_assignment / edges_foldAngle 与边一一对应；去重可能删掉自环边
+  if (Array.isArray(foldData.edges_assignment) && foldData.edges_assignment.length !== ev.length) {
+    const keep = [];
+    let k = 0;
+    const raw = foldData.edges_vertices || [];
+    for (let i = 0; i < raw.length; i++) {
+      const a = remap[raw[i][0]];
+      const b = remap[raw[i][1]];
+      if (a !== b) keep.push(i);
+    }
+    out.edges_assignment = keep.map((i) => foldData.edges_assignment[i]);
+    out.edges_foldAngle = Array.isArray(foldData.edges_foldAngle)
+      ? keep.map((i) => foldData.edges_foldAngle[i]) : [];
+  }
+  out.metadata = Object.assign({}, foldData.metadata, {
+    vertices_deduped: verts.length - kept.length,
+  });
+  return out;
+}
+
 function normalizeCreasePattern(foldData, options = {}) {
   const thickness = options.thickness ?? 1.0;
   const splitCrossings = options.splitCrossings !== false;
@@ -504,6 +571,7 @@ function normalizeCreasePattern(foldData, options = {}) {
 }
 
 module.exports = {
+  dedupeVertices,
   ALLOWED_ASSIGNMENTS,
   FOLD_ANGLE_FOR,
   createSeededRandom,

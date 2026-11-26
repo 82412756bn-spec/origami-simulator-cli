@@ -39,7 +39,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { FoldAnalyzer } = require('../utils/fold-analyzer');
-const { normalizeCreasePattern } = require('../utils/crease-pattern-normalizer');
+const { normalizeCreasePattern, dedupeVertices } = require('../utils/crease-pattern-normalizer')
 const { detectCreaseCrossings, checkLocalFlatFoldability } = require('../utils/crease-pattern-2d');
 const { matchSvgToFold, checkSvgGeometry, ASSIGNMENT_COLORS } = require('../utils/svg-crease-parser');
 const { parseXml } = require('../utils/xml-lite');
@@ -173,6 +173,16 @@ function generatePattern(patternName, options = {}) {
     params,
   });
 
+  // 顶点去重（2026-11-26）：生成器的 idx(i,j) 映射会让同一坐标被 push 两次
+  // （实测 crane 1500 顶点里 15 组重复、tiger 12 组）→ SVG 侧出现重复圆点。
+  const deduped = dedupeVertices(foldData);
+  const verticesRemoved = (foldData.vertices_coords || []).length -
+    (deduped.vertices_coords || []).length;
+  const foldDataFinal = deduped;
+  if (verticesRemoved > 0) {
+    console.log(`   （去重 ${verticesRemoved} 个重复顶点）`);
+  }
+
   // ── artifacts ────────────────────────────────────────────────────
   const outputDir = path.resolve(options.outputDir || './generated');
   const baseName = patternName;
@@ -182,11 +192,11 @@ function generatePattern(patternName, options = {}) {
   fs.mkdirSync(outputDir, { recursive: true });
 
   const svgText = withMutedConsole(() =>
-    new CreasePatternGeneratorV3().generateSVG(foldData, SVG_CANVAS));
+    new CreasePatternGeneratorV3().generateSVG(foldDataFinal, SVG_CANVAS));
 
   const artifacts = { fold: null, svg: null };
   if (format === 'fold' || format === 'both') {
-    fs.writeFileSync(foldPath, JSON.stringify(foldData, null, 2), 'utf8');
+    fs.writeFileSync(foldPath, JSON.stringify(foldDataFinal, null, 2), 'utf8');
     artifacts.fold = foldPath;
   }
   if (format === 'svg' || format === 'both') {
@@ -195,7 +205,7 @@ function generatePattern(patternName, options = {}) {
   }
 
   // ── verification (criteria A-F) ──────────────────────────────────
-  const verification = verifyArtifacts({ patternName, params, seed, thickness, foldData, svgText, artifacts, format });
+  const verification = verifyArtifacts({ patternName, params, seed, thickness, foldData: foldDataFinal, svgText, artifacts, format });
 
   return {
     pattern: patternName,
@@ -204,7 +214,7 @@ function generatePattern(patternName, options = {}) {
     thickness,
     artifacts,
     verification,
-    foldData,
+    foldData: foldDataFinal,
     svgText,
     normalizeReport,
   };

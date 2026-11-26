@@ -50,7 +50,7 @@ const { parseXml, findById, collectByTag } = require('./xml-lite');
 /** Colour used by the SVG generator for each crease assignment. */
 const ASSIGNMENT_COLORS = {
   M: '#FF0000',   // red   — mountain
-  V: '#0000FF',   // blue  — valley
+  V: '#0066cc',   // blue — valley（QUALITY-STANDARDS v1.5 §9）
   B: '#000000',   // black — boundary
 };
 

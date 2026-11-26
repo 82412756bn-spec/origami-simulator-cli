@@ -582,7 +582,9 @@ class CreasePatternGeneratorV3 {
 
     if (boundaryCoords.length < 6) return [];
 
-    const triangles = earcut(boundaryCoords);
+    // earcut 2.x 签名：earcut(vertices, holeIndices, dimensions)
+    // 顶点是**扁平坐标**数组（earcut 2.x 格式），无洞 → holeIndices 传 null，维度 2
+    const triangles = earcut(boundaryCoords, null, 2);
     const faces = [];
 
     for (let i = 0; i < triangles.length; i += 3) {
@@ -800,7 +802,7 @@ class CreasePatternGeneratorV3 {
     // 颜色映射 - origami-simulator 官方标准
     const colors = {
       M: '#FF0000',  // 红色 - Mountain (官方标准)
-      V: '#0000FF',  // 蓝色 - Valley (官方标准)
+      V: '#0066cc',  // 蓝色 - Valley（QUALITY-STANDARDS v1.5 §9）
       B: '#000000',  // 黑色 - Boundary (官方标准)
       F: '#FFFF00',  // 黄色 - Flat
       C: '#FF00FF',  // 紫红色 - Cut
@@ -822,7 +824,7 @@ class CreasePatternGeneratorV3 {
   <defs>
     <style>
       .crease-m { stroke: #FF0000; stroke-width: 1.5; fill: none; }
-      .crease-v { stroke: #0000FF; stroke-width: 1.5; fill: none; }
+      .crease-v { stroke: #0066cc; stroke-width: 1.5; fill: none; }
       .crease-b { stroke: #000000; stroke-width: 2; fill: none; }
       .crease-f { stroke: #FFFF00; stroke-width: 1; fill: none; }
       .crease-c { stroke: #FF00FF; stroke-width: 2; fill: none; }
@@ -892,7 +894,7 @@ class CreasePatternGeneratorV3 {
     <text x="0" y="0" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Legend</text>
     <line x1="0" y1="15" x2="30" y2="15" stroke="#FF0000" stroke-width="2"/>
     <text x="40" y="19" font-family="Arial, sans-serif" font-size="11">Mountain (M): ${stats.M || 0}</text>
-    <line x1="0" y1="35" x2="30" y2="35" stroke="#0000FF" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <line x1="0" y1="35" x2="30" y2="35" stroke="#0066cc" stroke-width="1.5" stroke-dasharray="5,3"/>
     <text x="40" y="39" font-family="Arial, sans-serif" font-size="11">Valley (V): ${stats.V || 0}</text>
     <line x1="0" y1="55" x2="30" y2="55" stroke="#000000" stroke-width="2"/>
     <text x="40" y="59" font-family="Arial, sans-serif" font-size="11">Boundary (B): ${stats.B || 0}</text>
@@ -939,7 +941,7 @@ class CreasePatternGeneratorV3 {
   _getStrokeColor(assignment) {
     const colors = {
       M: '#FF0000',  // 红色 - Mountain
-      V: '#0000FF',  // 蓝色 - Valley
+      V: '#0066cc',  // 蓝色 - Valley
       B: '#000000',  // 黑色 - Boundary
       F: '#FFFF00',  // 黄色 - Flat
       C: '#FF00FF',  // 紫红色 - Cut
