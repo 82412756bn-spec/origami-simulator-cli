@@ -97,6 +97,34 @@ function findPairs() {
   return pairs.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * 语料健康判定（2026-11-26）
+ *
+ * 只有「FOLD 的 M/V 计数与同名 SVG 的红/蓝一致」的作品，其 Maekawa 判定才有意义：
+ * 无限图案被裁成有限片段时，边界折痕被人为换成 B，破坏了邻近顶点的 M/V 平衡
+ * → Maekawa（要求每个内部顶点 |M−V| = 2）必然不通过。
+ * 实测（78 个作品）：有限作品 71/79 = 89.9% 通过；无限图案片段 80/635 = 12.6%。
+ *
+ * 详见 docs/CORPUS-HEALTH.md。
+ *
+ * 注：B 不参与比较 —— SVG 里一个矩形只算 1 个黑色元素，FOLD 展开成多条边，天然不等。
+ */
+function corpusHealth(foldPath, svgPath) {
+  const fold = JSON.parse(fs.readFileSync(foldPath, 'utf8'));
+  const counts = { M: 0, V: 0, U: 0, other: 0 };
+  for (const a of fold.edges_assignment || []) {
+    if (a === 'M') counts.M++;
+    else if (a === 'V') counts.V++;
+    else if (a === 'U') counts.U++;
+    else counts.other++;
+  }
+  const svg = fs.readFileSync(svgPath, 'utf8');
+  const red = (svg.match(/#FF0000/gi) || []).length;
+  const blue = (svg.match(/#0000FF/gi) || []).length;
+  return { m: counts.M, v: counts.V, u: counts.U, red, blue,
+           trustworthy: counts.M === red && counts.V === blue && counts.M + counts.V > 0 };
+}
+
 describe('golden corpus — origami-examples', () => {
   let pairs;
   let before;
@@ -257,5 +285,28 @@ describe('golden corpus — origami-examples', () => {
       }
     }
     expect(problems).toEqual([]);
+  });
+
+  test('corpus health: M/V counts match the SVG colours (only these are valid Maekawa baselines)', () => {
+    const health = pairs.map(({ fold, svg }) => corpusHealth(fold, svg));
+    const trustworthy = health.filter((h) => h.trustworthy);
+    const untrusted = health.filter((h) => !h.trustworthy);
+    // 语料是只读的真实作品，统计必须稳定（防止语料被换掉而无人察觉）
+    expect(trustworthy.length).toBeGreaterThan(0);
+    expect(trustworthy.length).toBeLessThan(pairs.length);
+
+    // 「丢失折痕类型」的那一类：assignment 全是 U（既没有 M 也没有 V）
+    const lostType = untrusted.filter((h) => h.u > 0 && h.m + h.v === 0);
+    expect(lostType.length).toBeGreaterThan(0);
+    for (const h of lostType) {
+      expect(h.m).toBe(0);
+      expect(h.v).toBe(0);
+    }
+
+    // 「不同源/有损」的那一类：有 M/V，但与 SVG 的红/蓝对不上
+    const mismatched = untrusted.filter((h) => h.m + h.v > 0);
+    for (const h of mismatched) {
+      expect(h.m === h.red && h.v === h.blue).toBe(false);
+    }
   });
 });
