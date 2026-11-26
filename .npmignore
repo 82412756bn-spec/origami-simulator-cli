@@ -1,0 +1,19 @@
+# npm 发布包排除规则
+#
+# 背景：package.json 的 files 白名单只管"哪些目录进包"，**不挡目录内部的运行产物**。
+# npm 文档明说：列入 files 的文件不能再被 .npmignore / .gitignore 排除 ——
+# 实测也确实无效（单测在 src/batch-output/ 生成的 229.5 kB PNG 照样被打进包）。
+# 所以真正的防线是 package.json 里那份**精确白名单**（逐个列出 src 的子目录，
+# 不整目录放行 "src/"）；这份文件是第二道保险，也覆盖 files 未列的路径。
+
+# CLI 运行产物（跑命令生成，会被测试重新生成）
+src/origami-screenshot.png
+src/batch-output/
+
+# Playwright / 覆盖率产物
+test-results/
+playwright-report/
+coverage/
+
+# 依赖
+node_modules/

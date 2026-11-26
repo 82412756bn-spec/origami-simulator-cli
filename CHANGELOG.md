@@ -28,7 +28,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **网络类失败的信号**：`tests/helpers/network.js`（外网探针）+ `tests/helpers/cli.js`
   （只对网络类特征失败重试的调用器）。外网不可达时网络用例整组**显式 skip**
   （明确跳过，不是静默通过）；外网抖动时重试，但确定性失败一次都不重试 —— 不用重试掩盖真 bug。
-- **`files` 白名单**：发布包从 215 文件 / 5.6 MB 降到 **71 文件 / 205 kB**。
+- **`files` 白名单**：发布包从 215 文件 / 5.6 MB 降到 **71 文件 / 208.7 kB**（解包后 803.7 kB）。
+  白名单按目录精确列出（`src/commands/`、`src/utils/`、`src/templates/`、`src/api/`、`src/mcp/`、
+  `src/*.js`），**不整目录放行 `src/`** —— 整目录放行会把单测
+  （`preset-constants.test.js` 的 `batch` 用例）在 `src/batch-output/` 生成的
+  229.5 kB PNG 一起打进包，而 `.npmignore` 对已列入 `files` 的文件无效（npm 文档明说）。
 
 ### Changed
 

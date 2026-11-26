@@ -7,7 +7,12 @@
     "origami": "./src/index.js"
   },
   "files": [
-    "src/",
+    "src/*.js",
+    "src/commands/",
+    "src/utils/",
+    "src/templates/",
+    "src/api/",
+    "src/mcp/",
     "docs/",
     "examples/",
     "README.md",
