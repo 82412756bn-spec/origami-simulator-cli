@@ -35,6 +35,78 @@ if (!fs.existsSync(TMP_DIR)) {
 }
 
 // ────────────────────────────────────────────────────────────────────
+// Signals logging (v2.47 — 14-day falsification window observer)
+// ────────────────────────────────────────────────────────────────────
+// Every tools/call appends one JSONL line to
+//   ~/.origami/signals/mcp.jsonl      (override: ORIGAMI_SIGNALS_DIR)
+// Only metadata is recorded: tool name, argument LENGTH, outcome,
+// duration and peer identity. Argument values are never written — they
+// may carry user data. Logging must never break the MCP session, so
+// every write is wrapped in try/catch and only warns once. The warning
+// goes to stderr because stdout carries the JSON-RPC stream.
+
+const SIGNALS_DIR = process.env.ORIGAMI_SIGNALS_DIR || path.join(os.homedir(), '.origami', 'signals');
+let _signalsWarned = false;
+
+/**
+ * Local ISO-8601 timestamp with UTC offset, e.g. 2026-11-27T09:00:00+08:00.
+ */
+function isoTimestamp() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const offsetMin = -d.getTimezoneOffset();
+  const sign = offsetMin >= 0 ? '+' : '-';
+  const abs = Math.abs(offsetMin);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+    `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` +
+    `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+}
+
+/**
+ * Length of the serialized arguments — the number of characters, never
+ * the content. Returns 0 when the arguments cannot be serialized.
+ */
+function argsLength(args) {
+  try {
+    const serialized = JSON.stringify(args === undefined || args === null ? {} : args);
+    return typeof serialized === 'string' ? serialized.length : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+/**
+ * Append one JSONL line to the signals log. Never throws.
+ */
+function appendSignal(entry) {
+  try {
+    fs.mkdirSync(SIGNALS_DIR, { recursive: true });
+    fs.appendFileSync(path.join(SIGNALS_DIR, `${entry.channel}.jsonl`), JSON.stringify(entry) + '\n');
+  } catch (err) {
+    if (!_signalsWarned) {
+      _signalsWarned = true;
+      process.stderr.write(`[origami] signals log unavailable, continuing without it (${err.message})\n`);
+    }
+  }
+}
+
+/**
+ * Record one tools/call.
+ * `peer` is the caller identity: the stdio transport is always local.
+ */
+function logToolCall(tool, argsLen, ok, startedAt) {
+  appendSignal({
+    ts: isoTimestamp(),
+    channel: 'mcp',
+    tool: tool || null,
+    args_len: argsLen,
+    ok: !!ok,
+    ms: Date.now() - startedAt,
+    peer: 'local',
+  });
+}
+
+// ────────────────────────────────────────────────────────────────────
 // Tool definitions
 // ────────────────────────────────────────────────────────────────────
 // Each tool has: name, description, inputSchema (JSON Schema),
@@ -267,10 +339,13 @@ async function handleRequest(req) {
       break;
 
     case 'tools/call': {
+      const startedAt = Date.now();
       const { name, arguments: args = {} } = req.params ?? {};
+      const argsLen = argsLength(args);
       const tool = TOOLS.find((t) => t.name === name);
       if (!tool) {
         sendError(req.id, -32602, `Unknown tool: ${name}`);
+        logToolCall(name, argsLen, false, startedAt);
         return;
       }
       // Validate required args
@@ -278,6 +353,7 @@ async function handleRequest(req) {
       for (const key of required) {
         if (args[key] === undefined) {
           sendError(req.id, -32602, `Missing required argument: ${key}`);
+          logToolCall(name, argsLen, false, startedAt);
           return;
         }
       }
@@ -289,11 +365,13 @@ async function handleRequest(req) {
           ],
           isError: result.exitCode !== 0,
         });
+        logToolCall(name, argsLen, result.exitCode === 0, startedAt);
       } catch (err) {
         sendResponse(req.id, {
           content: [{ type: 'text', text: `Error: ${err.message}` }],
           isError: true,
         });
+        logToolCall(name, argsLen, false, startedAt);
       }
       break;
     }
@@ -326,7 +404,7 @@ function start() {
 }
 
 // Export for testing
-module.exports = { TOOLS, handleRequest, runCli, sendResponse, sendError, start, SERVER_NAME, SERVER_VERSION };
+module.exports = { TOOLS, handleRequest, runCli, sendResponse, sendError, start, SERVER_NAME, SERVER_VERSION, appendSignal, isoTimestamp, argsLength };
 
 // Auto-start when run as main module
 if (require.main === module) {

@@ -21,6 +21,7 @@
     "src/templates/",
     "src/api/",
     "src/mcp/",
+    "scripts/",
     "docs/",
     "examples/",
     "README.md",
