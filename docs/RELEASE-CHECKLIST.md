@@ -7,13 +7,13 @@
 
 ---
 
-## 结论 1 — package.json 缺 `repository` / `homepage` / `bugs` ⚠️ 待修
+## 结论 1 — package.json 缺 `repository` / `homepage` / `bugs` ✅ 已修
 
 **[实测]** `package.json` 顶层共 13 个字段：`name` `version` `description` `main` `bin` `files` `scripts` `keywords` `author` `license` `dependencies` `engines` `devDependencies` —— **无这三个字段**。
 
 **影响**：npm 包页面会是空的，陌生人点不到源码。
 
-**处置**：补 `repository` → 已实测的 remote 值 `https://github.com/82412756bn-spec/origami-simulator-cli.git`（GitHub 账号 `82412756bn-spec` API 实测 200）。
+**处置**：✅ **已完成**（commit `5eb29ed`）—— 补 `repository` / `homepage` / `bugs`，值取自已实测的 remote（`https://github.com/82412756bn-spec/origami-simulator-cli.git`），非猜测。判据：`npm publish --dry-run` 通过。
 
 ---
 
@@ -104,7 +104,6 @@ node src/index.js --version  →  2.47.0
 ## 发布前剩余动作
 
 1. ✅ 移除 `@jackwener/opencli`（结论 4，已完成并复核）
-2. ⬜ 补 `repository` / `homepage` / `bugs`（结论 1）
 3. ⬜ GitHub 仓库转公开（否则 npm 页面上的 repo 链接是死链；且「非本人提问」这条外部信号在私有仓库里根本不存在）
 4. ⬜ `npm publish --access public` —— **不可逆，需签字**
 5. ⬜ 发布后当天装上 14 天证伪观测器（MCP/REST 当前 `console.` 出现 0 次，无调用日志可采）
