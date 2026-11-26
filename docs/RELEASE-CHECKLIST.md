@@ -77,11 +77,12 @@ grep -lEi "api[_-]?key|secret|token|password|BEGIN [A-Z ]*PRIVATE KEY|sk-[A-Za-z
 ## 已验证的发布包状态
 
 ```
-npm pack --dry-run  →  total files 71
-                       package size 208.9 kB
-                       unpacked size 803.7 kB
+npm pack --dry-run  →  total files 73
+                       package size 213.0 kB
+                       unpacked size 812.9 kB
                        包内运行产物文件 0 个
                        src 下 57 个 .js 全部进包（无遗漏）
+                       docs/ 含本清单与复现命令
 node src/index.js --version  →  2.47.0
 ```
 
