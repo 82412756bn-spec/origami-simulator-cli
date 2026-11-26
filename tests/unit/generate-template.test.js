@@ -98,7 +98,7 @@ describe('模板模式 · 对称变换保持折平性（核心判据）', () => 
   test('完全合格的模板（manifest 标注 fully_qualified）必须真的全过', () => {
     const failures = [];
     for (const t of loadManifest().templates) {
-      if (!t.baseline_at_copies3_rotate120.fully_qualified) continue;
+      if (!t.fully_qualified) continue;   // manifest v2 的字段（v1 是 baseline_at_copies3_rotate120.fully_qualified）
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'origami-tmpl-'));
       const r = run(['generate', '--template', t.id, '--copies', '3', '--rotate', '120',
         '--output-dir', dir, '--quiet']);
