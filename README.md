@@ -30,7 +30,7 @@ npx playwright install chromium   # 需要截图 / 录屏 / 渲染时才用得�
 
 > **npm 包尚未发布**（`npm publish` 未执行）。当前正式分发通道是 GitHub：
 > `github:82412756bn-spec/origami-simulator-cli`，以及 GitHub Releases 里挂的 tgz
-> （`npm install -g ./origami-simulator-cli-2.47.0.tgz`）。后续补发 npm 不改变用法。
+> （`npm install -g ./origami-simulator-cli-2.47.1.tgz`）。后续补发 npm 不改变用法。
 
 Node ≥ 18。纯本地的命令（`analyze` / `kawasaki` / `stl` / `diff` …）不需要浏览器，也不需要联网。
 

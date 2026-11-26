@@ -210,6 +210,34 @@ async function collectRegistry() {
   }
 }
 
+/**
+ * 分发通道核验 —— 2026-11-26 起正式通道是 GitHub Release，不是 npm。
+ * 公开仓库的 releases 端点无需认证；404/无 tag = 还没有 release。
+ * 存在的理由：判据 1 若只查 npm registry，GitHub 通道下会永远判「未发布」→ 窗口打不开。
+ */
+async function collectDistribution() {
+  try {
+    const res = await fetchJson(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`, {
+      headers: { Accept: 'application/vnd.github+json' },
+    });
+    if (res.status === 404) {
+      return { channel: null, tag: null, published: false, notes: ['GitHub 无 release（404）'] };
+    }
+    if (!res.ok || !res.json) {
+      return { channel: null, tag: null, published: false, notes: [`GitHub releases HTTP ${res.status}`] };
+    }
+    const tag = res.json.tag_name || null;
+    return {
+      channel: tag ? 'github' : null,
+      tag,
+      published: Boolean(tag),
+      notes: [tag ? `GitHub Release ${tag}` : 'release 里没有 tag'],
+    };
+  } catch (err) {
+    return { channel: null, tag: null, published: false, notes: [`GitHub releases 不可达：${err.message}`] };
+  }
+}
+
 /** Heuristic: does this issue/PR body look like a question? */
 const ASK_PATTERNS = [
   /[?？]/,
@@ -332,12 +360,13 @@ async function collectGithub() {
 // ────────────────────────────────────────────────────────────────────
 
 async function collect() {
-  const [registry, github] = await Promise.all([collectRegistry(), collectGithub()]);
+  const [registry, github, distribution] = await Promise.all([collectRegistry(), collectGithub(), collectDistribution()]);
   const calls = countNonOwnerCalls();
 
   const notes = [];
   notes.push(...registry.notes);
   notes.push(...github.notes);
+  notes.push(...distribution.notes);
   if (calls.note) notes.push(calls.note);
 
   const row = {
@@ -351,10 +380,11 @@ async function collect() {
     forks: github.forks,
     stars: github.stars,
     prs: github.prs,
+    distribution_tag: distribution.tag,
     note: notes.join('；'),
   };
 
-  return { row, registry, github, calls };
+  return { row, registry, github, distribution, calls };
 }
 
 function appendDailyRow(row) {
@@ -374,27 +404,39 @@ const INSUFFICIENT = '信息不足';
 const RANK = { [ESTABLISHED]: 3, [NOT_ESTABLISHED]: 2, [INSUFFICIENT]: 1 };
 
 function buildVerdicts(collected) {
-  const { registry, github, calls } = collected;
+  const { registry, github, distribution, calls } = collected;
   const verdicts = [];
 
-  // 判据 1 — registry 404 → 200
+  // 判据 1 — 分发通道就绪（npm registry **或** GitHub Release，任一成立即可）
+  // 2026-11-26：正式通道改为 GitHub Release（npm 账号创建被 Cloudflare 人机验证挡住）。
+  // 只查 registry 会让 GitHub 通道下永远判「未发布」→ 14 天窗口打不开。
   if (registry.published && registry.registry_version) {
     verdicts.push({
-      id: 1, label: 'registry 404→200', state: ESTABLISHED,
-      detail: `registry ${registry.registry_version}，发布 ${registry.published_days_ago === null ? '?' : registry.published_days_ago} 天前`,
+      id: 1, label: '分发通道就绪', state: ESTABLISHED,
+      detail: `npm registry ${registry.registry_version}，发布 ${registry.published_days_ago === null ? '?' : registry.published_days_ago} 天前`,
       missing: null,
     });
-  } else if (registry.published === false && registry.notes.some((n) => n.includes('404'))) {
+  } else if (distribution && distribution.published) {
     verdicts.push({
-      id: 1, label: 'registry 404→200', state: NOT_ESTABLISHED,
-      detail: 'registry 返回 404，包尚未发布',
+      id: 1, label: '分发通道就绪', state: ESTABLISHED,
+      detail: `GitHub Release ${distribution.tag}（npm registry 尚未发布）`,
+      missing: null,
+    });
+  } else if (
+    registry.published === false &&
+    registry.notes.some((n) => n.includes('404')) &&
+    distribution && distribution.notes.some((n) => n.includes('404'))
+  ) {
+    verdicts.push({
+      id: 1, label: '分发通道就绪', state: NOT_ESTABLISHED,
+      detail: 'npm registry 404 且 GitHub 无 release —— 两个通道都还没发',
       missing: null,
     });
   } else {
     verdicts.push({
-      id: 1, label: 'registry 404→200', state: INSUFFICIENT,
-      detail: registry.notes.join('；') || 'registry 数据缺失',
-      missing: '判据1 的 registry 数据',
+      id: 1, label: '分发通道就绪', state: INSUFFICIENT,
+      detail: [...registry.notes, ...(distribution ? distribution.notes : [])].join('；') || '分发通道数据缺失',
+      missing: '判据1 的分发通道数据',
     });
   }
 

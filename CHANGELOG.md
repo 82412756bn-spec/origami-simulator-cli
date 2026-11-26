@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.47.1] - 2026-11-26
+
+### Fixed
+- **观测器判据 1 的分发通道**：原先只查 `registry.npmjs.org` 的 404→200。
+  正式通道在 2026-11-26 改为 GitHub Release（npm 账号创建被 Cloudflare 人机验证挡住）后，
+  这个判据会让 14 天窗口永远打不开。现在改为「npm registry **或** GitHub Release 任一成立」，
+  并新增 `collectDistribution()`（公开仓库 releases 端点，无需认证）。
+- `daily.jsonl` 新增 `distribution_tag` 字段。
+
+> 为什么单独发一个 patch：v2.47.0 的 Release 附件是修复前的 tgz，与仓库内容对不上。
+> 按本项目自己的标准（artifact 必须与仓库一致），补发版本而不是改 release 说明。
+
 ## [2.47.0] - 2026-11-26
 
 > 说明：本仓库的变更记录在 2.43.0 之后中断，2.44 / 2.45 / 2.46 三个版本此前没有条目
