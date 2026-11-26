@@ -1037,6 +1037,12 @@ const { registerAnalyzeCommand } = require('./commands/analyze');
 registerAnalyzeCommand(program);
 
 // ============================================================================
+// Generate Command - crease pattern generation (.fold + .svg pair)
+// ============================================================================
+const { registerGenerateCommand } = require('./commands/generate');
+registerGenerateCommand(program);
+
+// ============================================================================
 // Fold-Analyzer Subcommands (v2.20+) — promoted to first-class CLI commands
 //
 // Each is a thin wrapper over a single FoldAnalyzer method. The shared

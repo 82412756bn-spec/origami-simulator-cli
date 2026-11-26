@@ -96,7 +96,24 @@ origami crane <file.fold>            # 传统仙鹤的 3D 预览（带边着色�
 origami batch --models "cranes,miura-ori" --action screenshot --output-dir out/
 ```
 
-### 三、给 agent 用的接口
+### 三、按意图生成折痕图（`generate`）
+
+```bash
+# 生成一对产物：.fold（可验证）+ .svg（可打印 / 可渲染 / 可上传 origamisimulator.org）
+origami generate crane --output-dir ./out
+origami generate star --seed 42 --thickness 1.0
+
+# 可用 pattern：star / crane / fish / miura / tiger / radial / modular / unit
+```
+
+生成后命令会**自动跑一遍验证**并逐条打印结果（产物成对 / FOLD 合法 / 折平局部必要条件 /
+2D 折痕线自交 / SVG↔FOLD 一致 / SVG 良构）。
+
+> **已知缺口（2026-11-26 实测）**：`crane` / `tiger` / `unit` 三个 pattern 的几何
+> **不满足折平必要条件**（crane: Kawasaki 29/469、Maekawa 410/469），且存在重复顶点。
+> 其余 5 个 pattern 全绿。这 5 个生成器此前从未被验证过。
+
+### 四、给 agent 用的接口
 
 ```bash
 origami mcp                          # MCP server（JSON-RPC over stdio）

@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.47.4] - 2026-11-26
+
+### Added
+
+- **`origami generate` 命令：按意图生成折痕图**（`.fold` + `.svg` 成对产出）
+  ```
+  origami generate <star|crane|fish|miura|tiger|radial|modular|unit> [-o dir] [-f fold|svg|both] [-s seed] [-t thickness]
+  ```
+  仓库里 5 个折痕图生成器共 1130 行**一直零引用零覆盖**（36 个命令里没有任何入口），
+  本版把它们接到 CLI 上，并在生成后自动跑一遍验证、逐条打印结果。
+
+  新增 2841 行实现 + 41 个测试（719 总数）：
+  - `src/utils/crease-pattern-2d.js`（800 行）—— 2D 线段相交检测。
+    **既有 `selfintersection` 用的是 3D Möller，对 2D 折痕图恒输出
+    "2D model — all faces coplanar, no 3D intersection possible"、Pairs checked: 0
+    → 折痕线在 2D 上自交此前根本检测不了。** 本模块是新增能力，未改动 selfintersection 的既有行为。
+  - `src/utils/crease-pattern-normalizer.js`（512 行）—— 种子化随机（确定性）、M/V 平衡、归一化
+  - `src/utils/crease-pattern-factory.js` / `svg-crease-parser.js` / `xml-lite.js`
+  - `tests/unit/generate-cmd.test.js`（36 例）+ `tests/unit/generate-cmd-golden-corpus.test.js`（5 例）
+
+- **golden corpus 回归**：以本机 `goods/origami-examples/` 的 **77 对同名 SVG+FOLD**
+  （100% 可配对）为基准，断言「可解析 + 字段自洽」，并对语料做 (size, mtime) 快照校验保证只读。
+
+### Fixed
+
+- `origami analyze` 的 description 写着 "Analyze a FOLD/SVG file"，但 SVG 实测报
+  "SVG analysis not yet supported" → 改为与实现一致的措辞（**只改描述，未新增 SVG 支持**）。
+
+### 验收判据 v2（大副两轮独立复核后定稿，硬门禁）
+
+| 判据 | 状态 |
+|---|---|
+| A 产物成对 / B FOLD 合法 / D 2D 交叉 / E SVG↔FOLD / G 确定性 / H round-trip / J 参数校验 | ✅ 通过 |
+| C 折平性的**局部必要条件**（Kawasaki + Maekawa） | ⚠️ **star / fish / miura / radial / modular 通过；crane / tiger / unit 不通过**（crane: Kawasaki 29/469、Maekawa 410/469） |
+| F SVG well-formedness | ⚠️ **star / fish / miura / radial / modular 通过；crane / tiger 有重复顶点与共线重叠**（crane 15 组重复坐标） |
+
+> ⚠️ C 与 F 不通过是**真实的能力缺口**，不是判据放宽：
+> 这 5 个生成器从未被验证过，crane/tiger/unit 的几何本身不满足折平必要条件。
+> 全局折平性是 NP-hard，不在验收范围 —— 判据措辞是「局部必要条件通过」，**不声称「能折平」**。
+
 ## [2.47.3] - 2026-11-26
 
 ### Fixed

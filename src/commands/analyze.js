@@ -17,7 +17,7 @@ const { FoldAnalyzer } = require('../utils/fold-analyzer');
 function registerAnalyzeCommand(program) {
   program
     .command('analyze <file>')
-    .description('Analyze a FOLD/SVG file locally (no browser required)')
+    .description('Analyze a FOLD file locally (no browser required; SVG input is not supported)')
     .option('--all', 'Show all analysis details')
     .option('--json', 'Output as JSON')
     .option('--validate', 'Run flat-foldability validation (Kawasaki/Maekawa)')
