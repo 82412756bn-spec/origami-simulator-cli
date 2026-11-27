@@ -63,7 +63,10 @@ function tmpDir(tag) {
  * @returns {{status:number, stdout:string, stderr:string}}
  */
 function runCli(args) {
-  const res = spawnSync('node', [CLI, ...args], { encoding: 'utf8' });
+  const res = spawnSync('node', [CLI, ...args], {
+    encoding: 'utf8',
+    env: Object.assign({}, process.env, { ORIGAMI_INTERNAL_TEST: '1' }),
+  });
   return {
     status: res.status,
     stdout: res.stdout || '',

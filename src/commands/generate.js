@@ -53,8 +53,38 @@ const generatorStatus = require('../utils/generator-status');
  * 而不是靠回忆。
  * 记在 ~/.origami/signals/generate.jsonl（不进发布包）。
  */
+/**
+ * 判断这次调用是不是测试产生的。
+ *
+ * 为什么必须判：Day 14 的判据是「内置 pattern 的真实调用数」，而
+ * `npm test` 每次跑都会调几十次 generate —— 混进统计会把「零真实调用」
+ * 误判成「有调用」，从而让本该删的代码留下来（或反过来）。
+ *
+ * 做法：沿父进程链找测试运行器（jest / vitest / mocha / playwright）。
+ * 比「每个测试文件打 env 标记」更稳 —— 不依赖测试怎么 spawn。
+ */
+function isTestInvocation() {
+  if (process.env.ORIGAMI_INTERNAL_TEST === '1') return true;
+  try {
+    let pid = process.ppid;
+    for (let i = 0; i < 5 && pid > 1; i++) {
+      const cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').replace(/\0/g, ' ').trim();
+      if (/jest|vitest|mocha|playwright/i.test(cmdline)) return true;
+      const stat = fs.readFileSync(`/proc/${pid}/stat`, 'utf8');
+      const ppid = parseInt(stat.slice(stat.lastIndexOf(')') + 2).split(' ')[1], 10);
+      if (!ppid || ppid === pid) break;
+      pid = ppid;
+    }
+  } catch (e) {
+    /* /proc 不可用就按非测试处理 */
+  }
+  return false;
+}
+
 function logGenerateCall(entry) {
   try {
+    // 测试产生的调用不是真实使用 —— 混入统计会让 Day 14 的判据误判
+    if (isTestInvocation()) return;
     const dir = path.join(os.homedir(), '.origami', 'signals');
     fs.mkdirSync(dir, { recursive: true });
     fs.appendFileSync(

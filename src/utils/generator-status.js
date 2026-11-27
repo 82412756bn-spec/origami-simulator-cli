@@ -32,9 +32,16 @@ function statusOf(pattern, file = FILE) {
 function suffix(pattern, file = FILE) {
   const st = statusOf(pattern, file);
   if (!st) return '';
-  return st.geometry === 'verified'
+  const geo = st.geometry === 'verified'
     ? '  [几何 ✅ verified]'
     : `  [几何 ⚠️ partial：${st.note}]`;
+
+  // 同族替代物：尤其当内置形态自身几何失衡、而替代物几何全过时，直接告诉用户更好的选择
+  const sub = st.substitute;
+  if (!sub || !sub.template) return geo;
+  if (!sub.geometryBetter) return geo;
+  const cmd = `origami generate --template ${sub.template} --copies ${sub.copies}`;
+  return `${geo}\n  💡 同族替代（几何全过，更稳）：${cmd}`;
 }
 
 module.exports = { FILE, loadStatus, statusOf, suffix };

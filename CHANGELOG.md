@@ -4,6 +4,54 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.49.2] - 2026-11-27
+
+### Added
+
+- **同族替代建议**：内置生成器在「20 模板 × copies{1,2,3,4,6} × rotate{0..180}」= 700 个组合里
+  都能找到结构同族的对应物。当**内置形态自身 Maekawa 失衡、而同族替代物全过**时，
+  `origami generate <pattern>` 会直接给出更好的选择：
+
+  ```
+  📐 Generated crease pattern: crane  [几何 ⚠️ partial：Kawasaki 411/411 · Maekawa 409/469（60 个顶点 M/V 失衡）]
+  💡 同族替代（几何全过，更稳）：origami generate --template scale --copies 2
+  ```
+
+  | 内置 | 同族替代 | 距离 | 自身几何 | 替代物几何 |
+  |---|---|---|---|---|
+  | crane | scale·c2 | 0.422 | ❌ 409/469 | ✅ 全过 |
+  | miura | flappingBird·c2 | 0.338 | ❌ 28/36 | ✅ 全过 |
+  | modular | flappingBird·c1 | 0.309 | ❌ 5/11 | ✅ 全过 |
+
+  > 距离 < 0.3 表示「结构同族」，**不等于逐顶点等价** —— 指纹对顶点数取了 log10，
+  > 41 vs 60 顶点的差异会被压成 0.2 的距离。要断言「删了零损失」需要逐顶点比对，本表未做。
+  > **geometryBetter=true 的含义是硬的**：内置形态自身 Maekawa 不平衡，而替代物全过。
+
+### Fixed
+
+- **调用日志不再被测试污染**：`npm test` 每次跑会调几十次 generate，混进统计会让
+  「内置 pattern 真实调用数」失真（实测一次 `npm test` 产生 43 条内置调用记录，
+  足以让 Day 14 的判据误判）。现在 CLI 沿父进程链识别测试运行器
+  （jest / vitest / mocha / playwright）并跳过记录；测试侧也加 `ORIGAMI_INTERNAL_TEST=1` 标记。
+  验证：`npm test` 746/746 全过后日志为空，手动调用仍记录 1 条。
+
+### 决策更新：Day 14 判据已命中「只有用户自己调用」→ 保留
+
+船长确认「只有我自己在用」→ 命中 v2.49.1 写下的判据第二行：
+**保留**（删 1130 行省下的不是别人的等待，而是用户自己的维护面 ——
+那不该由 agent 替用户决定）。
+
+保留不等于不做事，本轮做了两件：
+1. 把「更好的替代品」直接告诉用户（见上）
+2. 把统计口径修对（见 Fixed）—— 否则 12-10 拿到的数是假的
+
+### 附带发现（未修，记档待查）
+
+`transformTemplate` 的输出 **faces_vertices 为空数组**（原始模板经 `loadTemplateFold` 有 faces，
+如 flat_crane 118 个面；transform 后 0 个）。不影响折痕图判定（Kawasaki/Maekawa 只看边），
+但模板模式产出的 FOLD 缺面信息 → 下游若用该 FOLD 做折叠模拟会缺面数据。
+修需处理 copies>1 时的面偏移，故留待专档。
+
 ## [2.49.1] - 2026-11-27
 
 ### Added
