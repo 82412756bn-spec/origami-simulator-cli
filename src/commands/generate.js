@@ -252,6 +252,11 @@ function generateFromFoldData(baseName, foldDataIn, options = {}) {
   const removed = (foldDataIn.vertices_coords || []).length -
     (deduped.vertices_coords || []).length;
   const foldDataFinal = deduped;
+  // 转换器产出的 FOLD 不带 thickness 字段 → 模板模式产物在这里补上，
+  // 否则判据 B 会报 thickness=undefined（实测 miura-ori 模板 3 份阵列时出现）。
+  if (typeof foldDataFinal.thickness !== 'number') {
+    foldDataFinal.thickness = thickness;
+  }
   if (removed > 0) {
     console.log(`   （去重 ${removed} 个重复顶点）`);
   }

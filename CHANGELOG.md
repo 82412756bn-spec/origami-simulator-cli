@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.48.3] - 2026-11-26
+
+### Fixed
+- **模板模式产物缺 `thickness` 字段**：上游转换器产出的 FOLD 不带 `thickness`，
+  导致判据 B 报 `thickness=undefined`（实测 `miura-ori` 模板 3 份阵列）。
+  现在模板模式在 `generateFromFoldData` 内用 `--thickness`（默认 1.0）补齐。
+
+  实测 `origami generate --template miura-ori --copies 3 --rotate 120`：
+  **A–F 六项全绿**（Kawasaki 396/396 · Maekawa 396/396 · 0 处 2D 交叉 · 945/945 边匹配 · well-formed）
+
 ## [2.48.2] - 2026-11-26
 
 ### Fixed
