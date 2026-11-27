@@ -116,7 +116,8 @@ function transformTemplate(foldData, { copies = 1, rotate = 0, scale = 1, gap = 
   const gapSize = gap === null ? Math.max((box.width || 1) * scale * 0.02, 1e-6) : gap;
 
   const rad = (d) => (d * Math.PI) / 180;
-  const allV = [], allE = [], allA = [], allF = [];
+  const allV = [], allE = [], allA = [], allF = [], allFaces = [];
+  const baseFaces = foldData.faces_vertices || [];
 
   // 先各自旋转，再按**旋转后的实际包围盒**依次排开 —— 否则相邻份会重叠，
   // 表现为「2D 交叉」判据报警（旋转 120° 的菱形轮廓比原包围盒宽）。
@@ -147,6 +148,13 @@ function transformTemplate(foldData, { copies = 1, rotate = 0, scale = 1, gap = 
       allA.push(baseA[i] !== undefined ? baseA[i] : 'B');
       allF.push(baseF[i] !== undefined ? baseF[i] : 0);
     }
+    // 面（faces）也要跟着偏移 —— 之前被硬编码清空（faces_vertices: []），
+    // 导致模板模式产出的 FOLD 缺面信息，下游折叠模拟会缺面数据。
+    // 旋转/缩放不改变面内的顶点**索引**（同一份内），只需加该份的顶点偏移。
+    for (const f of baseFaces) {
+      if (!f || !f.length) continue;
+      allFaces.push(f.map((i) => i + off));
+    }
     // 推进游标必须用 **shift 之后** 的 maxX —— 之前误用了旧 cursorX，导致相邻两份重叠
     cursorX = b.maxX + shift + gapSize;
   }
@@ -156,7 +164,7 @@ function transformTemplate(foldData, { copies = 1, rotate = 0, scale = 1, gap = 
     edges_vertices: allE,
     edges_assignment: allA,
     edges_foldAngle: allF,
-    faces_vertices: [],          // 面片由 computeFaces 重算；判定不依赖它
+    faces_vertices: allFaces,    // 按份偏移重建（不再清空 —— 下游折叠模拟需要面信息）
   });
   if (typeof foldData.thickness === 'number') out.thickness = foldData.thickness;
   out.metadata = Object.assign({}, foldData.metadata, {

@@ -1,0 +1,90 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "russianTriangle",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      316.529,
+      232.941,
+      0
+    ],
+    [
+      1616.529,
+      232.941,
+      0
+    ],
+    [
+      2266.529,
+      882.941,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ]
+  ],
+  "edges_assignment": [
+    "V",
+    "V"
+  ],
+  "edges_foldAngle": [
+    -180,
+    -180
+  ],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 0,
+    "valley_creases": 3,
+    "total_edges": 3,
+    "total_vertices": 3,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null
+  },
+  "thickness": 1,
+  "upgrades": [
+    {
+      "version": "v1.5",
+      "upgrade": "thickness constraint applied",
+      "thickness": 1,
+      "reduction_degrees": 3,
+      "upgraded_at": "2026-06-01",
+      "tool": "origami-simulator-cli v1.5.0"
+    }
+  ],
+  "file_creator": "unknown [upgraded to v1.5]",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "vertices_edges": [
+    [
+      0
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      1
+    ]
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "Tri-Wing_Boomerang_Tiling",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      33.589,
+      193.362,
+      0
+    ],
+    [
+      563,
+      193.362,
+      0
+    ],
+    [
+      563,
+      656.175,
+      0
+    ],
+    [
+      33.589,
+      656.175,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      0,
+      3
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "faces_vertices": [
+    [
+      0,
+      1,
+      2,
+      3
+    ]
+  ],
+  "metadata": {
+    "mountain_creases": 0,
+    "valley_creases": 0,
+    "total_edges": 4,
+    "total_vertices": 4,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null
+  },
+  "file_creator": "origami generate (origami-simulator-cli)",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "thickness": 1,
+  "vertices_edges": [
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ]
+  ]
+}

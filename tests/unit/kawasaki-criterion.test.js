@@ -32,7 +32,8 @@
  *   2. **Anti-false-positive**: a FOLD whose foldAngle is constant must NOT
  *      pass automatically; and the degenerate corpus miura-ori must be
  *      rejected rather than accepted.
- *   3. Vertices with an incident 'B' edge never take part in the check.
+ *   3. Vertices with an incident 'B' / 'U' / 'F' edge never take part in the
+ *      check (both checks use the same rule set, so they cannot disagree).
  *   4. The Maekawa check and the Kawasaki check cover exactly the same
  *      vertices.
  *
@@ -77,7 +78,8 @@ function expectedInternalVertices(fold) {
   const out = [];
   for (const [v, inc] of incident.entries()) {
     if (inc.length < 3) continue;
-    if (inc.some((ei) => assignments[ei] === 'B')) continue;
+    // 与 fold-analyzer 的规则一致：排除含 'B'（纸边）/'U'（未指定）/'F'（平折、预折痕）边的顶点
+    if (inc.some((ei) => assignments[ei] === 'B' || assignments[ei] === 'U' || assignments[ei] === 'F')) continue;
     out.push(v);
   }
   return out.sort((a, b) => a - b);
@@ -259,7 +261,8 @@ describe('Maekawa and Kawasaki share one check set', () => {
       const analyzer = new FoldAnalyzer(loadFold(f));
       const sk = analyzer.strictKawasaki();
       const sm = analyzer.analyzeMaekawa();
-      // Kawasaki 只适用于偶数价顶点 → 检查集是 Maekawa 的子集，差集 = 被跳过的奇数价顶点
+      // 两个检查集现在是**同一套规则**（含 B/U/F 边的顶点都不参与）→ 完全一致；
+      // Kawasaki 还要再跳过奇数价顶点（定理只适用偶数价）→ 检查集是其子集。
       expect(sm.totalChecked).toBe(expectedInternalVertices(loadFold(f)).length);
       expect(sk.totalChecked).toBeLessThanOrEqual(sm.totalChecked);
       expect(sm.totalChecked - sk.totalChecked).toBe(sk.skippedOddValence || 0);

@@ -1,0 +1,339 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "openSinkBase",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      515.823,
+      521.176,
+      0
+    ],
+    [
+      2068.766,
+      521.176,
+      0
+    ],
+    [
+      515.823,
+      2074.117,
+      0
+    ],
+    [
+      2068.766,
+      2074.117,
+      0
+    ],
+    [
+      904.059,
+      1685.882,
+      0
+    ],
+    [
+      1680.529,
+      1685.882,
+      0
+    ],
+    [
+      904.059,
+      909.411,
+      0
+    ],
+    [
+      1680.529,
+      909.411,
+      0
+    ],
+    [
+      1292.294,
+      521.176,
+      0
+    ],
+    [
+      1292.294,
+      909.411,
+      0
+    ],
+    [
+      1292.294,
+      1685.882,
+      0
+    ],
+    [
+      1292.294,
+      2074.117,
+      0
+    ],
+    [
+      1292.294,
+      1297.6465,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      0,
+      6
+    ],
+    [
+      1,
+      7
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      2,
+      4
+    ],
+    [
+      6,
+      4
+    ],
+    [
+      7,
+      5
+    ],
+    [
+      4,
+      12
+    ],
+    [
+      12,
+      7
+    ],
+    [
+      6,
+      12
+    ],
+    [
+      12,
+      5
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      9,
+      12
+    ],
+    [
+      12,
+      10
+    ],
+    [
+      10,
+      11
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "V",
+    "V",
+    "V",
+    "V",
+    "V",
+    "M",
+    "M",
+    "V"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    -180,
+    -180,
+    -180,
+    -180,
+    -180,
+    180,
+    180,
+    -180
+  ],
+  "faces_vertices": [
+    [
+      0,
+      1,
+      7,
+      6
+    ],
+    [
+      3,
+      2,
+      4,
+      5
+    ],
+    [
+      2,
+      0,
+      6,
+      4
+    ],
+    [
+      1,
+      3,
+      5,
+      7
+    ],
+    [
+      4,
+      6,
+      12
+    ],
+    [
+      7,
+      5,
+      12
+    ]
+  ],
+  "metadata": {
+    "mountain_creases": 9,
+    "valley_creases": 4,
+    "total_edges": 17,
+    "total_vertices": 12,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null
+  },
+  "thickness": 1,
+  "upgrades": [
+    {
+      "version": "v1.5",
+      "upgrade": "thickness constraint applied",
+      "thickness": 1,
+      "reduction_degrees": 3,
+      "upgraded_at": "2026-06-01",
+      "tool": "origami-simulator-cli v1.5.0"
+    }
+  ],
+  "file_creator": "unknown [upgraded to v1.5]",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "vertices_edges": [
+    [
+      0,
+      2,
+      6
+    ],
+    [
+      0,
+      3,
+      7
+    ],
+    [
+      1,
+      2,
+      9
+    ],
+    [
+      1,
+      3,
+      8
+    ],
+    [
+      4,
+      9,
+      10,
+      12
+    ],
+    [
+      4,
+      8,
+      11,
+      15
+    ],
+    [
+      5,
+      6,
+      10,
+      14
+    ],
+    [
+      5,
+      7,
+      11,
+      13
+    ],
+    [
+      16
+    ],
+    [
+      16,
+      17
+    ],
+    [
+      18,
+      19
+    ],
+    [
+      19
+    ],
+    [
+      12,
+      13,
+      14,
+      15,
+      17,
+      18
+    ]
+  ]
+}

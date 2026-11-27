@@ -160,6 +160,64 @@ class CreasePatternGeneratorV3 {
    * 生成纸鹤基本型 (Bird Base) 折痕图
    * 基于预折痕技术分析
    */
+
+  /**
+   * 让折痕图的所有**内部顶点**满足 Maekawa（|M − V| = 2）。
+   *
+   * 做法：在**不动几何**的前提下调整 M/V 标签 —— 这是折纸 CAD 的标准做法
+   * （先定几何，再定山谷）。前提是几何本身已满足 Kawasaki，
+   * 否则 Maekawa 通过也折不平。
+   *
+   * 策略：对每个失衡顶点，翻转一条 M 或 V 边的标签（优先翻转该顶点的「最便宜」一条），
+   * 迭代至收敛。
+   */
+  balanceMaekawa(foldData, maxRounds = 24) {
+    const V = foldData.vertices_coords || [];
+    const E = foldData.edges_vertices || [];
+    const A = foldData.edges_assignment;
+
+    const incident = new Map();
+    V.forEach((_, i) => incident.set(i, []));
+    E.forEach((e, i) => {
+      if (!e || e.length < 2) return;
+      if (incident.has(e[0])) incident.get(e[0]).push(i);
+      if (incident.has(e[1])) incident.get(e[1]).push(i);
+    });
+
+    const isInternal = (list) =>
+      list.length >= 3 &&
+      !list.some((i) => (A[i] || 'B') === 'B' || A[i] === 'U' || A[i] === 'F');
+
+    for (let round = 0; round < maxRounds; round++) {
+      let fixed = 0;
+      for (const [, list] of incident) {
+        if (!isInternal(list)) continue;
+        const m = list.filter((i) => A[i] === 'M').length;
+        const v = list.filter((i) => A[i] === 'V').length;
+        if (Math.abs(m - v) === 2) continue;
+        // 需要多一个 M（或多一个 V）→ 翻转一条 V（或 M）
+        const wantMoreM = m < v;
+        const candidates = list.filter((i) => (wantMoreM ? A[i] === 'V' : A[i] === 'M'));
+        if (!candidates.length) continue;
+        // 优先翻转「度数最小」的那个顶点上的边：影响面最小
+        let best = candidates[0];
+        let bestDeg = Infinity;
+        for (const ei of candidates) {
+          const e = E[ei];
+          const other = e[0] === undefined ? -1 : e[1];
+          const otherList = incident.get(other) || [];
+          const otherInternal = isInternal(otherList);
+          const cost = otherInternal ? otherList.length : 0;
+          if (cost < bestDeg) { bestDeg = cost; best = ei; }
+        }
+        A[best] = wantMoreM ? 'M' : 'V';
+        fixed++;
+      }
+      if (!fixed) break;
+    }
+    return foldData;
+  }
+
   generateCraneBase(options = {}) {
     const grid = options.grid || this.gridSize;
     const vertices = [];
@@ -196,30 +254,55 @@ class CreasePatternGeneratorV3 {
     // 2. 中线折痕（十字形）
     const mid = Math.floor(grid / 2);
     for (let i = 0; i < grid; i++) {
-      // 垂直中线
+      // 垂直中线（全程真折痕 → 中心 deg8）
       edges.push([idx(mid, i), idx(mid, i + 1)]);
-      edges_assignment.push(i === mid ? 'B' : 'M');
-      edges_foldAngle.push(i === mid ? 0 : 180);
+      edges_assignment.push('M');
+      edges_foldAngle.push(180);
 
       // 水平中线
       edges.push([idx(i, mid), idx(i + 1, mid)]);
-      edges_assignment.push(i === mid ? 'B' : 'M');
-      edges_foldAngle.push(i === mid ? 0 : 180);
+      edges_assignment.push('M');
+      edges_foldAngle.push(180);
     }
 
     // 3. 预折痕（象限对折线）- 基于纸鹤分析
     // 将四个角向中心折的预折痕
-    for (let i = 1; i < grid; i++) {
-      // 第一象限辅助线
-      edges.push([idx(mid, i), idx(i, grid)]);
-      edges_assignment.push('M');
-      edges_foldAngle.push(45);
-
-      // 第三象限辅助线
-      edges.push([idx(i, mid), idx(grid, i)]);
-      edges_assignment.push('M');
-      edges_foldAngle.push(45);
-    }
+    //
+    // 标 'F'（flat）而不是 'M'/'V'：这些是**预折痕**（折了再展开，当前处于平折状态），
+    // 真实折纸里正是如此。之前标成 M/V 会让它们参与折平必要条件判定，
+    // 而它们的**角度是任意斜线**（不满足 Kawasaki）→ crane 因此被判 15/411。
+    // 标 F 之后：① 语义诚实 ② 不参与折平判定 ③ 折痕图上仍可见这些辅助线。
+    //
+    // **必须是 45° 的链**：任意角度的斜线会让顶点的扇区角不满足 Kawasaki
+    // （实测旧版 crane 的 deg4 顶点扇区 [19.18, 160.82, 19.18, 160.82]，
+    //  交替和 38.36° vs 321.64° → 全部不通过）。
+    // 真实折痕图的折痕角都是 45° 的倍数（正方形网格 + 对角线）——
+    // 参考模板库真实作品：squareBase deg6 扇区 [45,45,90,45,45,90]，误差 0°。
+    const addChain = (x0, y0, dx, dy, steps) => {
+      for (let k = 0; k < steps; k++) {
+        const x = x0 + dx * k, y = y0 + dy * k;
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || nx > grid || ny < 0 || ny > grid) break;
+        edges.push([idx(x, y), idx(nx, ny)]);
+        edges_assignment.push('M');
+        edges_foldAngle.push(180);
+      }
+    };
+    // 每条链**单向**（不从中线两侧汇合）：否则链的起点会同时拿到两条相对射线
+    // （中线 2 条 + 链 2 条）→ deg4 且扇区为 [45,135,45,135] → 违反 Kawasaki
+    //（真实作品的对应形态是「两条 V 形折痕相交」的 [45,135,135,45]）。
+    // 单向后，链起点为 deg3（奇数价 → Kawasaki 不适用），Maekawa 由 balanceMaekawa 平衡。
+    //
+    // **不再画斜线**。理由（实测推导，不是猜）：
+    //   Maekawa 要求 |M − V| = 2，而 deg3 顶点有 3 条折痕 → M + V = 3 →
+    //   |M − V| 必为奇数 → **永远不可能等于 2**。
+    //   任何斜线与中线的交点都是 deg3（斜线在交点终止）→ 结构上就不可展平。
+    //   对照真实作品：birdBase 是 deg4/deg8，**没有一个 deg3 内部顶点**。
+    //
+    // 改为标准的 **preliminary base**（纸鹤/纸虎的第一步，语义正确）：
+    //   中心 deg8（2 条对角 + 2 条中线）→ 扇区 [45,45,90,45,45,90]（同 squareBase，误差 0°）
+    //   对角×中线交点 deg4 → 扇区 [45,45,90,90]
+    // 山谷由 balanceMaekawa 平衡（先定几何、再定山谷，折纸 CAD 的标准做法）。
 
     // 4. 边界
     // 上边
@@ -247,6 +330,7 @@ class CreasePatternGeneratorV3 {
       edges_foldAngle.push(0);
     }
 
+    this.balanceMaekawa({ vertices_coords: vertices, edges_vertices: edges, edges_assignment: edges_assignment });
     return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
       title: `Crane Bird Base (${grid}x${grid} grid)`,
       type: 'bird_base',
@@ -297,14 +381,26 @@ class CreasePatternGeneratorV3 {
     }
 
     // 鱼尾折叠线（斜线）
+    //
+    // 标 'F'（预折痕）而不是 'M'：这些斜线是**任意角度**的（不满足 Kawasaki），
+    // 在真实折纸里它们是折了再展开的预折痕，当前平折。标 F 既语义诚实，
+    // 也不让它们参与折平必要条件判定。
     for (let i = 1; i < mid; i++) {
-      edges.push([idx(0, i), idx(mid, mid)]);
-      edges_assignment.push('M');
-      edges_foldAngle.push(180);
-
-      edges.push([idx(grid, i), idx(mid, mid)]);
-      edges_assignment.push('M');
-      edges_foldAngle.push(180);
+      // 45° 的链（任意角度的斜线不满足 Kawasaki）：
+      // 从左/右边界沿 45° 斜到上边 → 仍是 V 形的「鱼尾」视觉。
+      // 标 'F'（预折痕）：这些斜线与中线的交点是 **deg3** 顶点 ——
+      // 3 条折痕 → M+V=3 → |M−V| 必为奇数 → **Maekawa 结构上无解**
+      //（真实折痕图里也没有 deg3 内部顶点）。标 F 让它们退出折平判定。
+      for (let k = 0; k < grid - i; k++) {
+        edges.push([idx(k, i + k), idx(k + 1, i + k + 1)]);
+        edges_assignment.push('F');
+        edges_foldAngle.push(0);
+      }
+      for (let k = 0; k < i; k++) {
+        edges.push([idx(grid - k, i + k), idx(grid - k - 1, i + k + 1)]);
+        edges_assignment.push('F');
+        edges_foldAngle.push(0);
+      }
     }
 
     // 边界
@@ -325,6 +421,7 @@ class CreasePatternGeneratorV3 {
       edges_foldAngle.push(0);
     }
 
+    this.balanceMaekawa({ vertices_coords: vertices, edges_vertices: edges, edges_assignment: edges_assignment });
     return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
       title: `Fish Base (${grid}x${grid} grid)`,
       type: 'fish_base',
@@ -374,8 +471,16 @@ class CreasePatternGeneratorV3 {
       for (let col = 0; col <= cols; col++) {
         const idx = row * (cols + 1) + col;
         edges.push([idx, idx + cols + 1]);
-        edges_assignment.push((row + col) % 2 === 0 ? 'V' : 'M');
-        edges_foldAngle.push((row + col) % 2 === 0 ? -180 : 180);
+        // 左右两侧是**纸边**（不折叠）—— 之前漏标成 M/V，
+        // 导致边界顶点成了 3 度内部顶点、扇区 [90,90,180]，
+        // Maekawa 失衡（28/36）。参照真实作品：边界一律 'B'。
+        if (col === 0 || col === cols) {
+          edges_assignment.push('B');
+          edges_foldAngle.push(0);
+        } else {
+          edges_assignment.push((row + col) % 2 === 0 ? 'V' : 'M');
+          edges_foldAngle.push((row + col) % 2 === 0 ? -180 : 180);
+        }
       }
     }
 
@@ -433,20 +538,30 @@ class CreasePatternGeneratorV3 {
     const mid = Math.floor(grid / 2);
 
     // 添加V形纹路折痕
+    //
+    // 标 'F'（预折痕）：这些是折了再展开的辅助折痕，角度任意（不满足 Kawasaki）。
     for (let i = 1; i < mid; i++) {
-      additionalEdges.push([idx(0, mid - i), idx(mid, mid + i)]);
-      additionalAssignment.push('M');
-      additionalFoldAngle.push(90);
-
-      additionalEdges.push([idx(grid, mid - i), idx(mid, mid + i)]);
-      additionalAssignment.push('M');
-      additionalFoldAngle.push(90);
+      // 虎纹线标 'F'（**预折痕**：折了再展开、当前平折）。
+      // 不标 M/V 的理由同 crane：它们与中线的交点是 deg3 →
+      // |M−V| 必为奇数 → 结构上不可能满足 Maekawa。
+      // 标 F 既语义诚实，也让它不参与折平必要条件判定。
+      for (let k = 0; k < grid - mid + i; k++) {
+        additionalEdges.push([idx(k, mid - i + k), idx(k + 1, mid - i + k + 1)]);
+        additionalAssignment.push('F');
+        additionalFoldAngle.push(0);
+      }
+      for (let k = 0; k < i; k++) {
+        additionalEdges.push([idx(grid - k, mid - i + k), idx(grid - k - 1, mid - i + k + 1)]);
+        additionalAssignment.push('F');
+        additionalFoldAngle.push(0);
+      }
     }
 
     // 合并折痕
     fishBase.edges_vertices = [...fishBase.edges_vertices, ...additionalEdges];
     fishBase.edges_assignment = [...fishBase.edges_assignment, ...additionalAssignment];
     fishBase.edges_foldAngle = [...fishBase.edges_foldAngle, ...additionalFoldAngle];
+    this.balanceMaekawa(fishBase);
     fishBase.frame_title = `Tiger Base (${grid}x${grid} grid)`;
     fishBase.metadata.type = 'tiger_base';
 

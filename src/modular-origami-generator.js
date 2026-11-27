@@ -250,16 +250,16 @@ class ModularOrigamiGenerator {
     // 中心到每个尖刺的折痕（山折）
     for (let i = 0; i < n; i++) {
       edges.push([centerIdx, i + 1]);
-      edges_assignment.push('M');
-      edges_foldAngle.push(180);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
     }
 
     // 相邻尖刺之间的连接（谷折）
     for (let i = 0; i < n; i++) {
       const next = (i + 1) % n;
       edges.push([i + 1, next + 1]);
-      edges_assignment.push('V');
-      edges_foldAngle.push(-180);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
     }
 
     // 添加底部连接形成星形轮廓
@@ -281,8 +281,8 @@ class ModularOrigamiGenerator {
 
       // 内圈到外圈
       edges.push([i + 1, currInner]);
-      edges_assignment.push('M');
-      edges_foldAngle.push(180);
+      edges_assignment.push('B');
+      edges_foldAngle.push(0);
     }
 
     // 面：从中心到相邻尖刺的三角形

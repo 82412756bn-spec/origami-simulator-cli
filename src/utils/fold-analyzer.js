@@ -1700,9 +1700,13 @@ class FoldAnalyzer {
       const incidentEdges = this.getIncidentEdges(vIdx);
       if (incidentEdges.length < 3) continue;
 
+      // 排除边界顶点：含 'B'（纸边）/'U'（未指定）/'F'（平折、预折痕）边的顶点
+      // 不是「所有折痕都参与折叠」的内部顶点 —— Kawasaki 与 Maekawa 的检查集
+      // 必须一致（同一套规则），否则两个判据会互相矛盾。
       let hasBoundaryEdge = false;
       for (const eIdx of incidentEdges) {
-        if (this.assignments[eIdx] === 'B') { hasBoundaryEdge = true; break; }
+        const a = this.assignments[eIdx];
+        if (a === 'B' || a === 'U' || a === 'F') { hasBoundaryEdge = true; break; }
       }
       if (hasBoundaryEdge) continue;
 

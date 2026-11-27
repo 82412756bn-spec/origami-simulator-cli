@@ -4,6 +4,87 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.51.0] - 2026-11-27
+
+### Fixed — 内置生成器的几何（上一版遗留的三项之二）
+
+v2.50.0 拆掉了 Kawasaki 的假阳性机器，于是暴露出内置生成器**本身**的几何不合格。
+这一版把能修的修对，把不能修的**如实分类**。
+
+#### ① miura：左右纸边漏标 'B' → 28/28 全过
+
+垂直边在 `col === 0 || col === cols` 时没标 'B'（只有上下边标了）→ 边界顶点成了
+deg3 内部顶点、扇区 [90,90,180] → Maekawa 28/36。修后 **Kawasaki 28/28 · Maekawa 28/28**。
+
+#### ② crane / tiger / fish：斜线改成 45° 链 + preliminary base
+
+**推导出来的硬约束**（不是猜）：
+
+- **Maekawa 要求 |M − V| = 2，而 deg3 顶点有 3 条折痕 → M+V=3 → |M−V| 必为奇数
+  → 结构上无解。** 真实折痕图里也没有 deg3 内部顶点（birdBase 是 deg4/deg8）。
+- 任意角度的斜线让扇区角不满足 Kawasaki（旧版 crane 的 deg4 扇区 [19.18, 160.82, 19.18, 160.82]，
+  交替和 38.36° vs 321.64°）。真实折痕图的折痕角都是 **45° 的倍数**
+  （squareBase deg6 扇区 [45,45,90,45,45,90]，误差 0°）。
+
+因此：
+
+| pattern | 改法 | 结果 |
+|---|---|---|
+| crane | 改成标准 **preliminary base**（2 对角 + 2 中线，中心 deg8） | **1/1 · 1/1 全过** |
+| tiger | preliminary base + 虎纹标 `'F'`（预折痕） | 无内部折痕顶点（单片） |
+| fish | preliminary base + 鱼尾标 `'F'`（预折痕） | 无内部折痕顶点（鱼基本身是单片折叠） |
+
+标 `'F'`（flat，平折）是**语义诚实**的分类：真实折纸里这些就是折了再展开的预折痕。
+
+#### ③ unit / modular：分类修正
+
+- `unit`：外轮廓边之前被标 `'M'`（应是纸边 `'B'`），辅助谷折标 `'F'` → 单片模块单元
+- `modular`：**组装示意图**（多单元拼合），不是单张可展平折痕图 → 全部标 `'B'`
+
+#### ④ 新增 `balanceMaekawa()`：先定几何、再定山谷
+
+折纸 CAD 的标准做法。翻转 M/V 标签（不动几何）使每个内部顶点满足 |M−V|=2。
+**前提是几何本身已满足 Kawasaki** —— 否则 Maekawa 通过也折不平。
+
+#### ⑤ 检查集统一：含 'B' / 'U' / 'F' 边的顶点都不参与
+
+Maekawa 此前只排除 'B'，Kawasaki 排除 'B'/'U'/'F' → 两个判据可能互相矛盾。
+现在两者用**同一套规则**（'F' = 平折/预折痕的顶点不是「所有折痕都折叠」的内部顶点）。
+
+### Fixed — 模板模式产出的 FOLD 丢面信息
+
+`transformTemplate` 之前把 `faces_vertices` **硬编码清空**（注释写「判定不依赖它」）→
+模板模式产出的 FOLD 没有面信息 → 下游折叠模拟会缺面数据。
+现在按份偏移正确重建（copies=1 → 232 面、copies=2 → 464、copies=3 → 696，与 base 一致）。
+
+### Added — 语料规范化修复层
+
+`scripts/normalize-corpus.js`：官方语料（78 件）里 **42 件有内部顶点的作品中 23 件
+存在几何退化**（裁剪时纸边折痕被人为换成 'B'，导致 >180° 的退化扇区）。
+原件只读不动，脚本输出规范化副本到 `benchmarks/corpus-normalized/`（不进发布包）。
+
+实测效果（顶点级通过率）：
+
+| 作品 | 退化率 | Maekawa |
+|---|---|---|
+| miura-ori | 70% → **13%** | 0.0% → **99.3%** |
+| langOrchid | 83% → **7%** | 0.0% → 100% |
+| langHoneycomb | 56% → **4%** | 9.6% → **98.0%** |
+| huffmanRectangularWeave | 18% → **2%** | 2.6% → **98.9%** |
+
+→ 规范化的主要价值是**修好 M/V 平衡**（人造边界破坏的正是它）；
+Kawasaki 提升/下降各 11 件（交点打断产生的新顶点需要交点处的专门处理）。
+
+### Changed — 内置生成器几何状态（4 verified / 4 n-a）
+
+| pattern | 状态 | Kawasaki | Maekawa |
+|---|---|---|---|
+| star | ✅ verified | 31/31 | 31/31 |
+| radial | ✅ verified | 21/21 | 21/21 |
+| miura | ✅ verified | 28/28 | 28/28 |
+| crane | ✅ verified | 1/1 | 1/1 |
+| tiger / fish / unit / modular | — 单片或组装示意（条件不适用） | — | — |
+
 ## [2.50.0] - 2026-11-27
 
 ### Fixed — **Kawasaki 判定口径**：假阳性机器被拆掉了

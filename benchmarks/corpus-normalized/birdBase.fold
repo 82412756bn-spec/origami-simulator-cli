@@ -1,0 +1,377 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "birdBase",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      432,
+      288,
+      0
+    ],
+    [
+      2448,
+      288,
+      0
+    ],
+    [
+      2448,
+      2304,
+      0
+    ],
+    [
+      432,
+      2304,
+      0
+    ],
+    [
+      864,
+      1296,
+      0
+    ],
+    [
+      2016,
+      1296,
+      0
+    ],
+    [
+      1440,
+      720,
+      0
+    ],
+    [
+      1440,
+      1872,
+      0
+    ],
+    [
+      432,
+      1296,
+      0
+    ],
+    [
+      2448,
+      1296,
+      0
+    ],
+    [
+      1440,
+      288,
+      0
+    ],
+    [
+      1440,
+      2304,
+      0
+    ],
+    [
+      1440,
+      1296,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      12
+    ],
+    [
+      12,
+      2
+    ],
+    [
+      4,
+      12
+    ],
+    [
+      12,
+      5
+    ],
+    [
+      6,
+      12
+    ],
+    [
+      12,
+      7
+    ],
+    [
+      0,
+      6
+    ],
+    [
+      1,
+      6
+    ],
+    [
+      1,
+      5
+    ],
+    [
+      2,
+      5
+    ],
+    [
+      2,
+      7
+    ],
+    [
+      3,
+      7
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      0,
+      4
+    ],
+    [
+      4,
+      8
+    ],
+    [
+      5,
+      9
+    ],
+    [
+      6,
+      10
+    ],
+    [
+      7,
+      11
+    ],
+    [
+      3,
+      12
+    ],
+    [
+      12,
+      1
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B",
+    "M",
+    "V",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "M",
+    "V",
+    "V",
+    "V",
+    "V",
+    "V",
+    "V"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0,
+    180,
+    -180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    180,
+    -180,
+    -180,
+    -180,
+    -180,
+    -180,
+    -180
+  ],
+  "faces_vertices": [
+    [
+      0,
+      12,
+      4
+    ],
+    [
+      12,
+      0,
+      6
+    ],
+    [
+      12,
+      2,
+      7
+    ],
+    [
+      2,
+      12,
+      5
+    ],
+    [
+      4,
+      12,
+      3
+    ],
+    [
+      5,
+      12,
+      1
+    ],
+    [
+      12,
+      6,
+      1
+    ],
+    [
+      12,
+      7,
+      3
+    ]
+  ],
+  "metadata": {
+    "mountain_creases": 10,
+    "valley_creases": 6,
+    "total_edges": 20,
+    "total_vertices": 12,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null
+  },
+  "thickness": 1,
+  "upgrades": [
+    {
+      "version": "v1.5",
+      "upgrade": "thickness constraint applied",
+      "thickness": 1,
+      "reduction_degrees": 3,
+      "upgraded_at": "2026-06-01",
+      "tool": "origami-simulator-cli v1.5.0"
+    }
+  ],
+  "file_creator": "unknown [upgraded to v1.5]",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "vertices_edges": [
+    [
+      0,
+      3,
+      4,
+      10,
+      17
+    ],
+    [
+      0,
+      1,
+      11,
+      12,
+      23
+    ],
+    [
+      1,
+      2,
+      5,
+      13,
+      14
+    ],
+    [
+      2,
+      3,
+      15,
+      16,
+      22
+    ],
+    [
+      6,
+      16,
+      17,
+      18
+    ],
+    [
+      7,
+      12,
+      13,
+      19
+    ],
+    [
+      8,
+      10,
+      11,
+      20
+    ],
+    [
+      9,
+      14,
+      15,
+      21
+    ],
+    [
+      18
+    ],
+    [
+      19
+    ],
+    [
+      20
+    ],
+    [
+      21
+    ],
+    [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      22,
+      23
+    ]
+  ]
+}

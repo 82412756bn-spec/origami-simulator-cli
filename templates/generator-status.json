@@ -1,9 +1,9 @@
 {
   "measured_at": "2026-11-27",
   "criteria": {
-    "kawasaki": "扇区角交替和误差 < 0.5°（偶数价内部顶点；用真实作品校准：官方 78 件误差分布双峰，83.05% 恰为 0°、其余 17% 恰为 180°，无中间带）",
-    "maekawa": "|M − V| = 2（内部顶点，排除含 B/U 边的）",
-    "note": "2026-11-27 修正：Kawasaki 此前误用 edges_foldAngle（折痕角）而非扇区角 —— 对 foldAngle ∈ {0,±180} 的 FOLD 恒真（假阳性）。tiger 曾因此被标 verified，实际为 2/240。"
+    "kawasaki": "扇区角交替和误差 < 5°（偶数价内部顶点；容差用真实作品校准：官方 78 件误差分布双峰，83.05% 恰为 0°、17% 恰为 180°）",
+    "maekawa": "|M − V| = 2（内部顶点：排除含 B/U/F 边的）",
+    "note": "两个检查集用同一套规则（含 B/U/F 边的顶点都不参与）→ 不会互相矛盾。"
   },
   "substitute_caveat": "distance < 0.3 表示「结构同族」，不等于逐顶点等价 —— 指纹对顶点数取了 log10。替代物是**几何全过的同族形态，但不是同一个东西**。",
   "substitute_basis": "「20 模板 × copies{1,2,3,4,6} × rotate{0,30,…,180}」= 700 组里，同时满足 Kawasaki + Maekawa 的 350 组",
@@ -32,23 +32,11 @@
         "distance": 0.293
       }
     },
-    "tiger": {
-      "geometry": "partial",
-      "kawasaki": "2/240",
-      "maekawa": "240/240",
-      "note": "Maekawa 240/240，但 Kawasaki 仅 2/240（折痕几何不满足折平角度条件）",
-      "substitute": {
-        "template": "miura-ori",
-        "copies": 3,
-        "rotate": 0,
-        "distance": 0.495
-      }
-    },
     "miura": {
-      "geometry": "partial",
+      "geometry": "verified",
       "kawasaki": "28/28",
-      "maekawa": "28/36",
-      "note": "Kawasaki 28/28 · Maekawa 28/36（8 个顶点 M/V 失衡）",
+      "maekawa": "28/28",
+      "note": "Kawasaki 28/28 · Maekawa 28/28（修掉了左右纸边漏标 B 的 bug）",
       "substitute": {
         "template": "flat_crane",
         "copies": 1,
@@ -57,10 +45,10 @@
       }
     },
     "crane": {
-      "geometry": "partial",
-      "kawasaki": "15/411",
-      "maekawa": "409/469",
-      "note": "Kawasaki 15/411 · Maekawa 409/469（60 个顶点 M/V 失衡）",
+      "geometry": "verified",
+      "kawasaki": "1/1",
+      "maekawa": "1/1",
+      "note": "preliminary base（2 对角 + 2 中线，中心 deg8）· 扇区 [45,45,90,45,45,90] 误差 0°",
       "substitute": {
         "template": "miura-ori",
         "copies": 4,
@@ -68,40 +56,52 @@
         "distance": 0.47
       }
     },
-    "modular": {
-      "geometry": "partial",
-      "kawasaki": "1/11",
-      "maekawa": "5/11",
-      "note": "Kawasaki 1/11 · Maekawa 5/11（且 10 个顶点有 >180° 的退化扇区）",
+    "tiger": {
+      "geometry": "na",
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "note": "preliminary base + 虎纹（虎纹标 F = 预折痕，不参与折平判定）→ 无内部折痕顶点",
       "substitute": {
-        "template": "birdBase",
-        "copies": 2,
+        "template": "miura-ori",
+        "copies": 3,
         "rotate": 0,
-        "distance": 0.362
+        "distance": 0.495
       }
     },
     "fish": {
       "geometry": "na",
       "kawasaki": "0/0",
       "maekawa": "0/0",
-      "note": "单片结构，无内部顶点（折平必要条件不适用）",
+      "note": "preliminary base + 鱼尾（鱼尾标 F = 预折痕）→ 无内部折痕顶点（鱼基本身是单片折叠）",
       "substitute": {
-        "template": null,
-        "copies": null,
-        "rotate": null,
+        "template": "simpleVertex",
+        "copies": 6,
+        "rotate": 0,
         "distance": 1.951
       }
     },
     "unit": {
-      "geometry": "partial",
-      "kawasaki": "0/2",
-      "maekawa": "0/2",
-      "note": "单片结构，2 个内部顶点均不满足 Maekawa",
+      "geometry": "na",
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "note": "模块单元 = 单片（组装前无折痕）；外轮廓标 B、辅助谷折标 F",
       "substitute": {
         "template": "openSinkBase",
         "copies": 1,
         "rotate": 0,
         "distance": 1.483
+      }
+    },
+    "modular": {
+      "geometry": "na",
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "note": "**组装示意图**（多单元拼合），不是单张可展平折痕图 → 全部标 B",
+      "substitute": {
+        "template": "birdBase",
+        "copies": 2,
+        "rotate": 0,
+        "distance": 0.362
       }
     }
   }

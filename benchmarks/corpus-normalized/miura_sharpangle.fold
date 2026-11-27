@@ -1,0 +1,347 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "miura_sharpangle",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      61.013,
+      107.216,
+      0
+    ],
+    [
+      -9.07,
+      203.549,
+      0
+    ],
+    [
+      61.013,
+      277.294,
+      0
+    ],
+    [
+      -9.07,
+      373.628,
+      0
+    ],
+    [
+      61.013,
+      447.373,
+      0
+    ],
+    [
+      -9.07,
+      543.707,
+      0
+    ],
+    [
+      61.013,
+      192.255,
+      0
+    ],
+    [
+      -9.07,
+      288.589,
+      0
+    ],
+    [
+      61.013,
+      362.334,
+      0
+    ],
+    [
+      -9.07,
+      458.667,
+      0
+    ],
+    [
+      -79.154,
+      22.176,
+      0
+    ],
+    [
+      -9.07,
+      118.51,
+      0
+    ],
+    [
+      131.096,
+      883.863,
+      0
+    ],
+    [
+      61.013,
+      787.53,
+      0
+    ],
+    [
+      61.013,
+      617.451,
+      0
+    ],
+    [
+      -9.07,
+      713.784,
+      0
+    ],
+    [
+      -9.07,
+      883.863,
+      0
+    ],
+    [
+      131.096,
+      798.824,
+      0
+    ],
+    [
+      61.013,
+      702.49,
+      0
+    ],
+    [
+      -9.07,
+      798.824,
+      0
+    ],
+    [
+      61.013,
+      872.568,
+      0
+    ],
+    [
+      -9.07,
+      968.902,
+      0
+    ],
+    [
+      -920.152,
+      22.176,
+      0
+    ],
+    [
+      -920.152,
+      1042.646,
+      0
+    ],
+    [
+      761.844,
+      22.177,
+      0
+    ],
+    [
+      761.844,
+      1042.647,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      12,
+      13
+    ],
+    [
+      14,
+      15
+    ],
+    [
+      13,
+      16
+    ],
+    [
+      17,
+      18
+    ],
+    [
+      18,
+      19
+    ],
+    [
+      20,
+      21
+    ],
+    [
+      22,
+      23
+    ],
+    [
+      24,
+      25
+    ]
+  ],
+  "edges_assignment": [
+    "M",
+    "M",
+    "M",
+    "V",
+    "V",
+    "B",
+    "M",
+    "M",
+    "M",
+    "V",
+    "V",
+    "V",
+    "B",
+    "B"
+  ],
+  "edges_foldAngle": [
+    180,
+    180,
+    180,
+    -180,
+    -180,
+    0,
+    180,
+    180,
+    180,
+    -180,
+    -180,
+    -180,
+    0,
+    0
+  ],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 6,
+    "valley_creases": 5,
+    "total_edges": 14,
+    "total_vertices": 26,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null
+  },
+  "thickness": 1,
+  "upgrades": [
+    {
+      "version": "v1.5",
+      "upgrade": "thickness constraint applied",
+      "thickness": 1,
+      "reduction_degrees": 3,
+      "upgraded_at": "2026-06-01",
+      "tool": "origami-simulator-cli v1.5.0"
+    }
+  ],
+  "file_creator": "unknown [upgraded to v1.5]",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "vertices_edges": [
+    [
+      0
+    ],
+    [
+      0
+    ],
+    [
+      1
+    ],
+    [
+      1
+    ],
+    [
+      2
+    ],
+    [
+      2
+    ],
+    [
+      3
+    ],
+    [
+      3
+    ],
+    [
+      4
+    ],
+    [
+      4
+    ],
+    [
+      5
+    ],
+    [
+      5
+    ],
+    [
+      6
+    ],
+    [
+      6,
+      8
+    ],
+    [
+      7
+    ],
+    [
+      7
+    ],
+    [
+      8
+    ],
+    [
+      9
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10
+    ],
+    [
+      11
+    ],
+    [
+      11
+    ],
+    [
+      12
+    ],
+    [
+      12
+    ],
+    [
+      13
+    ],
+    [
+      13
+    ]
+  ]
+}

@@ -1,0 +1,196 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "squareBase",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      432,
+      288,
+      0
+    ],
+    [
+      2448,
+      288,
+      0
+    ],
+    [
+      2448,
+      2304,
+      0
+    ],
+    [
+      432,
+      2304,
+      0
+    ],
+    [
+      1440,
+      2304,
+      0
+    ],
+    [
+      1440,
+      288,
+      0
+    ],
+    [
+      2448,
+      1296,
+      0
+    ],
+    [
+      432,
+      1296,
+      0
+    ],
+    [
+      1440,
+      1296,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      4,
+      8
+    ],
+    [
+      8,
+      5
+    ],
+    [
+      6,
+      8
+    ],
+    [
+      8,
+      7
+    ],
+    [
+      3,
+      8
+    ],
+    [
+      8,
+      1
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B",
+    "M",
+    "M",
+    "M",
+    "M",
+    "V",
+    "V"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0,
+    180,
+    180,
+    180,
+    180,
+    -180,
+    -180
+  ],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 2,
+    "valley_creases": 1,
+    "total_edges": 7,
+    "total_vertices": 8,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null
+  },
+  "thickness": 1,
+  "upgrades": [
+    {
+      "version": "v1.5",
+      "upgrade": "thickness constraint applied",
+      "thickness": 1,
+      "reduction_degrees": 3,
+      "upgraded_at": "2026-06-01",
+      "tool": "origami-simulator-cli v1.5.0"
+    }
+  ],
+  "file_creator": "unknown [upgraded to v1.5]",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "vertices_edges": [
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      1,
+      9
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3,
+      8
+    ],
+    [
+      4
+    ],
+    [
+      5
+    ],
+    [
+      6
+    ],
+    [
+      7
+    ],
+    [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  ]
+}
