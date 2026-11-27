@@ -133,3 +133,14 @@ splitCreasesAtCrossings  →  balanceMountainValley  →  dedupeVertices
 
 新增可作模板：`miura-ori`（M132/132）· `scale`（M114/114）· `squaretwistManyAngles`（M36/36）·
 `singlesquaretwist` · `simpleVertex` · 以及若干无内部顶点的造型件（K0/0 M0/0）。
+
+
+### 模板库扩充到 20 件后的最终排查
+
+| 类别 | 件数 | 可否修 |
+|---|---|---|
+| ✅ 规范化后 Kawasaki + Maekawa 全过 | **20** | — |
+| ❌ 真实 M/V 失衡（曲面折痕 / 剪纸 / 无限图案的有限片段） | 57 | **不可修**：人工边界破坏了 M/V 平衡，是形态限制 |
+
+颜色解析修好前，那 57 件里有 15 件的失格原因是**转换器没认出颜色写法**（短 hex / style 内联 /
+CSS 类），现已全部修好；剩下的是真的 M/V 失衡。

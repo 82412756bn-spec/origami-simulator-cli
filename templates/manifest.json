@@ -1,6 +1,6 @@
 {
-  "schema": "origami-template-library/3",
-  "purpose": "「按意图生成」的模板库：每个模板是官方真实折痕图（经转换器修复后重新转换），旋转/阵列等对称变换后仍保证可折平。",
+  "schema": "origami-template-library/4",
+  "purpose": "「按意图生成」的模板库：官方真实折痕图（经修复后的转换器重新转换），旋转/阵列等对称变换后仍保证可折平。",
   "source": {
     "site": "https://origamisimulator.org/",
     "license": "MIT License, Copyright (c) 2018 Amanda Ghassaei（见 ./LICENSE）"
@@ -11,16 +11,17 @@
     "fixes": [
       "polyline 坐标提取：兼容「x1,y1,x2,y2 逗号混写」（846 个 polyline 曾全部产出 0 条边）",
       "path 分支：改调 _path_to_edges（原来调只认 M/L 的 _line_to_edges_from_poly，支持曲线的 _path_to_edges 从未被调用）",
-      "_path_to_edges：重写为支持 M/L/H/V/C/S/Q/T/A/Z，曲线按尺度自适应采样（2-6 段）"
+      "_path_to_edges：重写为支持 M/L/H/V/C/S/Q/T/A/Z，曲线按尺度自适应采样（2-6 段）",
+      "颜色解析：支持短 hex（#f00）、style 属性内联、CSS 类映射；新增 Flat(#FFFF00) 映射"
     ],
     "result": "77/77 SVG 全部产出非空 FOLD（修复前 3 件为空）"
   },
-  "selection_rule": "转换 → 规范化（打断交点→平衡 M/V→去重）→ Kawasaki 与 Maekawa 全过 → 可作模板",
+  "selection_rule": "转换 → 规范化（打断交点→平衡 M/V→去重）→ copies=3/rotate=120 下 Kawasaki 与 Maekawa 全过且无 2D 交叉 → 可作模板",
   "verified_at": "2026-11-26",
   "official_baseline": {
     "svg_total": 77,
     "converted_nonempty": "77/77",
-    "templates_qualified": 19,
+    "templates_qualified": 20,
     "builtin_generators_cover": "0/78",
     "template_mode_fits": "63/78"
   },
@@ -29,268 +30,342 @@
       "id": "Improvisation-62",
       "source": "origamisimulator.org/Curved/Improvisation-62.svg",
       "file": "Improvisation-62.fold",
-      "vertices": 700,
-      "edges": 676,
+      "vertices": 2100,
+      "edges": 2028,
       "kawasaki": "0/0",
       "maekawa": "0/0",
       "bytes": 197754,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "0/0",
+        "maekawa": "0/0"
+      }
     },
     {
       "id": "Treble_Clef",
       "source": "origamisimulator.org/Curved/Treble_Clef.svg",
       "file": "Treble_Clef.fold",
-      "vertices": 241,
-      "edges": 241,
+      "vertices": 723,
+      "edges": 723,
       "kawasaki": "0/0",
       "maekawa": "0/0",
       "bytes": 357690,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "0/0",
+        "maekawa": "0/0"
+      }
     },
     {
       "id": "birdBase",
       "source": "origamisimulator.org/Bases/birdBase.svg",
       "file": "birdBase.fold",
-      "vertices": 13,
-      "edges": 24,
-      "kawasaki": "5/5",
-      "maekawa": "5/5",
+      "vertices": 39,
+      "edges": 72,
+      "kawasaki": "15/15",
+      "maekawa": "15/15",
       "bytes": 3337,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "15/15",
+        "maekawa": "15/15"
+      }
     },
     {
       "id": "brochurefold",
       "source": "origamisimulator.org/SimpleFolds/brochurefold.svg",
       "file": "brochurefold.fold",
-      "vertices": 15,
-      "edges": 11,
+      "vertices": 45,
+      "edges": 33,
       "kawasaki": "0/0",
       "maekawa": "0/0",
       "bytes": 2344,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "0/0",
+        "maekawa": "0/0"
+      }
     },
     {
       "id": "cubeunwrapping",
       "source": "origamisimulator.org/PolygonUnfolding/cubeunwrapping.svg",
       "file": "cubeunwrapping.fold",
-      "vertices": 14,
-      "edges": 19,
+      "vertices": 42,
+      "edges": 57,
       "kawasaki": "0/0",
       "maekawa": "0/0",
       "bytes": 3310,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "0/0",
+        "maekawa": "0/0"
+      }
     },
     {
       "id": "curvedcrease2",
       "source": "origamisimulator.org/Curved/curvedcrease2.svg",
       "file": "curvedcrease2.fold",
-      "vertices": 46,
-      "edges": 105,
+      "vertices": 138,
+      "edges": 315,
       "kawasaki": "0/0",
       "maekawa": "0/0",
       "bytes": 15880,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "0/0",
+        "maekawa": "0/0"
+      }
     },
     {
       "id": "flappingBird",
       "source": "origamisimulator.org/Origami/flappingBird.svg",
       "file": "flappingBird.fold",
-      "vertices": 30,
-      "edges": 47,
-      "kawasaki": "14/14",
-      "maekawa": "14/14",
+      "vertices": 90,
+      "edges": 141,
+      "kawasaki": "42/42",
+      "maekawa": "42/42",
       "bytes": 4876,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "42/42",
+        "maekawa": "42/42"
+      }
     },
     {
       "id": "flat_crane",
       "source": "origamisimulator.org/Origami/flat_crane.svg",
       "file": "flat_crane.fold",
-      "vertices": 64,
-      "edges": 133,
-      "kawasaki": "42/42",
-      "maekawa": "50/50",
+      "vertices": 192,
+      "edges": 399,
+      "kawasaki": "126/126",
+      "maekawa": "150/150",
       "bytes": 18566,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "126/126",
+        "maekawa": "150/150"
+      }
     },
     {
       "id": "mapfold",
       "source": "origamisimulator.org/SimpleFolds/mapfold.svg",
       "file": "mapfold.fold",
-      "vertices": 15,
-      "edges": 11,
+      "vertices": 45,
+      "edges": 33,
       "kawasaki": "0/0",
       "maekawa": "0/0",
       "bytes": 2335,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "0/0",
+        "maekawa": "0/0"
+      }
     },
     {
       "id": "miura-ori",
       "source": "origamisimulator.org/Tessellations/miura-ori.svg",
       "file": "miura-ori.fold",
-      "vertices": 182,
-      "edges": 315,
-      "kawasaki": "132/132",
-      "maekawa": "132/132",
+      "vertices": 546,
+      "edges": 945,
+      "kawasaki": "396/396",
+      "maekawa": "396/396",
       "bytes": 44551,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "396/396",
+        "maekawa": "396/396"
+      }
     },
     {
       "id": "openSinkBase",
       "source": "origamisimulator.org/Bases/openSinkBase.svg",
       "file": "openSinkBase.fold",
-      "vertices": 13,
-      "edges": 20,
-      "kawasaki": "5/5",
-      "maekawa": "5/5",
+      "vertices": 39,
+      "edges": 60,
+      "kawasaki": "15/15",
+      "maekawa": "15/15",
       "bytes": 2965,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "15/15",
+        "maekawa": "15/15"
+      }
     },
     {
       "id": "pinwheelBase",
       "source": "origamisimulator.org/Bases/pinwheelBase.svg",
       "file": "pinwheelBase.fold",
-      "vertices": 12,
-      "edges": 16,
-      "kawasaki": "4/4",
-      "maekawa": "4/4",
+      "vertices": 36,
+      "edges": 48,
+      "kawasaki": "12/12",
+      "maekawa": "12/12",
       "bytes": 2679,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "12/12",
+        "maekawa": "12/12"
+      }
     },
     {
       "id": "scale",
       "source": "origamisimulator.org/Curved/scale.svg",
       "file": "scale.fold",
-      "vertices": 735,
-      "edges": 851,
-      "kawasaki": "114/114",
-      "maekawa": "114/114",
+      "vertices": 2205,
+      "edges": 2553,
+      "kawasaki": "342/342",
+      "maekawa": "342/342",
       "bytes": 247729,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "342/342",
+        "maekawa": "342/342"
+      }
     },
     {
       "id": "simpleVertex",
       "source": "origamisimulator.org/SimpleFolds/simpleVertex.svg",
       "file": "simpleVertex.fold",
-      "vertices": 10,
-      "edges": 9,
-      "kawasaki": "1/1",
-      "maekawa": "1/1",
+      "vertices": 30,
+      "edges": 27,
+      "kawasaki": "3/3",
+      "maekawa": "3/3",
       "bytes": 1678,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "3/3",
+        "maekawa": "3/3"
+      }
     },
     {
       "id": "singlesquaretwist",
       "source": "origamisimulator.org/Origami/singlesquaretwist.svg",
       "file": "singlesquaretwist.fold",
-      "vertices": 16,
-      "edges": 24,
-      "kawasaki": "4/4",
-      "maekawa": "4/4",
+      "vertices": 48,
+      "edges": 72,
+      "kawasaki": "12/12",
+      "maekawa": "12/12",
       "bytes": 4212,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "12/12",
+        "maekawa": "12/12"
+      }
     },
     {
       "id": "squareBase",
       "source": "origamisimulator.org/Bases/squareBase.svg",
       "file": "squareBase.fold",
-      "vertices": 9,
-      "edges": 10,
-      "kawasaki": "1/1",
-      "maekawa": "1/1",
+      "vertices": 27,
+      "edges": 30,
+      "kawasaki": "3/3",
+      "maekawa": "3/3",
       "bytes": 1558,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "3/3",
+        "maekawa": "3/3"
+      }
     },
     {
       "id": "squaretwistManyAngles",
       "source": "origamisimulator.org/Origami/squaretwistManyAngles.svg",
       "file": "squaretwistManyAngles.fold",
-      "vertices": 144,
-      "edges": 216,
-      "kawasaki": "36/36",
-      "maekawa": "36/36",
+      "vertices": 432,
+      "edges": 648,
+      "kawasaki": "108/108",
+      "maekawa": "108/108",
       "bytes": 38633,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "108/108",
+        "maekawa": "108/108"
+      }
     },
     {
       "id": "triPerfTess",
       "source": "origamisimulator.org/Kirigami/triPerfTess.svg",
       "file": "triPerfTess.fold",
-      "vertices": 724,
-      "edges": 952,
+      "vertices": 2172,
+      "edges": 2856,
       "kawasaki": "0/0",
       "maekawa": "0/0",
       "bytes": 120316,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "0/0",
+        "maekawa": "0/0"
+      }
     },
     {
       "id": "waterbombBase",
       "source": "origamisimulator.org/Bases/waterbombBase.svg",
       "file": "waterbombBase.fold",
-      "vertices": 9,
-      "edges": 12,
-      "kawasaki": "1/1",
-      "maekawa": "1/1",
+      "vertices": 27,
+      "edges": 36,
+      "kawasaki": "3/3",
+      "maekawa": "3/3",
       "bytes": 1634,
       "fully_qualified": true,
       "known_limitations": null,
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
-      "thickness_note": "转换器输出为薄纸假设（±180°）；厚度约束由 generate --thickness 在生成时应用"
+      "baseline_copies3_rotate120": {
+        "kawasaki": "3/3",
+        "maekawa": "3/3"
+      }
+    },
+    {
+      "id": "wavy_pleats",
+      "source": "origamisimulator.org/Curved/wavy_pleats.svg",
+      "file": "wavy_pleats.fold",
+      "vertices": 222,
+      "edges": 222,
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "bytes": 13583,
+      "fully_qualified": true,
+      "known_limitations": null,
+      "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
+      "baseline_copies3_rotate120": {
+        "kawasaki": "0/0",
+        "maekawa": "0/0"
+      }
     }
   ],
-  "total_bytes": 1072047
+  "total_bytes": 1085630
 }

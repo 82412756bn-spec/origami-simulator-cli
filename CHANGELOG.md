@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.48.4] - 2026-11-26
+
+### Fixed
+
+- **上游转换器补 4 种颜色表达 + Flat 映射**（`evolution/svg_to_fold.py`）：
+  官方 77 个 SVG 的折痕颜色有 5 种写法，转换器此前只认 1 种：
+
+  | 写法 | 例子 | 此前 |
+  |---|---|---|
+  | 完整 hex | `#FF0000` | ✅ |
+  | **短 hex** | `#f00` / `#00f` / `#000` | ❌ helloworld / polygami / origamisimulator / cross / FTpoly7 |
+  | **style 属性内联** | `style="stroke:#ff0000"` | ❌ airplane |
+  | **CSS 类** | `.crease-m{stroke:#e74c3c}` + `class="crease-m"` | ❌ test_bird_base_v5 |
+  | **CSS 类 + 标准色** | `.st3{stroke:#FF0000}` | ❌ Leafy_Opus_T-69 |
+
+  另有 `#FFFF00`（Flat / 平折）**没有任何映射** → 被整批丢弃（langCardinal 丢了 78 条黄线）。
+  现已：短 hex 展开 · style 属性解析 · CSS 类映射（parse 时预扫描 `<style>`）· 新增 `FLAT_COLORS`。
+
+### Changed
+
+- **模板库 19 → 20 件**（1060 KB）：新增 `wavy_pleats`；全部 20 件在
+  **copies=3 × rotate=120** 下 Kawasaki 与 Maekawa 全过且无 2D 交叉（manifest 逐件记录基线）。
+  `templates/manifest.json` 升到 schema v4。
+
+- **官方 77 件的排查结论**（`docs/VERIFICATION-AGAINST-OFFICIAL.md`）：
+  57 件仍不可作模板，原因**不是转换器**而是**真实的 M/V 失衡**（曲面折痕 / 剪纸 /
+  无限图案的有限片段）—— 人工边界破坏了 M/V 平衡，属形态限制，不可修。
+
 ## [2.48.3] - 2026-11-26
 
 ### Fixed
