@@ -46,6 +46,9 @@ const SIGNALS_DIR = process.env.ORIGAMI_SIGNALS_DIR || path.join(os.homedir(), '
 const DAILY_LOG = path.join(SIGNALS_DIR, 'daily.jsonl');
 const MCP_LOG = path.join(SIGNALS_DIR, 'mcp.jsonl');
 const REST_LOG = path.join(SIGNALS_DIR, 'rest.jsonl');
+// generate 调用日志（内置 pattern vs 模板模式 vs 意图模式）——
+// 12-10 出结论时读它，决定内置生成器（1130 行）留还是删
+const GENERATE_LOG = path.join(SIGNALS_DIR, 'generate.jsonl');
 
 // ────────────────────────────────────────────────────────────────────
 // 时间与格式
@@ -114,6 +117,34 @@ function hasUnknownPeer(record) {
  * Read the call logs and count non-owner calls.
  * Returns { count, note } — count is null when neither log file exists.
  */
+/**
+ * 汇总 generate 的调用分布：内置 pattern / 模板模式 / 意图模式 各多少次。
+ * 12-10 出证伪结论时读它 → 决定内置生成器（1130 行）留还是删。
+ */
+function countGenerateCalls() {
+  const out = { total: 0, builtin: 0, template: 0, intent: 0, byPattern: {}, byTemplate: {} };
+  try {
+    if (!fs.existsSync(GENERATE_LOG)) return out;
+    for (const line of fs.readFileSync(GENERATE_LOG, 'utf8').split('\n')) {
+      if (!line.trim()) continue;
+      let d;
+      try { d = JSON.parse(line); } catch (e) { continue; }
+      out.total += 1;
+      if (d.mode === 'builtin') {
+        out.builtin += 1;
+        out.byPattern[d.pattern] = (out.byPattern[d.pattern] || 0) + 1;
+      } else if (d.mode === 'template') {
+        out.template += 1;
+        out.byTemplate[d.template] = (out.byTemplate[d.template] || 0) + 1;
+      } else if (d.mode === 'intent') {
+        out.intent += 1;
+        out.byTemplate[d.template] = (out.byTemplate[d.template] || 0) + 1;
+      }
+    }
+  } catch (e) { /* 读不到就当没有 */ }
+  return out;
+}
+
 function countNonOwnerCalls() {
   const files = [MCP_LOG, REST_LOG];
   const existing = files.filter((f) => fs.existsSync(f));
@@ -362,6 +393,7 @@ async function collectGithub() {
 async function collect() {
   const [registry, github, distribution] = await Promise.all([collectRegistry(), collectGithub(), collectDistribution()]);
   const calls = countNonOwnerCalls();
+  const generateCalls = countGenerateCalls();
 
   const notes = [];
   notes.push(...registry.notes);
@@ -376,6 +408,10 @@ async function collect() {
     issues_total: github.issues_total,
     issues_asking: github.issues_asking,
     nonowner_calls: calls.count,
+    generate_calls: generateCalls.total,
+    generate_builtin: generateCalls.builtin,
+    generate_template: generateCalls.template,
+    generate_intent: generateCalls.intent,
     artifact_leads: github.artifact_leads,
     forks: github.forks,
     stars: github.stars,

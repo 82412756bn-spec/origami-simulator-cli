@@ -1,0 +1,38 @@
+{
+  "measured_at": "2026-11-26",
+  "baseline": "官方 78 例（结构指纹距离 < 0.9 视为同构）",
+  "patterns": {
+    "star": {
+      "geometry": "verified",
+      "note": "Kawasaki 31/31 · Maekawa 31/31 · 0 交叉"
+    },
+    "tiger": {
+      "geometry": "verified",
+      "note": "Kawasaki 240/240 · Maekawa 240/240 · 0 交叉"
+    },
+    "radial": {
+      "geometry": "verified",
+      "note": "Kawasaki 21/21 · Maekawa 21/21 · 0 交叉"
+    },
+    "fish": {
+      "geometry": "partial",
+      "note": "单片无内部顶点，Maekawa 0/1"
+    },
+    "crane": {
+      "geometry": "partial",
+      "note": "Kawasaki 411/411 · Maekawa 409/469（60 个顶点 M/V 失衡）"
+    },
+    "miura": {
+      "geometry": "partial",
+      "note": "Kawasaki 28/28 · Maekawa 28/36"
+    },
+    "modular": {
+      "geometry": "partial",
+      "note": "Kawasaki 11/11 · Maekawa 5/11"
+    },
+    "unit": {
+      "geometry": "partial",
+      "note": "单片无内部顶点，Maekawa 0/2"
+    }
+  }
+}

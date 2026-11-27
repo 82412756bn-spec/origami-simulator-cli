@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.49.1] - 2026-11-27
+
+### Added
+
+- **内置生成器的几何状态明示**（`templates/generator-status.json` + `src/utils/generator-status.js`）：
+  这 5 个生成器（1130 行）从未被验证过几何正确性，而 CLI 此前不告诉用户
+  「这个 pattern 的折痕图可能不满足折平必要条件」。现在输出会带
+  `[几何 ✅ verified]` 或 `[几何 ⚠️ partial：…]`：
+  star / tiger / radial = verified；crane / miura / modular / fish / unit = partial（附实测数）
+
+- **generate 调用日志**（`~/.origami/signals/generate.jsonl`）：每条记 mode=builtin|template|intent
+  与用了哪个 pattern / 模板；观测器汇总进 `daily.jsonl` 的
+  `generate_builtin` / `generate_template` / `generate_intent`。
+
+### 决策记录：内置生成器（1130 行）暂不删 —— 理由与 Day 14 的判据
+
+用**集合差**重测（此前「对官方 78 例 0/78」的测法是歪的）：它产出的形态是否不在
+「20 模板 + 78 官方」= 98 件的并集里 —— 实测 **6/8 与模板同构**（距离 0.255–0.746），
+**2/8（fish、unit）不在并集里** → 独有价值存在但都很弱（且这两个几何是 partial）。
+
+处置：**保留 + 降级 + 明示状态**，理由三条 ——
+1. **不可逆操作要慢**：删 1130 行不可逆，而 14 天证伪窗口才刚开始（Day 1/14）→ 现在删 = 没证据就下重注
+2. **模板模式给不了的能力**：模板依赖 20 件外部数据（MIT，随包 1060 KB）；内置生成器**自包含**
+3. 但它当前**不占优** → 降级并明示几何状态，不让用户自己撞
+
+**Day 14 的判据（届时读 `daily.jsonl` 的 generate_* 计数）**：
+非本人调用 ≥1 次 → 保留并修几何；只有用户自己调用 → 保留（自己的工具，维护成本自己的选择）；
+**零调用**（连自己都不用）→ 删。
+
 ## [2.49.0] - 2026-11-26
 
 ### Added

@@ -37,6 +37,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 const { FoldAnalyzer } = require('../utils/fold-analyzer');
 const { normalizeCreasePattern, dedupeVertices } = require('../utils/crease-pattern-normalizer')
@@ -45,6 +46,26 @@ const { matchSvgToFold, checkSvgGeometry, ASSIGNMENT_COLORS } = require('../util
 const { parseXml } = require('../utils/xml-lite');
 const { findTemplate, loadTemplateFold, transformTemplate } = require('../utils/template-transform');
 const { loadFamilies, mapIntent, resolveFamily } = require('../utils/intent-map');
+const generatorStatus = require('../utils/generator-status');
+
+/**
+ * 记录 generate 的调用（本地日志）—— 让 Day 14 的「内置生成器留还是删」有数据可依，
+ * 而不是靠回忆。
+ * 记在 ~/.origami/signals/generate.jsonl（不进发布包）。
+ */
+function logGenerateCall(entry) {
+  try {
+    const dir = path.join(os.homedir(), '.origami', 'signals');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.appendFileSync(
+      path.join(dir, 'generate.jsonl'),
+      JSON.stringify(Object.assign({ ts: new Date().toISOString() }, entry)) + '\n'
+    );
+  } catch (e) {
+    /* 记录失败不影响生成 */
+  }
+}
+
 const CreasePatternGeneratorV3 = require('../crease-pattern-generator-v3');
 const {
   PATTERNS,
@@ -447,7 +468,7 @@ function printReport(result) {
 
   console.log('');
   console.log('═══════════════════════════════════════════════════════');
-  console.log(`  📐 Generated crease pattern: ${pattern}`);
+  console.log(`  📐 Generated crease pattern: ${pattern}${generatorStatus.suffix(pattern)}`);
   console.log('═══════════════════════════════════════════════════════');
   console.log(`   Parameters: ${Object.entries(params).map(([k, v]) => `${k}=${v}`).join(', ')}`);
   console.log(`   Seed: ${seed}   Thickness: ${thickness} mm`);
@@ -578,6 +599,8 @@ Notes:
           const transformed = transformTemplate(base.foldData || base,
             { copies: plan.copies, rotate: plan.rotate, scale: plan.scale });
           const result = generateFromFoldData(plan.template, transformed, options);
+          logGenerateCall({ mode: 'intent', intent: options.intent, family: plan.family,
+                            template: plan.template, copies: plan.copies, rotate: plan.rotate });
           printReport(result);
         } catch (err) {
           fail(`意图生成失败：${err.message}`);
@@ -624,6 +647,8 @@ Notes:
             console.log(`   （模板规范化：在 ${sr.detected} 处折痕交汇点建共享顶点，拆成 ${sr.edgesAfter} 条边）`);
           }
           const result = generateFromFoldData(found.template.id, transformed, options);
+          logGenerateCall({ mode: 'template', template: found.template.id,
+                            copies, rotate, scale: options.scale });
           printReport(result);
         } catch (err) {
           fail(`模板生成失败：${err.message}`);
@@ -632,6 +657,7 @@ Notes:
       }
 
       const result = generatePattern(pattern, options);
+      logGenerateCall({ mode: 'builtin', pattern, seed: options.seed, thickness: options.thickness });
 
       if (options.json) {
         console.log(JSON.stringify({
