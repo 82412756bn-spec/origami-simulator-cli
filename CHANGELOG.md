@@ -4,6 +4,70 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.50.0] - 2026-11-27
+
+### Fixed — **Kawasaki 判定口径**：假阳性机器被拆掉了
+
+`origami kawasaki` / `analyze` 的 Kawasaki 检查此前用 **`edges_foldAngle`（折痕的折叠量，±180°）**
+做交替和，而不是 Kawasaki 定理真正约束的 **扇区角**（相邻折痕射线的夹角）。
+
+对任何 `foldAngle ∈ {0, ±180}` 的 FOLD —— **所有内置生成器，以及大多数真实作品** ——
+偶数价顶点的折痕角交替和**恒相等** → deviation 恒为 0 → **判定恒真**。
+
+实测（修正前后）：
+
+| 作品 | 修正前（假阳性） | 修正后（真值） |
+|---|---|---|
+| `origami kawasaki tiger` | 240/240 within 5° | **2/240**（误差中位 223.8°、最大 318°） |
+| `origami kawasaki crane` | 411/411 | **15/411** |
+| `origami kawasaki modular` | 11/11 | **1/11** |
+| star / radial / miura | 31/31 · 21/21 · 28/28 | 不变（本来就真过） |
+
+**这推翻了 v2.48 的那次"修复"**：它把「miura-ori 0/132 → 130/132」当作成功，
+但那只是让判定无法失败。真相是：那份 miura-ori 文件**本身几何退化**
+（69.7% 的顶点有 > 180° 的扇区）→ 正确的判定就是拒绝它；
+**规范化后的模板库版本 132/132 全过**（规范化修好了几何）。
+
+### 撤回的结论
+
+| 声称 | 位置 | 修正后 |
+|---|---|---|
+| tiger 是 verified（Kawasaki 240/240） | v2.49.1 起 | **撤回** → partial（Kawasaki 2/240） |
+| 真实作品通过率 44% → **87.33%** | v2.47.6 | **撤回** → 实测 **19.0%**（8/42 有内部顶点的官方作品）；仅几何干净的 **42.1%**（8/19） |
+| flappingBird / scale 是 fully_qualified | v2.48 的 manifest | **撤回** → `fully_qualified: false` + `known_limitations` 登记 |
+| 推荐 `crane` 用 `--template scale --copies 2` | v2.49.2 | **撤回** → scale 的 Kawasaki 是 0/114。改为 `miura-ori --copies 4` |
+
+### 容差：用真实作品重新校准
+
+保持 **5°**（不是收紧到 0.5°）：官方 78 件 16998 个偶数价顶点的误差分布**双峰**
+—— 83.05% 恰为 0°、17% 恰为 180°（零长/重合射线造成的退化顶点），中间带仅 0.2%
+（36 个顶点，来自少数作品的手绘精度噪声，如 flappingBird 的 2.79°）。
+→ 5° 只多放过那 0.2% 的真实噪声，**不会**放过 180° 的退化；
+反之 0.5° 会把 flappingBird 这类「数学上可展平但精度不足」的真实作品判死（假阴性）。
+
+### Added
+
+- `templates/template-status.json`：20 件模板的几何状态；`generate --template` 在模板
+  不满足折平必要条件时**当场提示**（例：`⚠️ 该模板不满足折平必要条件：Kawasaki 0/114`）
+- **防假阳性回归测试**（3 条，此前完全没有）：
+  1. `foldAngle` 恒定的 FOLD **不得**自动通过
+  2. 几何退化的官方 miura-ori 必须**被拒绝**（v2.48 报它 130/130 全过）
+  3. 规范化后的模板库 miura-ori 必须全过
+
+### Changed
+
+- 内置生成器的几何状态标签全部按修正判据重算：star / radial = verified；
+  tiger / crane / miura / modular / unit = partial；fish = 单片（无内部顶点，条件不适用）
+- 同族替代建议的措辞改为「**不是同一个东西**」—— 只说"更稳"会让人以为可平替；
+  替代物只在自身几何失衡时给出，且必须自身 Kawasaki + Maekawa 全过
+
+### 附带发现（未修，记档）
+
+- `transformTemplate` 输出 `faces_vertices` 为空数组 → 模板模式产出的 FOLD 缺面信息
+  → 下游折叠模拟会缺面数据。修需处理 copies>1 时的面偏移。
+- 官方语料 42 件有内部顶点的作品里 23 件存在几何退化（>180° 扇区），
+  多数来自裁剪时的边界折痕被换成 'B' —— 这解释了历史上大量「作品不合格」的假象。
+
 ## [2.49.2] - 2026-11-27
 
 ### Added

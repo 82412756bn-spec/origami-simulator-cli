@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const FILE = path.join(__dirname, '..', '..', 'templates', 'generator-status.json');
+const TEMPLATE_FILE = path.join(__dirname, '..', '..', 'templates', 'template-status.json');
 
 let cached = null;
 
@@ -36,12 +37,37 @@ function suffix(pattern, file = FILE) {
     ? '  [几何 ✅ verified]'
     : `  [几何 ⚠️ partial：${st.note}]`;
 
-  // 同族替代物：尤其当内置形态自身几何失衡、而替代物几何全过时，直接告诉用户更好的选择
+  // 同族替代物：当内置形态自身几何失衡、而同族替代物几何全过时，给出更稳的选择。
+  // 必须说明「不是同一个形态」—— 只说"更稳"会让人以为可平替。
   const sub = st.substitute;
   if (!sub || !sub.template) return geo;
-  if (!sub.geometryBetter) return geo;
+  if (st.geometry === 'verified') return geo;
   const cmd = `origami generate --template ${sub.template} --copies ${sub.copies}`;
-  return `${geo}\n  💡 同族替代（几何全过，更稳）：${cmd}`;
+  return `${geo}\n  💡 几何全过的同族形态（**不是同一个东西**）：${cmd}`;
 }
 
-module.exports = { FILE, loadStatus, statusOf, suffix };
+/** 取某个模板的几何状态 */
+function templateStatus(templateId, file = TEMPLATE_FILE) {
+  let tpl = null;
+  try {
+    tpl = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (e) {
+    return null;
+  }
+  return (tpl.templates || {})[templateId] || null;
+}
+
+/** 模板不满足折平必要条件时的提示（无状态 = 该模板无内部顶点，条件不适用） */
+function templateWarning(templateId, file = TEMPLATE_FILE) {
+  const st = templateStatus(templateId, file);
+  if (!st) return '';
+  const kawaOk = st.kawasaki && st.kawasaki.split('/')[0] === st.kawasaki.split('/')[1];
+  const maekOk = st.maekawa && st.maekawa.split('/')[0] === st.maekawa.split('/')[1];
+  if (kawaOk && maekOk) return '';
+  const parts = [];
+  if (!kawaOk) parts.push(`Kawasaki ${st.kawasaki}`);
+  if (!maekOk) parts.push(`Maekawa ${st.maekawa}`);
+  return `\n  ⚠️ 该模板不满足折平必要条件：${parts.join(' · ')}`;
+}
+
+module.exports = { FILE, TEMPLATE_FILE, loadStatus, statusOf, suffix, templateStatus, templateWarning };

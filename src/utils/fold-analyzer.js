@@ -30,6 +30,24 @@ const TOLERANCE_STRICT_FLOOR = 0.001;  // 0.001 mm minimum
 const RESIDUAL_ACCEPT_DEFAULT = 0.05;  // 5% of unit
 const RESIDUAL_ACCEPT_STRICT = 0.005;  // 0.5% of unit
 
+/**
+ * Kawasaki 交替角和的容差（度）。
+ *
+ * 用**真实作品**校准（2026-11-27，官方 78 件，16998 个偶数价内部顶点，
+ * 扇区角口径）：
+ *   - 误差分布**双峰**：83.05% 的顶点误差恰为 0°，17% 恰为 180°
+ *     （零长/重合折痕射线造成的退化顶点，多来自裁剪人造边界）
+ *   - 中间带（0.5°–5°）只占 0.2%（36 个顶点），来自少数作品的手绘精度噪声
+ *     （例：flappingBird 的 4 个顶点误差 2.79°，该作品数学上可展平）
+ *
+ * 所以 5° 是安全的：它**只**多放过那 0.2% 的真实噪声，**不会**放过 180° 的退化。
+ * 收紧到 0.5° 反而会把 flappingBird 这类「可展平但精度不足」的真实作品判死（假阴性）。
+ *
+ * 注意：5° 这个值原本是在**折痕角**口径下定的，那个口径对 foldAngle ∈ {0,±180}
+ * 的 FOLD 恒真（假阳性）—— 口径修正后重新用真实作品验证过，结论是不变。
+ */
+const KAWASAKI_TOLERANCE_DEG = 5.0;
+
 class FoldAnalyzer {
   constructor(foldData) {
     this.fold = foldData;
@@ -192,14 +210,12 @@ class FoldAnalyzer {
     // 且 Kawasaki 只查偶数价顶点（定理的适用前提）。
     // 此前此处用的是**扇区角**且含边界顶点 → 与 origami kawasaki 给出互相矛盾的结论。
     for (const { vertex: vIdx, edges: incidentEdges } of this.getInternalCreaseVertices()) {
-      const order = this._cyclicEdgeOrder(vIdx, incidentEdges);
-      const creaseAngles = order.map(({ edge }) => {
-        const fa = this.foldAngles[edge];
-        return typeof fa === 'number' ? Math.abs(fa) : 0;
-      });
-      const evenSum = creaseAngles.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0);
-      const oddSum = creaseAngles.filter((_, i) => i % 2 === 1).reduce((a, b) => a + b, 0);
-      const altSum = Math.abs(evenSum - oddSum);
+      // Kawasaki 要的是**扇区角**（几何量），不是折痕角（折叠量）——
+      // 后者对 foldAngle ∈ {0,±180} 的 FOLD 恒真 → 假阳性。
+      const sectors = this._sectorAngles(vIdx, incidentEdges);
+      const evenSum = sectors.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0);
+      const oddSum = sectors.filter((_, i) => i % 2 === 1).reduce((a, b) => a + b, 0);
+      const altSum = Math.abs(evenSum - oddSum) * (180 / Math.PI);
 
       // Maekawa: M - V = ±2 for flat fold
       let mCount = 0, vCount = 0;
@@ -212,7 +228,8 @@ class FoldAnalyzer {
       const maekawaValid = Math.abs(mvDiff) === 2;
 
       // Kawasaki 只适用于偶数价顶点（奇数项交替和不可能相消）
-      const kawasakiValid = incidentEdges.length % 2 === 0 && altSum < 5.0;
+      const kawasakiValid = incidentEdges.length % 2 === 0
+        && altSum < KAWASAKI_TOLERANCE_DEG;
       const passes = kawasakiValid && maekawaValid;
 
       if (passes) passCount++;
@@ -1713,6 +1730,34 @@ class FoldAnalyzer {
    * @param {number[]} incidentEdges
    * @returns {Array<{ edge: number, angle: number }>}
    */
+  /**
+   * 顶点的**扇区角**（sector angle）：相邻两条折痕射线之间的夹角。
+   *
+   * 为什么不能用 edges_foldAngle：Kawasaki 定理要的是几何量（扇区角），
+   * 而 foldAngle 是折痕的折叠量（山/谷折 180°）。当一个 FOLD 的 foldAngle
+   * 取值只有 {0, ±180} 时（内置生成器与大量官方作品都是这样），
+   * 偶数价顶点的「折痕角交替和」恒相等 → 判定恒真 → **假阳性**。
+   *
+   * 实测（2026-11-27）：用折痕角 tiger 报「240/240 within 5°」；
+   * 用扇区角真实值 2/240（误差中位 223.8°）。
+   */
+  _sectorAngles(vIdx, incidentEdges) {
+    const [vx, vy] = this.vertices[vIdx] || [0, 0];
+    const dirs = incidentEdges.map((eIdx) => {
+      const [a, b] = this.edges[eIdx] || [];
+      const other = a === vIdx ? b : a;
+      const [ox, oy] = this.vertices[other] || [0, 0];
+      let angle = Math.atan2(oy - vy, ox - vx);
+      if (angle < 0) angle += 2 * Math.PI;
+      return angle;
+    }).sort((x, y) => x - y);
+    const sectors = [];
+    for (let i = 0; i < dirs.length; i++) {
+      sectors.push((i + 1 < dirs.length ? dirs[i + 1] : dirs[0] + 2 * Math.PI) - dirs[i]);
+    }
+    return sectors;
+  }
+
   _cyclicEdgeOrder(vIdx, incidentEdges) {
     const [vx, vy] = this.vertices[vIdx] || [0, 0];
     const items = incidentEdges.map((eIdx) => {
@@ -1944,7 +1989,7 @@ class FoldAnalyzer {
    * }}
    */
   strictKawasaki(topN = 10) {
-    const KAWASAKI_TOLERANCE = 5.0;  // degrees
+    const KAWASAKI_TOLERANCE = KAWASAKI_TOLERANCE_DEG;  // degrees（真实作品校准）
     const result = {
       totalChecked: 0,
       withinTolerance: 0,
@@ -1966,20 +2011,15 @@ class FoldAnalyzer {
         result.skippedOddValence = (result.skippedOddValence || 0) + 1;
         continue;
       }
-      const order = this._cyclicEdgeOrder(vIdx, incidentEdges);
+      // Kawasaki 要的是**扇区角**（几何量），不是折痕角（折叠量）——
+      // 后者对 foldAngle ∈ {0,±180} 的 FOLD 恒真 → 假阳性。
+      const sectors = this._sectorAngles(vIdx, incidentEdges);
 
-      // Crease angle of each edge (absolute value — a mountain and a valley
-      // crease of the same magnitude must contribute the same amount).
-      const creaseAngles = order.map(({ edge }) => {
-        const fa = this.foldAngles[edge];
-        return typeof fa === 'number' ? Math.abs(fa) : 0;
-      });
-
-      const evenSum = creaseAngles.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0);
-      const oddSum = creaseAngles.filter((_, i) => i % 2 === 1).reduce((a, b) => a + b, 0);
-      // Kawasaki: the alternating sums of the crease angles must be EQUAL.
-      // Deviation = |evenSum - oddSum|. Small = good.
-      const deviation = Math.abs(evenSum - oddSum);
+      const evenSum = sectors.filter((_, i) => i % 2 === 0).reduce((a, b) => a + b, 0);
+      const oddSum = sectors.filter((_, i) => i % 2 === 1).reduce((a, b) => a + b, 0);
+      // Kawasaki: the alternating sums of the sector angles must be EQUAL.
+      // Deviation = |evenSum - oddSum|，单位度。
+      const deviation = Math.abs(evenSum - oddSum) * (180 / Math.PI);
 
       result.totalChecked++;
       if (deviation < KAWASAKI_TOLERANCE) {

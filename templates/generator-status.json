@@ -1,96 +1,108 @@
 {
   "measured_at": "2026-11-27",
-  "baseline": "官方 78 例（结构指纹距离 < 0.9 视为同构）",
+  "criteria": {
+    "kawasaki": "扇区角交替和误差 < 0.5°（偶数价内部顶点；用真实作品校准：官方 78 件误差分布双峰，83.05% 恰为 0°、其余 17% 恰为 180°，无中间带）",
+    "maekawa": "|M − V| = 2（内部顶点，排除含 B/U 边的）",
+    "note": "2026-11-27 修正：Kawasaki 此前误用 edges_foldAngle（折痕角）而非扇区角 —— 对 foldAngle ∈ {0,±180} 的 FOLD 恒真（假阳性）。tiger 曾因此被标 verified，实际为 2/240。"
+  },
+  "substitute_caveat": "distance < 0.3 表示「结构同族」，不等于逐顶点等价 —— 指纹对顶点数取了 log10。替代物是**几何全过的同族形态，但不是同一个东西**。",
+  "substitute_basis": "「20 模板 × copies{1,2,3,4,6} × rotate{0,30,…,180}」= 700 组里，同时满足 Kawasaki + Maekawa 的 350 组",
   "patterns": {
     "star": {
       "geometry": "verified",
+      "kawasaki": "31/31",
+      "maekawa": "31/31",
       "note": "Kawasaki 31/31 · Maekawa 31/31 · 0 交叉",
       "substitute": {
-        "template": "flappingBird",
-        "copies": 2,
+        "template": "pinwheelBase",
+        "copies": 6,
         "rotate": 0,
-        "distance": 0.214,
-        "geometryBetter": false
-      }
-    },
-    "tiger": {
-      "geometry": "verified",
-      "note": "Kawasaki 240/240 · Maekawa 240/240 · 0 交叉",
-      "substitute": {
-        "template": "scale",
-        "copies": 2,
-        "rotate": 0,
-        "distance": 0.408,
-        "geometryBetter": false
+        "distance": 0.318
       }
     },
     "radial": {
       "geometry": "verified",
+      "kawasaki": "21/21",
+      "maekawa": "21/21",
       "note": "Kawasaki 21/21 · Maekawa 21/21 · 0 交叉",
       "substitute": {
-        "template": "flappingBird",
-        "copies": 1,
+        "template": "pinwheelBase",
+        "copies": 4,
         "rotate": 0,
-        "distance": 0.252,
-        "geometryBetter": false
+        "distance": 0.293
       }
     },
-    "fish": {
+    "tiger": {
       "geometry": "partial",
-      "note": "单片无内部顶点，Maekawa 0/1",
+      "kawasaki": "2/240",
+      "maekawa": "240/240",
+      "note": "Maekawa 240/240，但 Kawasaki 仅 2/240（折痕几何不满足折平角度条件）",
       "substitute": {
-        "template": "Treble_Clef",
-        "copies": 2,
+        "template": "miura-ori",
+        "copies": 3,
         "rotate": 0,
-        "distance": 0.55,
-        "geometryBetter": false
-      }
-    },
-    "crane": {
-      "geometry": "partial",
-      "note": "Kawasaki 411/411 · Maekawa 409/469（60 个顶点 M/V 失衡）",
-      "substitute": {
-        "template": "scale",
-        "copies": 2,
-        "rotate": 0,
-        "distance": 0.422,
-        "geometryBetter": true
+        "distance": 0.495
       }
     },
     "miura": {
       "geometry": "partial",
-      "note": "Kawasaki 28/28 · Maekawa 28/36",
+      "kawasaki": "28/28",
+      "maekawa": "28/36",
+      "note": "Kawasaki 28/28 · Maekawa 28/36（8 个顶点 M/V 失衡）",
       "substitute": {
-        "template": "flappingBird",
-        "copies": 2,
+        "template": "flat_crane",
+        "copies": 1,
         "rotate": 0,
-        "distance": 0.338,
-        "geometryBetter": true
+        "distance": 0.381
+      }
+    },
+    "crane": {
+      "geometry": "partial",
+      "kawasaki": "15/411",
+      "maekawa": "409/469",
+      "note": "Kawasaki 15/411 · Maekawa 409/469（60 个顶点 M/V 失衡）",
+      "substitute": {
+        "template": "miura-ori",
+        "copies": 4,
+        "rotate": 0,
+        "distance": 0.47
       }
     },
     "modular": {
       "geometry": "partial",
-      "note": "Kawasaki 11/11 · Maekawa 5/11",
+      "kawasaki": "1/11",
+      "maekawa": "5/11",
+      "note": "Kawasaki 1/11 · Maekawa 5/11（且 10 个顶点有 >180° 的退化扇区）",
       "substitute": {
-        "template": "flappingBird",
-        "copies": 1,
+        "template": "birdBase",
+        "copies": 2,
         "rotate": 0,
-        "distance": 0.309,
-        "geometryBetter": true
+        "distance": 0.362
       }
     },
-    "unit": {
-      "geometry": "partial",
-      "note": "单片无内部顶点，Maekawa 0/2",
+    "fish": {
+      "geometry": "na",
+      "kawasaki": "0/0",
+      "maekawa": "0/0",
+      "note": "单片结构，无内部顶点（折平必要条件不适用）",
       "substitute": {
         "template": null,
         "copies": null,
         "rotate": null,
-        "distance": 1.276,
-        "geometryBetter": false
+        "distance": 1.951
+      }
+    },
+    "unit": {
+      "geometry": "partial",
+      "kawasaki": "0/2",
+      "maekawa": "0/2",
+      "note": "单片结构，2 个内部顶点均不满足 Maekawa",
+      "substitute": {
+        "template": "openSinkBase",
+        "copies": 1,
+        "rotate": 0,
+        "distance": 1.483
       }
     }
-  },
-  "substitute_caveat": "distance < 0.3 表示「结构同族」，不等于逐顶点等价 —— 指纹对顶点数取了 log10，41 vs 60 顶点的差异会被压成 0.2 的距离。要断言「删了零损失」需要逐顶点比对，本表未做。geometryBetter=true 的含义是硬的：内置形态自身 Maekawa 不平衡，而该替代物 Maekawa 全过。",
-  "substitute_basis": "「20 模板 × copies{1,2,3,4,6} × rotate{0,30,...,180}」= 700 个组合的结构指纹最近邻"
+  }
 }

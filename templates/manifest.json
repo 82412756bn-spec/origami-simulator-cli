@@ -17,7 +17,7 @@
     "result": "77/77 SVG 全部产出非空 FOLD（修复前 3 件为空）"
   },
   "selection_rule": "转换 → 规范化（打断交点→平衡 M/V→去重）→ copies=3/rotate=120 下 Kawasaki 与 Maekawa 全过且无 2D 交叉 → 可作模板",
-  "verified_at": "2026-11-26",
+  "verified_at": "2026-11-27",
   "official_baseline": {
     "svg_total": 77,
     "converted_nonempty": "77/77",
@@ -134,11 +134,11 @@
       "file": "flappingBird.fold",
       "vertices": 90,
       "edges": 141,
-      "kawasaki": "42/42",
-      "maekawa": "42/42",
+      "kawasaki": "8/14",
+      "maekawa": "14/14",
       "bytes": 4876,
-      "fully_qualified": true,
-      "known_limitations": null,
+      "fully_qualified": false,
+      "known_limitations": "Kawasaki 8/14：6 个顶点的交替角和误差 ≥ 5°（其中多数为 180° 的退化顶点）；其余 2.79° 的顶点属手绘精度噪声。Maekawa 14/14 通过。",
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
       "baseline_copies3_rotate120": {
         "kawasaki": "42/42",
@@ -236,11 +236,11 @@
       "file": "scale.fold",
       "vertices": 2205,
       "edges": 2553,
-      "kawasaki": "342/342",
-      "maekawa": "342/342",
+      "kawasaki": "0/114",
+      "maekawa": "114/114",
       "bytes": 247729,
-      "fully_qualified": true,
-      "known_limitations": null,
+      "fully_qualified": false,
+      "known_limitations": "Kawasaki 0/114：顶点的扇区角排布为 α / (180°−α) / α / (180°−α)（α=58.7°），交替和 117.4° vs 242.6°，不满足 Kawasaki —— 该模板的折痕几何本身不满足折平角度条件。Maekawa 114/114 通过。",
       "converted_by": "evolution/svg_to_fold.py（2026-11-26 修复后）",
       "baseline_copies3_rotate120": {
         "kawasaki": "342/342",
@@ -367,5 +367,6 @@
       }
     }
   ],
-  "total_bytes": 1085630
+  "total_bytes": 1085630,
+  "criteria_note": "2026-11-27 判据修正：Kawasaki 此前误用 edges_foldAngle（折叠量 ±180°）而非扇区角 —— 对 foldAngle ∈ {0,±180} 的 FOLD 恒真（假阳性），曾让 flappingBird / scale 被误标 fully_qualified。现按扇区角（真实作品校准容差 0.5°：官方 78 件误差分布双峰，83.05% 恰为 0°、其余 17% 恰为 180°，无中间带） + Maekawa |M−V|=2 实测。"
 }

@@ -1,23 +1,39 @@
 /**
- * Regression tests for the Kawasaki / Maekawa 判定口径 (v2.48)
+ * Regression tests for the Kawasaki / Maekawa 判定口径 (v2.50)
  *
  * Background
  * ----------
- * `origami kawasaki` used to alternate-sum the **sector angles** (the gaps
- * between consecutive creases, produced by computeVertexAngles()).  Kawasaki's
- * theorem constrains the **crease angles** — `|edges_foldAngle|` — so the old
- * criterion reported systematic false negatives on real crease patterns
- * (miura-ori: 0/132 → 130/132 on the real-world corpus).
+ * Kawasaki's theorem constrains the **sector angles** at a vertex: for a
+ * flat-foldable even-degree vertex, the alternating sums of the sector
+ * angles (the gaps between consecutive crease rays) must be equal — each
+ * summing to 180°.
  *
- * The second half of the fix aligns the check sets: a vertex that touches a
- * boundary ('B') edge is not a flat-foldability candidate, so it is excluded
- * from BOTH the Kawasaki and the Maekawa check.
+ * v2.48 "fixed" this the wrong way round: it replaced the sector-angle sum
+ * with the **crease angle** `|edges_foldAngle|`. But `edges_foldAngle` is the
+ * *folding amount* of a crease (±180°), not a geometric angle. For any FOLD
+ * whose foldAngle takes only the values {0, ±180} — which is every built-in
+ * generator and most real works — the alternating sums are **identically
+ * equal**, so the check became a **false-positive machine**:
+ *
+ *   - `origami kawasaki` reported tiger as "240/240 within 5°" while the
+ *     true sector-angle error is 224° (median) — i.e. it does not fold flat.
+ *   - The v2.48 fixture (the raw miura-ori from the corpus) "passed" only
+ *     because the check could not fail; that file is in fact geometrically
+ *     degenerate (69.7% of its vertices have a >180° sector). The normalised
+ *     copy in the template library (132/132) is the sound one.
+ *
+ * v2.50 restores the sector-angle criterion and recalibrates the tolerance
+ * against real work (0.5°): the corpus error distribution is **bimodal** —
+ * 83.05% of vertices are exactly 0° and the rest exactly 180° (degenerate
+ * rays from trimming) — so there is no "small error" band to be lenient about.
  *
  * What these tests lock down:
- *   1. The real miura-ori pattern passes the Kawasaki check (≥ 100 / 132) —
- *      both through the analyzer API and through the `origami kawasaki` CLI.
- *   2. Vertices with an incident 'B' edge never take part in the check.
- *   3. The Maekawa check and the Kawasaki check cover exactly the same
+ *   1. A geometrically sound real work passes (flat-crane: 42/42).
+ *   2. **Anti-false-positive**: a FOLD whose foldAngle is constant must NOT
+ *      pass automatically; and the degenerate corpus miura-ori must be
+ *      rejected rather than accepted.
+ *   3. Vertices with an incident 'B' edge never take part in the check.
+ *   4. The Maekawa check and the Kawasaki check cover exactly the same
  *      vertices.
  *
  * The real-world corpus under ~/文档/Unbuntu_system/ is READ-ONLY and is only
@@ -31,6 +47,8 @@ const { cli } = require('../helpers/cli');
 
 const PROJECT_ROOT = path.join(__dirname, '../..');
 const MIURA_PATH = path.join(PROJECT_ROOT, 'miura-ori.fold');
+// 几何干净的真实作品（42 个内部顶点全部满足 Kawasaki）
+const FLAT_CRANE_PATH = path.join(PROJECT_ROOT, 'flat-crane.fold');
 
 // Read-only real-world corpus (may be absent on another machine → skipped).
 const BENCH_ROOT = '/home/rayna/文档/Unbuntu_system/goods/origami-examples/FOLD';
@@ -86,37 +104,67 @@ function boundaryTouchingVertices(fold) {
 // ────────────────────────────────────────────────────────────────────
 // 1. miura-ori must actually pass the Kawasaki check
 // ────────────────────────────────────────────────────────────────────
-describe('Kawasaki criterion — real miura-ori', () => {
-  test('passes ≥ 100 of the 132 internal vertices', () => {
-    const analyzer = new FoldAnalyzer(loadFold(MIURA_PATH));
+describe('Kawasaki criterion — geometrically sound real work', () => {
+  test('flat-crane passes every checked vertex', () => {
+    const analyzer = new FoldAnalyzer(loadFold(FLAT_CRANE_PATH));
     const sk = analyzer.strictKawasaki();
 
-    expect(sk.totalChecked).toBe(130);
-    expect(sk.withinTolerance).toBeGreaterThanOrEqual(100);
-    // exact value for the shipped fixture — a change here means the口径 moved
-    expect(sk.withinTolerance).toBe(130);
+    expect(sk.totalChecked).toBe(42);
+    // exact value for the shipped fixture — a change here means the 口径 moved
+    expect(sk.withinTolerance).toBe(42);
     expect(sk.outOfTolerance).toBe(0);
     expect(sk.withinTolerance + sk.outOfTolerance).toBe(sk.totalChecked);
   });
 
   test('the `origami kawasaki` CLI reports the same pass rate', async () => {
-    const r = await cli(['kawasaki', MIURA_PATH, '--json']);
+    const r = await cli(['kawasaki', FLAT_CRANE_PATH, '--json']);
     expect(r.exitCode).toBe(0);
     const parsed = JSON.parse(r.stdout);
-    expect(parsed.totalChecked).toBe(130);
-    expect(parsed.withinTolerance).toBe(130);
+    expect(parsed.totalChecked).toBe(42);
+    expect(parsed.withinTolerance).toBe(42);
     expect(parsed.outOfTolerance).toBe(0);
   }, 30000);
+});
 
-  test('the read-only real-world corpus copy gives the same verdict', () => {
-    if (!fs.existsSync(BENCH_MIURA)) {
-      console.warn(`  (skipped — corpus not present: ${BENCH_MIURA})`);
-      return;
-    }
-    const analyzer = new FoldAnalyzer(loadFold(BENCH_MIURA));
+// ─────────────────────────────────────────────────────────────
+// Anti-false-positive regression (the v2.48 → v2.50 bug)
+// ─────────────────────────────────────────────────────────────
+describe('Kawasaki criterion — must not be a false-positive machine', () => {
+  test('a FOLD with constant foldAngle does NOT pass automatically', () => {
+    // 构造：4 条折痕的顶点，扇区角 60/60/120/120（交替和 180 vs 240 → 差 60°），
+    // 但 edges_foldAngle 全部取 ±180 —— v2.48 的实现会对它恒真。
+    const fold = {
+      vertices_coords: [[0, 0], [1, 0], [0.5, 0.87], [-0.5, 0.87], [0, -1]],
+      edges_vertices: [[0, 1], [0, 2], [0, 3], [0, 4]],
+      edges_assignment: ['M', 'V', 'M', 'V'],
+      edges_foldAngle: [180, 180, 180, 180],
+    };
+    const sk = new FoldAnalyzer(fold).strictKawasaki();
+    expect(sk.totalChecked).toBe(1);
+    expect(sk.withinTolerance).toBe(0);
+    expect(sk.outOfTolerance).toBe(1);
+  });
+
+  test('the degenerate corpus miura-ori is rejected, not accepted', () => {
+    // 该文件 69.7% 的顶点有 >180° 的退化扇区 → 真实的 Kawasaki 判定应当拒绝它。
+    // v2.48 的实现对它报「130/130 全过」—— 那是折痕角口径的假阳性。
+    const analyzer = new FoldAnalyzer(loadFold(MIURA_PATH));
     const sk = analyzer.strictKawasaki();
     expect(sk.totalChecked).toBe(130);
-    expect(sk.withinTolerance).toBe(130);
+    expect(sk.withinTolerance).toBe(0);
+    expect(sk.outOfTolerance).toBe(130);
+  });
+
+  test('the normalised template-library copy of miura-ori does pass', () => {
+    // 规范化（打断交点 → 平衡 M/V → 去重）修好了几何 → 132/132 全过。
+    const tplPath = path.join(PROJECT_ROOT, 'templates', 'miura-ori.fold');
+    if (!fs.existsSync(tplPath)) {
+      console.warn('  (skipped — template file absent)');
+      return;
+    }
+    const sk = new FoldAnalyzer(loadFold(tplPath)).strictKawasaki();
+    expect(sk.withinTolerance).toBe(sk.totalChecked);
+    expect(sk.totalChecked).toBeGreaterThan(100);
   });
 });
 

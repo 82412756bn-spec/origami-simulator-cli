@@ -1,0 +1,59 @@
+{
+  "measured_at": "2026-11-27",
+  "criteria": {
+    "kawasaki": "扇区角交替和误差 < 5°（偶数价内部顶点；容差用真实作品校准：官方 78 件误差分布双峰，83.05% 恰为 0°、17% 恰为 180°，中间带仅 0.2% 且全是手绘精度噪声 → 5° 只放过噪声、不放过退化）",
+    "maekawa": "|M − V| = 2（内部顶点，排除含 B/U 边的）",
+    "note": "2026-11-27 修正：Kawasaki 此前误用 edges_foldAngle（折痕角）而非扇区角 —— 对 foldAngle ∈ {0,±180} 的 FOLD 恒真（假阳性）。tiger 曾因此被标 verified，实际为 2/240。"
+  },
+  "note": "只列出有内部顶点的模板；其余为单片/无内部顶点（折平必要条件不适用）。flappingBird 与 scale 不满足 Kawasaki —— 已在 generate --template 时明示。",
+  "templates": {
+    "birdBase": {
+      "kawasaki": "5/5",
+      "maekawa": "5/5"
+    },
+    "openSinkBase": {
+      "kawasaki": "5/5",
+      "maekawa": "5/5"
+    },
+    "pinwheelBase": {
+      "kawasaki": "4/4",
+      "maekawa": "4/4"
+    },
+    "flat_crane": {
+      "kawasaki": "42/42",
+      "maekawa": "42/42"
+    },
+    "miura-ori": {
+      "kawasaki": "132/132",
+      "maekawa": "132/132"
+    },
+    "squaretwistManyAngles": {
+      "kawasaki": "36/36",
+      "maekawa": "36/36"
+    },
+    "singlesquaretwist": {
+      "kawasaki": "4/4",
+      "maekawa": "4/4"
+    },
+    "simpleVertex": {
+      "kawasaki": "1/1",
+      "maekawa": "1/1"
+    },
+    "squareBase": {
+      "kawasaki": "1/1",
+      "maekawa": "1/1"
+    },
+    "waterbombBase": {
+      "kawasaki": "1/1",
+      "maekawa": "1/1"
+    },
+    "flappingBird": {
+      "kawasaki": "8/14",
+      "maekawa": "14/14"
+    },
+    "scale": {
+      "kawasaki": "0/114",
+      "maekawa": "114/114"
+    }
+  }
+}

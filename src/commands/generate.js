@@ -677,6 +677,10 @@ Notes:
             console.log(`   （模板规范化：在 ${sr.detected} 处折痕交汇点建共享顶点，拆成 ${sr.edgesAfter} 条边）`);
           }
           const result = generateFromFoldData(found.template.id, transformed, options);
+          if (found.template.id) {
+            const warn = generatorStatus.templateWarning(found.template.id);
+            if (warn) console.log(warn);
+          }
           logGenerateCall({ mode: 'template', template: found.template.id,
                             copies, rotate, scale: options.scale });
           printReport(result);
