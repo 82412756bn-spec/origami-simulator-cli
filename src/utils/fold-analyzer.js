@@ -1809,12 +1809,19 @@ class FoldAnalyzer {
       notes: [],
     };
 
-    if (this.faces.length === 1) {
-      result.notes.push('Flat dieline — Maekawa check disabled (no 3D fold)');
+    // 「无 3D 折叠可检」的正确判据是**内部折痕顶点集为空**，
+    // 而不是 `faces.length === 1`。
+    // 后者只是代理指标，且会误伤：折痕图普遍带悬挂边 → 半边算法只能闭合部分面
+    // （实测真实作品 birdBase：文件里 16 面，重算只有 8 面）→
+    // 于是很多**几何完全正确**的折痕图被当成「flat dieline」而**整段跳过检查**，
+    // 报出「0 个被检查顶点」这种看起来像「全过」的结果。
+    const internalVerts = this.getInternalCreaseVertices();
+    if (internalVerts.length === 0) {
+      result.notes.push('Flat dieline — 无内部折痕顶点，Maekawa 检查不适用（单片 / 平面轮廓）');
       return result;
     }
 
-    for (const { vertex: vIdx, edges: incidentEdges } of this.getInternalCreaseVertices()) {
+    for (const { vertex: vIdx, edges: incidentEdges } of internalVerts) {
       let mCount = 0, vCount = 0;
       for (const eIdx of incidentEdges) {
         const a = this.assignments[eIdx];
@@ -1824,7 +1831,20 @@ class FoldAnalyzer {
 
       const mvDiff = mCount - vCount;        // signed
       const mvAbs = Math.abs(mvDiff);        // unsigned
-      const deviation = Math.abs(mvAbs - 2);  // ||M-V| - 2|
+      // Maekawa 的期望值按**顶点的价数**取：
+      //   偶数价（无折痕终止）：|M − V| = 2   —— 经典形式
+      //   奇数价（有折痕终止）：|M − V| = 1   —— 推广形式 |M−V| = 2 − c（c = 终止折痕数）
+      //
+      // 为什么必须分开：奇数价顶点有奇数条折痕 → M + V 为奇数 → |M−V| **必为奇数**
+      // → 永远不可能等于 2。用偶数价的公式去判奇数价顶点是**公式用错了**（结构性误判），
+      // 不是"更严格"。
+      //
+      // 依据（真实作品，非推测）：官方语料里 **208 个 deg3 内部顶点全部是 |M−V| = 1**，
+      // 无一例外；几何干净的真实作品（flat_crane / birdBase / openSinkBase / waterbomb /
+      // 6ptHypar-anti）里**一个奇数价内部顶点都没有** → 奇数价顶点属于「折痕终止」结构。
+      const oddValence = incidentEdges.length % 2 === 1;
+      const expectedMv = oddValence ? 1 : 2;
+      const deviation = Math.abs(mvAbs - expectedMv);  // ||M-V| - expected|
 
       result.totalChecked++;
       if (deviation === 0) {
@@ -2002,8 +2022,9 @@ class FoldAnalyzer {
       notes: [],
     };
 
-    if (this.faces.length === 1) {
-      result.notes.push('Flat dieline — Kawasaki check disabled (no 3D fold)');
+    // 与 analyzeMaekawa 同一判据：内部折痕顶点集为空才是「不可检」
+    if (this.getInternalCreaseVertices().length === 0) {
+      result.notes.push('Flat dieline — 无内部折痕顶点，Kawasaki 检查不适用（单片 / 平面轮廓）');
       return result;
     }
 

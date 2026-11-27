@@ -117,7 +117,19 @@ function transformTemplate(foldData, { copies = 1, rotate = 0, scale = 1, gap = 
 
   const rad = (d) => (d * Math.PI) / 180;
   const allV = [], allE = [], allA = [], allF = [], allFaces = [];
-  const baseFaces = foldData.faces_vertices || [];
+  // 面**从边重算**（planar half-edge），而不是沿用来源文件里的 faces：
+  // 来源文件的 faces 往往是转换/规范化的产物，可能互相重叠
+  // （实测模板库的面面积和是纸的凸包面积的 3–15 倍）→ 下游折叠模拟会失真。
+  // loadTemplateFold 已经打断过交点、平衡过 M/V、去过重顶点 → 边是干净的划分，
+  // 重算出的面互不重叠。旋转/缩放不改变拓扑 → 只需算一次，再按份偏移。
+  let baseFaces = foldData.faces_vertices || [];
+  try {
+    const { extractPlanarFaces } = require('./crease-pattern-normalizer');
+    const recomputed = extractPlanarFaces(foldData);
+    if (recomputed && recomputed.length) baseFaces = recomputed;
+  } catch (e) {
+    /* 重算失败 → 沿用来源文件的面（判定会如实报出重叠） */
+  }
 
   // 先各自旋转，再按**旋转后的实际包围盒**依次排开 —— 否则相邻份会重叠，
   // 表现为「2D 交叉」判据报警（旋转 120° 的菱形轮廓比原包围盒宽）。

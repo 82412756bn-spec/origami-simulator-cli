@@ -680,6 +680,19 @@ Notes:
           if (found.template.id) {
             const warn = generatorStatus.templateWarning(found.template.id);
             if (warn) console.log(warn);
+            // 面片重叠检测：下游折叠模拟假定面片是纸的**划分**（互不重叠），
+            // 重叠会让层序/厚度计算失真 → 生成后当场验一次。
+            try {
+              const { detectFaceOverlaps } = require('../utils/face-overlap');
+              const fr = detectFaceOverlaps({
+                vertices_coords: result.fold && result.fold.vertices_coords,
+                faces_vertices: result.fold && result.fold.faces_vertices,
+              });
+              if (!fr.ok && fr.faces > 0) {
+                console.log(`  ⚠️ 面片重叠：${fr.overlaps.length} 处（面积和/纸面积 = ${fr.areaRatio.toFixed(2)}）`
+                  + ' → 下游折叠模拟可能失真');
+              }
+            } catch (e) { /* 检测失败不影响生成 */ }
           }
           logGenerateCall({ mode: 'template', template: found.template.id,
                             copies, rotate, scale: options.scale });

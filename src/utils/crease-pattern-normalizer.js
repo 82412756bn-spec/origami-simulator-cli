@@ -577,4 +577,5 @@ module.exports = {
   createSeededRandom,
   balanceMountainValley,
   normalizeCreasePattern,
+  extractPlanarFaces,
 };

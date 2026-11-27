@@ -69,17 +69,17 @@ const PATTERNS = {
 
   crane: {
     label: 'Crane bird base',
-    description: 'Bird base crease diagram with pre-creases (crease-pattern-generator-v3)',
+    description: '真正的鹤基折痕图（preliminary base + 4 条 22.5° 角折痕）',
     source: 'src/crease-pattern-generator-v3.js',
     generator: () => new CreasePatternGeneratorV3(),
-    method: 'generateCraneBase',
-    defaults: { grid: 32 },
+    method: 'generateTrueBirdBase',
+    defaults: { scale: 1 },
     ranges: {
-      grid: { min: 4, max: 256, integer: true },
+      scale: { min: 0.1, max: 1000 },
     },
-    sizeParams: { width: 'grid', height: 'grid' },
+    sizeParams: { width: 'scale', height: 'scale' },
     options: [
-      { flag: '--grid <n>', param: 'grid', desc: 'Crease grid resolution (4-256, default 32)' },
+      { flag: '--scale <n>', param: 'scale', desc: '模型尺度（默认 1）' },
     ],
   },
 
@@ -119,17 +119,17 @@ const PATTERNS = {
 
   tiger: {
     label: 'Tiger base',
-    description: 'Tiger base crease diagram (crease-pattern-generator-v3)',
+    description: '虎基折痕图（preliminary base + 22.5° 预折痕）',
     source: 'src/crease-pattern-generator-v3.js',
     generator: () => new CreasePatternGeneratorV3(),
-    method: 'generateTigerBase',
-    defaults: { grid: 32 },
+    method: 'generateTigerBase22',
+    defaults: { scale: 1 },
     ranges: {
-      grid: { min: 4, max: 256, integer: true },
+      scale: { min: 0.1, max: 1000 },
     },
-    sizeParams: { width: 'grid', height: 'grid' },
+    sizeParams: { width: 'scale', height: 'scale' },
     options: [
-      { flag: '--grid <n>', param: 'grid', desc: 'Crease grid resolution (4-256, default 32)' },
+      { flag: '--scale <n>', param: 'scale', desc: '模型尺度（默认 1）' },
     ],
   },
 

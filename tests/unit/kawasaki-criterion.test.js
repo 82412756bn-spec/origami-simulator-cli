@@ -129,6 +129,51 @@ describe('Kawasaki criterion — geometrically sound real work', () => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// Maekawa 的期望值按顶点的价数取（v2.51.1）
+// ─────────────────────────────────────────────────────────────
+describe('Maekawa criterion — expected value depends on vertex valence', () => {
+  /** 造一个单顶点折痕图：n 条折痕从中心发出，按给定 M/V 分配 */
+  function synthVertex(n, mCount) {
+    const V = [[0, 0]];
+    const E = [], A = [];
+    for (let i = 0; i < n; i++) {
+      const a = (2 * Math.PI * i) / n;
+      V.push([Math.cos(a), Math.sin(a)]);
+      E.push([0, 1 + i]);
+      A.push(i < mCount ? 'M' : 'V');
+    }
+    return { vertices_coords: V, edges_vertices: E, edges_assignment: A };
+  }
+
+  test('even valence expects |M-V| = 2 (classic Maekawa)', () => {
+    const r = new FoldAnalyzer(synthVertex(4, 3)).analyzeMaekawa();
+    expect(r.totalChecked).toBe(1);
+    expect(r.withinTolerance).toBe(1);
+  });
+
+  test('odd valence (crease termination) expects |M-V| = 1', () => {
+    // deg3 = 一条折痕终止于另一条折痕中段 → 推广形式 |M−V| = 2 − c = 1
+    const r = new FoldAnalyzer(synthVertex(3, 2)).analyzeMaekawa();
+    expect(r.totalChecked).toBe(1);
+    expect(r.withinTolerance).toBe(1);
+  });
+
+  test('odd valence with |M-V| = 3 still fails', () => {
+    // 防假阳性：奇数价不等于「一律通过」
+    const r = new FoldAnalyzer(synthVertex(3, 3)).analyzeMaekawa();
+    expect(r.totalChecked).toBe(1);
+    expect(r.withinTolerance).toBe(0);
+    expect(r.outOfTolerance).toBe(1);
+  });
+
+  test('even valence with |M-V| = 4 still fails', () => {
+    const r = new FoldAnalyzer(synthVertex(4, 4)).analyzeMaekawa();
+    expect(r.totalChecked).toBe(1);
+    expect(r.withinTolerance).toBe(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
 // Anti-false-positive regression (the v2.48 → v2.50 bug)
 // ─────────────────────────────────────────────────────────────
 describe('Kawasaki criterion — must not be a false-positive machine', () => {

@@ -744,9 +744,10 @@ describe('origami generate — invalid arguments', () => {
 
   test('an out-of-range parameter exits non-zero and names the valid range', () => {
     const dir = tmpDir('bad-param');
-    const res = runCli(['generate', PATTERN, '--output-dir', dir, '--grid', '9999']);
+    // crane 的几何已改为 22.5° 网格的鹤基 → 参数是 --scale（旧的 --grid 已弃用）
+    const res = runCli(['generate', PATTERN, '--output-dir', dir, '--scale', '9999']);
     expect(res.status).not.toBe(0);
-    expect(res.stderr).toMatch(/--grid must be between 4 and 256/);
+    expect(res.stderr).toMatch(/--scale must be between/);
     expect(fs.existsSync(path.join(dir, `${PATTERN}.fold`))).toBe(false);
     fs.rmSync(dir, { recursive: true, force: true });
   });

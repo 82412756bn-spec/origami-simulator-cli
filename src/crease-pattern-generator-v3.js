@@ -218,6 +218,177 @@ class CreasePatternGeneratorV3 {
     return foldData;
   }
 
+  /**
+   * 真正的**鹤基（bird base）**折痕图。
+   *
+   * 几何依据（来自模板库里的真实作品 birdBase：13 顶点 / 24 边 / 中心 deg8 M5/V3）：
+   *   - 正方形纸的 4 个角
+   *   - 中心 8 条射线（到 4 角 + 4 个中轴点）—— preliminary base
+   *   - **4 条 22.5° 的角折痕**（从 4 个角朝内，交于轴上）
+   *   - 4 条边界折痕（轴点 → 对应边的中点）
+   *
+   * 22.5° 用精确的 tan(π/8)，而非原 SVG 的像素取整。
+   * crane 之前只是 preliminary base → 与 tiger 无法区分（v2.51.0 的遗留项）。
+   */
+  /**
+   * **虎基（tiger base）**折痕图 —— preliminary base + 22.5° 的**预折痕**。
+   *
+   * 为什么与 crane（真鹤基）不同：
+   *   - crane = preliminary base + **8 条 22.5° 真折痕**（鹤基的角折痕是实际要折的）
+   *   - tiger = preliminary base + **4 条 22.5° 预折痕**（折了再展开的辅助线，标 'F'）
+   * 两者在折纸里是同族（都从 preliminary base 出发）但形态不同：
+   * 虎基是 preliminary base 的「斜压」变体，辅助折痕用于把方形压成三角形。
+   *
+   * 标 'F' 的依据：这些预折痕与中线交于轴点 → 交点成为 deg3 顶点 →
+   * M+V=3 → |M−V| 必为奇数 → **Maekawa 结构上无解**（见 v2.51.0 的推导）。
+   * 标 'F' 既语义诚实（真实折纸里它们就是折了再展开的预折痕），
+   * 也让检查集只剩 preliminary base 的中心 deg8（真正的折叠结构）。
+   */
+  generateTigerBase22(options = {}) {
+    const scale = options.scale || 1;
+    const t = Math.tan(Math.PI / 8);
+    const q = (1 - t) * scale;
+
+    const vertices = [];
+    const edges = [];
+    const faces = [];
+    const edges_assignment = [];
+    const edges_foldAngle = [];
+
+    const V = (x, y) => {
+      vertices.push([x * scale, y * scale, 0]);
+      return vertices.length - 1;
+    };
+    const E = (a, b, kind) => {
+      edges.push([a, b]);
+      edges_assignment.push(kind);
+      edges_foldAngle.push(kind === 'M' ? 180 : kind === 'V' ? -180 : 0);
+    };
+
+    const c0 = V(-scale, -scale);
+    const c1 = V(scale, -scale);
+    const c2 = V(scale, scale);
+    const c3 = V(-scale, scale);
+    const cen = V(0, 0);
+    const midL = V(-q, 0);
+    const midR = V(q, 0);
+    const midB = V(0, -q);
+    const midT = V(0, q);
+    const edgeL = V(-scale, 0);
+    const edgeR = V(scale, 0);
+    const edgeB = V(0, -scale);
+    const edgeT = V(0, scale);
+
+    // 纸边
+    E(c0, c1, 'B'); E(c1, c2, 'B'); E(c2, c3, 'B'); E(c3, c0, 'B');
+
+    // preliminary base 的真折痕：2 条对角 + 2 条中线
+    E(cen, c0, 'M'); E(cen, c2, 'M');      // 对角
+    E(cen, c1, 'V'); E(cen, c3, 'V');      // 对角
+    E(cen, edgeL, 'M'); E(cen, edgeR, 'M');// 中线
+    E(cen, edgeB, 'M'); E(cen, edgeT, 'M');
+
+    // 4 条 22.5° 预折痕（'F'）
+    E(c0, midB, 'F'); E(c1, midR, 'F');
+    E(c2, midT, 'F'); E(c3, midL, 'F');
+
+    this.balanceMaekawa({ vertices_coords: vertices, edges_vertices: edges, edges_assignment: edges_assignment });
+
+    try {
+      const { extractPlanarFaces } = require('./utils/crease-pattern-normalizer');
+      const computed = extractPlanarFaces({ vertices_coords: vertices, edges_vertices: edges });
+      if (computed && computed.length > 1) faces.push(...computed);
+    } catch (e) { /* 算不出就沿用空 faces */ }
+
+    return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
+      title: 'Tiger Base (虎基：preliminary base + 22.5° 预折痕)',
+      type: 'tiger_base',
+      params: { scale },
+      isCreasePattern: true,
+    });
+  }
+
+  generateTrueBirdBase(options = {}) {
+    const scale = options.scale || 1;
+    const t = Math.tan(Math.PI / 8);          // tan(22.5°) = 0.41421356
+    const q = (1 - t) * scale;                // 22.5° 线与中轴的交点（如 (0, -q)）
+
+    const vertices = [];
+    const edges = [];
+    const faces = [];
+    const edges_assignment = [];
+    const edges_foldAngle = [];
+
+    const V = (x, y) => {
+      vertices.push([x * scale, y * scale, 0]);
+      return vertices.length - 1;
+    };
+    const E = (a, b, kind) => {
+      edges.push([a, b]);
+      edges_assignment.push(kind);
+      edges_foldAngle.push(kind === 'M' ? 180 : kind === 'V' ? -180 : 0);
+    };
+
+    // 拓扑与模板库里的真实作品 birdBase 完全一致（13 顶点 / 24 边 / 中心 deg8 M5/V3 /
+    // 4 个 deg4 轴点 M3/V1，扇区 [112.5,112.5,67.5,67.5]）：
+    //   4 角 + 中心 + 4 个轴点（22.5° 交点）+ 4 个边中点
+    const c0 = V(-scale, -scale);   // 0 左下角
+    const c1 = V(scale, -scale);    // 1 右下角
+    const c2 = V(scale, scale);      // 2 右上角
+    const c3 = V(-scale, scale);     // 3 左上角
+    const cen = V(0, 0);            // 4 中心
+    const midL = V(-q, 0);          // 5 左轴点（22.5° 交点）
+    const midR = V(q, 0);           // 6 右轴点
+    const midB = V(0, -q);          // 7 下轴点
+    const midT = V(0, q);           // 8 上轴点
+    const edgeL = V(-scale, 0);     // 9  左边中点
+    const edgeR = V(scale, 0);      // 10 右边中点
+    const edgeB = V(0, -scale);     // 11 下边中点
+    const edgeT = V(0, scale);      // 12 上边中点
+
+    // 纸边
+    E(c0, c1, 'B'); E(c1, c2, 'B'); E(c2, c3, 'B'); E(c3, c0, 'B');
+
+    // 中心 8 射线：M5 / V3（连续的 3 个角为 V）
+    E(cen, c0, 'M');
+    E(cen, c1, 'V');
+    E(cen, c2, 'V');
+    E(cen, c3, 'V');
+    E(cen, midL, 'M');
+    E(cen, midR, 'M');
+    E(cen, midB, 'M');
+    E(cen, midT, 'M');
+
+    // 8 条 22.5° 角折痕（每个角连相邻 2 个轴点）
+    E(c0, midB, 'M'); E(c1, midB, 'M');
+    E(c1, midR, 'M'); E(c2, midR, 'M');
+    E(c2, midT, 'M'); E(c3, midT, 'M');
+    E(c3, midL, 'M'); E(c0, midL, 'M');
+
+    // 4 条边界折痕（谷折）：轴点 → 对应边的中点
+    E(midL, edgeL, 'V');
+    E(midR, edgeR, 'V');
+    E(midB, edgeB, 'V');
+    E(midT, edgeT, 'V');
+
+    this.balanceMaekawa({ vertices_coords: vertices, edges_vertices: edges, edges_assignment: edges_assignment });
+
+    // 面：用半边算法从边重算（折痕图普遍带悬挂边，半边算法只能闭合部分面，
+    // 但面数够用即可 —— 判定不依赖面）。
+    try {
+      const { extractPlanarFaces } = require('./utils/crease-pattern-normalizer');
+      const computed = extractPlanarFaces({ vertices_coords: vertices, edges_vertices: edges });
+      if (computed && computed.length > 1) faces.push(...computed);
+    } catch (e) { /* 算不出就沿用空 faces */ }
+
+    return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
+      title: 'Bird Base (真正的鹤基：preliminary base + 8 条 22.5° 角折痕)',
+      type: 'bird_base',
+      params: { scale },
+      isCreasePattern: true,
+    });
+  }
+
   generateCraneBase(options = {}) {
     const grid = options.grid || this.gridSize;
     const vertices = [];
