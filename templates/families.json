@@ -1,0 +1,1031 @@
+{
+ "schema": "origami-intent-families/1",
+ "threshold": 0.9,
+ "note": "语义族 = 官方分类目录（现成的语义标注）；候选模板 = 由数据推导（官方形态 → 最近组合，组合空间 模板×copies×rotate=700，距离 < 0.9）；hold-out 按文件名排序交错分半，**验收用固定阈值 0.9，不从推导集派生**（避免循环）。",
+ "families": {
+  "SimpleFolds": {
+   "official_examples": 4,
+   "covered_by_templates": 2,
+   "candidate_templates": [
+    "brochurefold",
+    "simpleVertex"
+   ],
+   "examples": [
+    "brochurefold",
+    "mapfold"
+   ]
+  },
+  "Origami": {
+   "official_examples": 13,
+   "covered_by_templates": 13,
+   "candidate_templates": [
+    "flat_crane",
+    "flappingBird",
+    "miura-ori",
+    "openSinkBase",
+    "singlesquaretwist"
+   ],
+   "examples": [
+    "6ptHypar-anti",
+    "MoosersTrainRigid-Gardner",
+    "airplane",
+    "flappingBird",
+    "flat_crane",
+    "hypar",
+    "langCardinal",
+    "langKnlDragon"
+   ]
+  },
+  "Bistable": {
+   "official_examples": 1,
+   "covered_by_templates": 1,
+   "candidate_templates": [
+    "pinwheelBase"
+   ],
+   "examples": [
+    "curvedPleatSimple"
+   ]
+  },
+  "Curved": {
+   "official_examples": 18,
+   "covered_by_templates": 15,
+   "candidate_templates": [
+    "miura-ori",
+    "cubeunwrapping",
+    "mapfold",
+    "brochurefold",
+    "simpleVertex",
+    "scale",
+    "curvedcrease2"
+   ],
+   "examples": [
+    "Carved_Cylinder",
+    "Crossing_curves",
+    "Improvisation-62",
+    "Leafy_Opus_T-69",
+    "Origami_Sphere_16Flaps",
+    "Rotating_Star",
+    "Sweet_Dreams_Opus_T-41",
+    "Tri-Wing_Boomerang_Tiling"
+   ]
+  },
+  "2026.04.19飞鹤折纸": {
+   "official_examples": 1,
+   "covered_by_templates": 1,
+   "candidate_templates": [
+    "flat_crane"
+   ],
+   "examples": [
+    "origami_crane_base"
+   ]
+  },
+  "Kirigami": {
+   "official_examples": 4,
+   "covered_by_templates": 3,
+   "candidate_templates": [
+    "miura-ori",
+    "flat_crane",
+    "mapfold"
+   ],
+   "examples": [
+    "honeycombKiri",
+    "miyamotoTower",
+    "triPerfTess"
+   ]
+  },
+  "Bases": {
+   "official_examples": 7,
+   "covered_by_templates": 7,
+   "candidate_templates": [
+    "birdBase",
+    "openSinkBase",
+    "pinwheelBase",
+    "squareBase",
+    "waterbombBase"
+   ],
+   "examples": [
+    "birdBase",
+    "boatBase",
+    "frogBase",
+    "openSinkBase",
+    "pinwheelBase",
+    "squareBase",
+    "waterbombBase"
+   ]
+  },
+  "Squaremaze": {
+   "official_examples": 3,
+   "covered_by_templates": 2,
+   "candidate_templates": [
+    "flat_crane",
+    "miura-ori"
+   ],
+   "examples": [
+    "cross",
+    "helloworld"
+   ]
+  },
+  "Tessellations": {
+   "official_examples": 20,
+   "covered_by_templates": 19,
+   "candidate_templates": [
+    "miura-ori",
+    "flat_crane",
+    "scale",
+    "openSinkBase",
+    "mapfold",
+    "flappingBird"
+   ],
+   "examples": [
+    "FTpoly7",
+    "HexTriFlatFoldableTess",
+    "huffmanExtrudedBoxes",
+    "huffmanRectangularWeave",
+    "huffmanStarsTriangles",
+    "huffmanWaterbomb",
+    "langHyperbolicLimit",
+    "langOvalTessellation"
+   ]
+  },
+  "PolygonUnfolding": {
+   "official_examples": 1,
+   "covered_by_templates": 1,
+   "candidate_templates": [
+    "cubeunwrapping"
+   ],
+   "examples": [
+    "cubeunwrapping"
+   ]
+  },
+  "Polygami": {
+   "official_examples": 2,
+   "covered_by_templates": 1,
+   "candidate_templates": [
+    "flat_crane"
+   ],
+   "examples": [
+    "polygamiCross"
+   ]
+  },
+  "Popup": {
+   "official_examples": 4,
+   "covered_by_templates": 3,
+   "candidate_templates": [
+    "flat_crane",
+    "flappingBird"
+   ],
+   "examples": [
+    "castlePopup",
+    "geometricPopup",
+    "popupSimple"
+   ]
+  }
+ },
+ "templateUsage": {
+  "Improvisation-62": {
+   "covered": 0,
+   "by_family": {}
+  },
+  "Treble_Clef": {
+   "covered": 0,
+   "by_family": {}
+  },
+  "birdBase": {
+   "covered": 2,
+   "by_family": {
+    "Bases": 2
+   }
+  },
+  "brochurefold": {
+   "covered": 3,
+   "by_family": {
+    "Curved": 2,
+    "SimpleFolds": 1
+   }
+  },
+  "cubeunwrapping": {
+   "covered": 4,
+   "by_family": {
+    "Curved": 3,
+    "PolygonUnfolding": 1
+   }
+  },
+  "curvedcrease2": {
+   "covered": 1,
+   "by_family": {
+    "Curved": 1
+   }
+  },
+  "flappingBird": {
+   "covered": 5,
+   "by_family": {
+    "Origami": 3,
+    "Popup": 1,
+    "Tessellations": 1
+   }
+  },
+  "flat_crane": {
+   "covered": 14,
+   "by_family": {
+    "Origami": 5,
+    "Tessellations": 3,
+    "Popup": 2,
+    "Squaremaze": 1,
+    "Kirigami": 1,
+    "2026.04.19飞鹤折纸": 1,
+    "Polygami": 1
+   }
+  },
+  "mapfold": {
+   "covered": 5,
+   "by_family": {
+    "Curved": 3,
+    "Tessellations": 1,
+    "Kirigami": 1
+   }
+  },
+  "miura-ori": {
+   "covered": 19,
+   "by_family": {
+    "Tessellations": 10,
+    "Curved": 4,
+    "Squaremaze": 1,
+    "Kirigami": 1,
+    "Origami": 3
+   }
+  },
+  "openSinkBase": {
+   "covered": 5,
+   "by_family": {
+    "Origami": 1,
+    "Bases": 2,
+    "Tessellations": 2
+   }
+  },
+  "pinwheelBase": {
+   "covered": 2,
+   "by_family": {
+    "Bistable": 1,
+    "Bases": 1
+   }
+  },
+  "scale": {
+   "covered": 3,
+   "by_family": {
+    "Curved": 1,
+    "Tessellations": 2
+   }
+  },
+  "simpleVertex": {
+   "covered": 2,
+   "by_family": {
+    "Curved": 1,
+    "SimpleFolds": 1
+   }
+  },
+  "singlesquaretwist": {
+   "covered": 1,
+   "by_family": {
+    "Origami": 1
+   }
+  },
+  "squareBase": {
+   "covered": 1,
+   "by_family": {
+    "Bases": 1
+   }
+  },
+  "squaretwistManyAngles": {
+   "covered": 0,
+   "by_family": {}
+  },
+  "triPerfTess": {
+   "covered": 0,
+   "by_family": {}
+  },
+  "waterbombBase": {
+   "covered": 1,
+   "by_family": {
+    "Bases": 1
+   }
+  },
+  "wavy_pleats": {
+   "covered": 0,
+   "by_family": {}
+  }
+ },
+ "nearestCombination": {
+  "6ptHypar-anti": {
+   "id": "flat_crane",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.407
+  },
+  "Carved_Cylinder": {
+   "id": "brochurefold",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.483
+  },
+  "CircularPleat-antiFacet": {
+   "id": "scale",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.938
+  },
+  "Crossing_curves": {
+   "id": "simpleVertex",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.383
+  },
+  "FTpoly7": {
+   "id": "flat_crane",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.677
+  },
+  "HexSpiralTess": {
+   "id": "mapfold",
+   "copies": 1,
+   "rotate": 0,
+   "d": 1.719
+  },
+  "HexTriFlatFoldableTess": {
+   "id": "miura-ori",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.468
+  },
+  "Improvisation-62": {
+   "id": "cubeunwrapping",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.854
+  },
+  "Leafy_Opus_T-69": {
+   "id": "mapfold",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.585
+  },
+  "MoosersTrainRigid-Gardner": {
+   "id": "flat_crane",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.736
+  },
+  "Origami_Sphere_16Flaps": {
+   "id": "mapfold",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.624
+  },
+  "Rotating_Star": {
+   "id": "cubeunwrapping",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.421
+  },
+  "Sweet_Dreams_Opus_T-41": {
+   "id": "miura-ori",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.414
+  },
+  "Treble_Clef": {
+   "id": "mapfold",
+   "copies": 1,
+   "rotate": 0,
+   "d": 1.719
+  },
+  "Tri-Wing_Boomerang_Tiling": {
+   "id": "cubeunwrapping",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.854
+  },
+  "airplane": {
+   "id": "openSinkBase",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.763
+  },
+  "auxetic_triangle": {
+   "id": "mapfold",
+   "copies": 1,
+   "rotate": 0,
+   "d": 1.719
+  },
+  "birdBase": {
+   "id": "birdBase",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.0
+  },
+  "boatBase": {
+   "id": "openSinkBase",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.421
+  },
+  "brochurefold": {
+   "id": "brochurefold",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.658
+  },
+  "castlePopup": {
+   "id": "flat_crane",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.681
+  },
+  "comet": {
+   "id": "scale",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.608
+  },
+  "cross": {
+   "id": "flat_crane",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.71
+  },
+  "cubeunwrapping": {
+   "id": "cubeunwrapping",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.173
+  },
+  "curvedPleatSimple": {
+   "id": "pinwheelBase",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.596
+  },
+  "curvedcrease2": {
+   "id": "curvedcrease2",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.0
+  },
+  "flappingBird": {
+   "id": "flappingBird",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.0
+  },
+  "flat_crane": {
+   "id": "flat_crane",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.0
+  },
+  "frogBase": {
+   "id": "birdBase",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.41
+  },
+  "geometricPopup": {
+   "id": "flat_crane",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.671
+  },
+  "helloworld": {
+   "id": "miura-ori",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.799
+  },
+  "honeycombKiri": {
+   "id": "miura-ori",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.385
+  },
+  "housePopup": {
+   "id": "flat_crane",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.955
+  },
+  "huffmanExtrudedBoxes": {
+   "id": "miura-ori",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.482
+  },
+  "huffmanRectangularWeave": {
+   "id": "scale",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.818
+  },
+  "huffmanStarsTriangles": {
+   "id": "scale",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.533
+  },
+  "huffmanTower": {
+   "id": "miura-ori",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.61
+  },
+  "huffmanWaterbomb": {
+   "id": "miura-ori",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.233
+  },
+  "hypar": {
+   "id": "flat_crane",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.461
+  },
+  "langCardinal": {
+   "id": "miura-ori",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.282
+  },
+  "langHoneycomb": {
+   "id": "scale",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.943
+  },
+  "langHyperbolicLimit": {
+   "id": "miura-ori",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.599
+  },
+  "langKnlDragon": {
+   "id": "miura-ori",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.205
+  },
+  "langOrchid": {
+   "id": "miura-ori",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.176
+  },
+  "langOvalTessellation": {
+   "id": "miura-ori",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.222
+  },
+  "langRattanWeave": {
+   "id": "miura-ori",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.186
+  },
+  "langWedgeDoubleFaced": {
+   "id": "flat_crane",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.762
+  },
+  "mapfold": {
+   "id": "simpleVertex",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.56
+  },
+  "miura-ori": {
+   "id": "miura-ori",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.171
+  },
+  "miura_sharpangle": {
+   "id": "mapfold",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.291
+  },
+  "miura_v3": {
+   "id": "flat_crane",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.404
+  },
+  "miyamotoTower": {
+   "id": "flat_crane",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.452
+  },
+  "openSinkBase": {
+   "id": "openSinkBase",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.0
+  },
+  "origami_crane_base": {
+   "id": "flat_crane",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.315
+  },
+  "origamisimulator": {
+   "id": "scale",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.998
+  },
+  "pinwheelBase": {
+   "id": "pinwheelBase",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.0
+  },
+  "polygami": {
+   "id": "miura-ori",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.917
+  },
+  "polygamiCross": {
+   "id": "flat_crane",
+   "copies": 2,
+   "rotate": 0,
+   "d": 0.757
+  },
+  "popupSimple": {
+   "id": "flappingBird",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.508
+  },
+  "randlettflappingbird": {
+   "id": "flappingBird",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.441
+  },
+  "reschBarbell": {
+   "id": "miura-ori",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.878
+  },
+  "reschTriTessellation": {
+   "id": "miura-ori",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.546
+  },
+  "russianTriangle": {
+   "id": "brochurefold",
+   "copies": 1,
+   "rotate": 0,
+   "d": 1.464
+  },
+  "scale": {
+   "id": "brochurefold",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.487
+  },
+  "shell14": {
+   "id": "miura-ori",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.667
+  },
+  "shell6": {
+   "id": "miura-ori",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.648
+  },
+  "simpleVertex": {
+   "id": "mapfold",
+   "copies": 1,
+   "rotate": 0,
+   "d": 1.388
+  },
+  "singlesquaretwist": {
+   "id": "singlesquaretwist",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.372
+  },
+  "squareBase": {
+   "id": "squareBase",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.0
+  },
+  "squaretwistManyAngles": {
+   "id": "flat_crane",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.521
+  },
+  "test_bird_base_v5": {
+   "id": "openSinkBase",
+   "copies": 6,
+   "rotate": 0,
+   "d": 0.385
+  },
+  "test_miura_v5": {
+   "id": "openSinkBase",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.386
+  },
+  "traditionalCrane": {
+   "id": "flappingBird",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.178
+  },
+  "triPerfTess": {
+   "id": "mapfold",
+   "copies": 3,
+   "rotate": 0,
+   "d": 0.13
+  },
+  "waterbomb": {
+   "id": "flappingBird",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.445
+  },
+  "waterbombBase": {
+   "id": "waterbombBase",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.0
+  },
+  "wavy_pleats": {
+   "id": "mapfold",
+   "copies": 1,
+   "rotate": 0,
+   "d": 0.859
+  },
+  "whirlpool": {
+   "id": "miura-ori",
+   "copies": 4,
+   "rotate": 0,
+   "d": 0.22
+  }
+ },
+ "officialFamily": {
+  "brochurefold": "SimpleFolds",
+  "russianTriangle": "SimpleFolds",
+  "mapfold": "SimpleFolds",
+  "simpleVertex": "SimpleFolds",
+  "singlesquaretwist": "Origami",
+  "squaretwistManyAngles": "Origami",
+  "flat_crane": "Origami",
+  "hypar": "Origami",
+  "langOrchid": "Origami",
+  "MoosersTrainRigid-Gardner": "Origami",
+  "randlettflappingbird": "Origami",
+  "traditionalCrane": "Origami",
+  "6ptHypar-anti": "Origami",
+  "langKnlDragon": "Origami",
+  "langCardinal": "Origami",
+  "flappingBird": "Origami",
+  "airplane": "Origami",
+  "curvedPleatSimple": "Bistable",
+  "comet": "Curved",
+  "CircularPleat-antiFacet": "Curved",
+  "scale": "Curved",
+  "shell6": "Curved",
+  "Rotating_Star": "Curved",
+  "shell14": "Curved",
+  "Carved_Cylinder": "Curved",
+  "Treble_Clef": "Curved",
+  "Crossing_curves": "Curved",
+  "huffmanTower": "Curved",
+  "Leafy_Opus_T-69": "Curved",
+  "wavy_pleats": "Curved",
+  "Sweet_Dreams_Opus_T-41": "Curved",
+  "HexSpiralTess": "Curved",
+  "curvedcrease2": "Curved",
+  "Origami_Sphere_16Flaps": "Curved",
+  "Tri-Wing_Boomerang_Tiling": "Curved",
+  "Improvisation-62": "Curved",
+  "origami_crane_base": "2026.04.19飞鹤折纸",
+  "miyamotoTower": "Kirigami",
+  "triPerfTess": "Kirigami",
+  "auxetic_triangle": "Kirigami",
+  "honeycombKiri": "Kirigami",
+  "openSinkBase": "Bases",
+  "birdBase": "Bases",
+  "squareBase": "Bases",
+  "pinwheelBase": "Bases",
+  "boatBase": "Bases",
+  "waterbombBase": "Bases",
+  "frogBase": "Bases",
+  "cross": "Squaremaze",
+  "helloworld": "Squaremaze",
+  "origamisimulator": "Squaremaze",
+  "HexTriFlatFoldableTess": "Tessellations",
+  "miura_sharpangle": "Tessellations",
+  "huffmanStarsTriangles": "Tessellations",
+  "waterbomb": "Tessellations",
+  "miura-ori": "Tessellations",
+  "langOvalTessellation": "Tessellations",
+  "langHyperbolicLimit": "Tessellations",
+  "langWedgeDoubleFaced": "Tessellations",
+  "test_miura_v5": "Tessellations",
+  "langRattanWeave": "Tessellations",
+  "FTpoly7": "Tessellations",
+  "test_bird_base_v5": "Tessellations",
+  "miura_v3": "Tessellations",
+  "reschTriTessellation": "Tessellations",
+  "reschBarbell": "Tessellations",
+  "huffmanRectangularWeave": "Tessellations",
+  "huffmanExtrudedBoxes": "Tessellations",
+  "whirlpool": "Tessellations",
+  "huffmanWaterbomb": "Tessellations",
+  "langHoneycomb": "Tessellations",
+  "cubeunwrapping": "PolygonUnfolding",
+  "polygamiCross": "Polygami",
+  "polygami": "Polygami",
+  "popupSimple": "Popup",
+  "housePopup": "Popup",
+  "castlePopup": "Popup",
+  "geometricPopup": "Popup"
+ },
+ "holdout": [
+  "Carved_Cylinder",
+  "Crossing_curves",
+  "HexSpiralTess",
+  "Improvisation-62",
+  "MoosersTrainRigid-Gardner",
+  "Rotating_Star",
+  "Treble_Clef",
+  "airplane",
+  "birdBase",
+  "brochurefold",
+  "comet",
+  "cubeunwrapping",
+  "curvedcrease2",
+  "flat_crane",
+  "geometricPopup",
+  "honeycombKiri",
+  "huffmanExtrudedBoxes",
+  "huffmanStarsTriangles",
+  "huffmanWaterbomb",
+  "langCardinal",
+  "langHyperbolicLimit",
+  "langOrchid",
+  "langRattanWeave",
+  "mapfold",
+  "miura_sharpangle",
+  "miyamotoTower",
+  "origami_crane_base",
+  "pinwheelBase",
+  "polygamiCross",
+  "randlettflappingbird",
+  "reschTriTessellation",
+  "scale",
+  "shell6",
+  "singlesquaretwist",
+  "squaretwistManyAngles",
+  "test_miura_v5",
+  "triPerfTess",
+  "waterbombBase",
+  "whirlpool"
+ ],
+ "derive": [
+  "6ptHypar-anti",
+  "CircularPleat-antiFacet",
+  "FTpoly7",
+  "HexTriFlatFoldableTess",
+  "Leafy_Opus_T-69",
+  "Origami_Sphere_16Flaps",
+  "Sweet_Dreams_Opus_T-41",
+  "Tri-Wing_Boomerang_Tiling",
+  "auxetic_triangle",
+  "boatBase",
+  "castlePopup",
+  "cross",
+  "curvedPleatSimple",
+  "flappingBird",
+  "frogBase",
+  "helloworld",
+  "housePopup",
+  "huffmanRectangularWeave",
+  "huffmanTower",
+  "hypar",
+  "langHoneycomb",
+  "langKnlDragon",
+  "langOvalTessellation",
+  "langWedgeDoubleFaced",
+  "miura-ori",
+  "miura_v3",
+  "openSinkBase",
+  "origamisimulator",
+  "polygami",
+  "popupSimple",
+  "reschBarbell",
+  "russianTriangle",
+  "shell14",
+  "simpleVertex",
+  "squareBase",
+  "test_bird_base_v5",
+  "traditionalCrane",
+  "waterbomb",
+  "wavy_pleats"
+ ],
+ "holdoutDistances": [
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.13,
+  0.173,
+  0.176,
+  0.186,
+  0.22,
+  0.233,
+  0.282,
+  0.291,
+  0.315,
+  0.372,
+  0.383,
+  0.385,
+  0.386,
+  0.421,
+  0.441,
+  0.452,
+  0.482,
+  0.483,
+  0.487,
+  0.521,
+  0.533,
+  0.546,
+  0.56,
+  0.599,
+  0.608,
+  0.648,
+  0.658,
+  0.671,
+  0.736,
+  0.757,
+  0.763,
+  0.854,
+  1.719,
+  1.719
+ ],
+ "deriveDistances": [
+  0.0,
+  0.0,
+  0.0,
+  0.171,
+  0.178,
+  0.205,
+  0.222,
+  0.385,
+  0.404,
+  0.407,
+  0.41,
+  0.414,
+  0.421,
+  0.445,
+  0.461,
+  0.468,
+  0.508,
+  0.585,
+  0.596,
+  0.61,
+  0.624,
+  0.667,
+  0.677,
+  0.681,
+  0.71,
+  0.762,
+  0.799,
+  0.818,
+  0.854,
+  0.859,
+  0.878,
+  0.917,
+  0.938,
+  0.943,
+  0.955,
+  0.998,
+  1.388,
+  1.464,
+  1.719
+ ]
+}

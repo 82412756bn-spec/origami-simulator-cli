@@ -44,6 +44,7 @@ const { detectCreaseCrossings, checkLocalFlatFoldability } = require('../utils/c
 const { matchSvgToFold, checkSvgGeometry, ASSIGNMENT_COLORS } = require('../utils/svg-crease-parser');
 const { parseXml } = require('../utils/xml-lite');
 const { findTemplate, loadTemplateFold, transformTemplate } = require('../utils/template-transform');
+const { loadFamilies, mapIntent, resolveFamily } = require('../utils/intent-map');
 const CreasePatternGeneratorV3 = require('../crease-pattern-generator-v3');
 const {
   PATTERNS,
@@ -506,6 +507,9 @@ function registerGenerateCommand(program) {
     .option('--unit-length <n>', 'Modular: unit length')
     .option('--paper-size <n>', 'Unit: paper edge length')
     .option('--template <id>', 'Use a real crease pattern from templates/ as the base (MIT, see templates/LICENSE)')
+    .option('--intent <family>', 'Generate from an intent (base|origami|tessellation|pleat|kirigami|popup|...)')
+    .option('--motif <name>', 'Intent mode: pick a specific motif within the family')
+    .option('--symmetry <n>', 'Intent mode: symmetry order (how many rotated copies)')
     .option('--copies <n>', 'Template mode: how many rotated copies (1-64)')
     .option('--rotate <deg>', 'Template mode: rotation step between copies in degrees (-360..360)')
     .option('--scale <s>', 'Template mode: overall scale factor (0.01..100)')
@@ -521,16 +525,63 @@ Notes:
     .action((pattern, options) => {
       // ── 模板模式 ──────────────────────────────────────────────
       const hasTemplate = options.template !== undefined;
+      const hasIntent = options.intent !== undefined;
       const isPositional = pattern !== undefined && pattern !== null && pattern !== '';
       if (hasTemplate && isPositional) {
         fail('同时给了位置参数（pattern）和 --template，两者互斥',
              '用 `origami generate --template <id>` 或 `origami generate <pattern>`，二选一。');
         return;
       }
-      if (!hasTemplate && !isPositional) {
+      if (!hasTemplate && !hasIntent && !isPositional) {
         fail('缺少目标：给一个 pattern 名或 --template <id>',
              '可用 pattern: ' + Object.keys(require('../utils/crease-pattern-factory').PATTERN_SPECS || {}).join(', ')
+             + '；或用 --intent <族>（base / origami / tessellation / pleat / ...）'
              + '；模板见 templates/manifest.json');
+        return;
+      }
+      // ── 意图模式 ────────────────────────────────────────────
+      if (hasIntent && hasTemplate) {
+        fail('同时给了 --intent 和 --template，两者互斥',
+             '意图模式会自动选模板；要用指定模板请用 --template。');
+        return;
+      }
+      if (hasIntent) {
+        let families;
+        try {
+          families = loadFamilies();
+        } catch (err) {
+          fail(`族表不可用：${err.message}`, '重新安装本包（templates/families.json 是包的一部分）。');
+          return;
+        }
+        const mapped = mapIntent({
+          family: options.intent,
+          motif: options.motif,
+          symmetry: options.symmetry !== undefined ? Number(options.symmetry) : undefined,
+          rotation: options.rotation !== undefined ? Number(options.rotation) : undefined,
+          scale: options.scale !== undefined ? Number(options.scale) : undefined,
+        }, families);
+        if (!mapped.ok) {
+          fail(`意图无法映射：${mapped.reason}`,
+               `支持的形态族：${mapped.supported.join(', ')}`
+               + (mapped.roadmap.length ? `｜待补：${mapped.roadmap.join('；')}` : ''));
+          return;
+        }
+        const plan = mapped.plan;
+        console.log(`意图 "${options.intent}" → 形态族 ${plan.family}`
+          + `｜模板 ${plan.template}`
+          + `｜copies=${plan.copies} rotate=${plan.rotate} scale=${plan.scale}`
+          + (plan.motifMatched ? `｜motif 命中官方形态 ${plan.motifMatched}` : '')
+          + (plan.motifMissed ? `｜⚠️ 未找到 motif "${plan.motifMissed}"，已用族内默认模板`
+            + `（可选：${plan.alternatives.join(', ')}）` : ''));
+        try {
+          const base = loadTemplateFold({ id: plan.template, file: `${plan.template}.fold` });
+          const transformed = transformTemplate(base.foldData || base,
+            { copies: plan.copies, rotate: plan.rotate, scale: plan.scale });
+          const result = generateFromFoldData(plan.template, transformed, options);
+          printReport(result);
+        } catch (err) {
+          fail(`意图生成失败：${err.message}`);
+        }
         return;
       }
       if (hasTemplate) {

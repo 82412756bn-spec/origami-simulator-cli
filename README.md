@@ -143,7 +143,27 @@ origami generate star --seed 42 --thickness 1.0
 > 以 78 个真实作品为基准，Kawasaki 通过率 **44% → 87.33%**，38 件真实作品变成「全过」。
 > **Maekawa 仍只有 28% 通过**（独立议题，未解决）。
 
-### 四、给 agent 用的接口
+### 四、按意图生成（`--intent`）
+
+```bash
+# 我要一个六重对称的镶嵌折纸
+origami generate --intent tessellation --symmetry 6 --output-dir ./out
+
+# 我要一个基础折法（base 族）
+origami generate --intent base --symmetry 4 --output-dir ./out
+
+# 指定族内的具体 motif
+origami generate --intent base --motif birdbase --output-dir ./out
+```
+
+**语义族**（取自官方分类目录）：`base` · `origami` · `tessellation` · `pleat` ·
+`kirigami` · `popup` · `polygami` · `simplefold` · `squaremaze` · `bistable` · `unfolding`
+
+候选模板由**数据推导**：对官方 78 个真实折痕图，在「模板 × copies × rotate」组合空间里
+求最近邻后按族归拢（见 `templates/families.json`）。**无候选的族会明确报「暂不支持」
+并列出支持的族**，不静默换模板。
+
+### 五、给 agent 用的接口
 
 ```bash
 origami mcp                          # MCP server（JSON-RPC over stdio）

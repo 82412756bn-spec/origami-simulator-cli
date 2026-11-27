@@ -186,20 +186,35 @@ function estimateTransform(modelPts, svgPts) {
   const svgWidth = s.width !== 0 ? s.width : s.height;
   if (width === 0 || svgWidth === 0) return result;
 
-  const scale = svgWidth / width;
-  const tx = s.minX - scale * m.minX;
+  // 缩放候选：generateSVG 是**等比 fit 到画布**（宽/高都可能成为约束），
+  // 这里原来只按**宽度**反推 → 当模型高宽比 ≠ 画布高宽比时 scale 算错，
+  // 判据 E「SVG ↔ FOLD」会全不匹配。
+  // 实测：miura-ori 模型 bbox 970×1196（竖长 → 高度约束）→ 0/315 匹配；
+  //       birdBase 2016×2016（正方 → 宽高一致）→ 正常匹配。
+  // 现在按宽、按高各算一个 scale，再各配「Y 镜像 / 不镜像」→ 共 4 个候选，取残差最小者。
+  const scales = [];
+  if (m.width !== 0 && s.width !== 0) scales.push(s.width / m.width);
+  if (m.height !== 0 && s.height !== 0) scales.push(s.height / m.height);
+  if (!scales.length) scales.push(svgWidth / width);
 
-  // Two candidates: Y mirrored (SVG convention) and Y not mirrored.
-  const candidates = [
-    { flipY: true, ty: s.maxY + scale * m.minY },
-    { flipY: false, ty: s.minY - scale * m.minY },
-  ];
+  const candidates = [];
+  for (const sc of scales) {
+    const tx = s.minX - sc * m.minX;
+    // flipY 的 ty 必须由**模型 y 的最大值**推出，而不是 SVG 的 y 最大值：
+    // generateSVG 用 toSvgY(y) = height - ((y - minY) * scale + offsetY)
+    // → 反变换是 y_svg = A - sc*y，令模型 y∈[m.minY, m.maxY] 映射到 [s.minY, s.maxY]
+    //    得 A = s.minY + sc*m.maxY。
+    // 原式 ty = s.maxY + sc*m.minY 隐含「SVG 内容顶到画布边缘」的假设，
+    // 而 generateSVG 留了 margin → 偏差可达 0.2 单位 > 容差 0.05 → 判据 E 全不匹配。
+    candidates.push({ s: sc, tx, flipY: true, ty: s.minY + sc * m.maxY });
+    candidates.push({ s: sc, tx, flipY: false, ty: s.minY - sc * m.minY });
+  }
 
   let best = null;
   for (const cand of candidates) {
     const forward = (p) => (cand.flipY
-      ? [scale * p[0] + tx, cand.ty - scale * p[1]]
-      : [scale * p[0] + tx, scale * p[1] + cand.ty]);
+      ? [cand.s * p[0] + cand.tx, cand.ty - cand.s * p[1]]
+      : [cand.s * p[0] + cand.tx, cand.s * p[1] + cand.ty]);
 
     // Residual: how far the transformed model bbox corners are from the
     // actual SVG bbox corners.
@@ -213,7 +228,7 @@ function estimateTransform(modelPts, svgPts) {
     );
 
     if (!best || residual < best.residual) {
-      best = { ...cand, s: scale, tx, ty: cand.ty, residual };
+      best = { ...cand, s: cand.s, tx: cand.tx, ty: cand.ty, residual };
     }
   }
 

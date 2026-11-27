@@ -4,6 +4,50 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.49.0] - 2026-11-26
+
+### Added
+
+- **意图模式：`origami generate --intent <族> [--motif <名>] [--symmetry N] [--rotation R] [--scale S]`**
+
+  这是「按**我的想法**生成」缺失的那一层：模板模式只能「选模板 id + 给参数」，
+  而用户说的是「我要一个**六瓣**的星形折纸」—— 需要把意图翻译成模板与参数。
+
+  - **语义族 = 官方分类目录**（Bases / Origami / Tessellations / Curved / Kirigami / Popup /
+    Polygami / SimpleFolds / Squaremaze / Bistable / PolygonUnfolding）—— 现成的语义标注，不是手编的族名
+  - **候选模板 = 数据推导**：对官方 78 个真实折痕图，在「模板 × copies × rotate」组合空间
+    （20 × 5 × 7 = 700）里求最近邻（结构指纹距离 < 0.9）后按族归拢 → `templates/families.json`
+  - **无候选的族 → CLI 明确报「暂不支持」并列出支持的族**，不静默 fallback
+  - `--motif` 未命中 → 明确提示并列出该族可选模板
+  - 新增 `src/utils/intent-map.js`
+
+  实测：`--intent tessellation --symmetry 6` → miura-ori ×6，**A–F 全绿**
+  （Kawasaki 792/792 · Maekawa 792/792 · 0 交叉）；`--intent base --symmetry 4` → birdBase ×4（A–F 全绿）。
+
+- **`templates/families.json`**：族 → 候选模板映射 + 每模板独占覆盖数 + hold-out 划分与距离分布。
+- **`scripts/analyze-coverage.js`**：以官方 78 例为基准的三项分析 —— ①内置生成器几何正确性
+  ②模板集 set cover 最小覆盖集 ③未复现形态分类。可复现。
+
+### Fixed
+
+- **判据 E「SVG ↔ FOLD」的变换反推**（`estimateTransform`）：
+  原来只按**宽度**反推 scale，而 `generateSVG` 是**等比 fit 到画布**（宽/高都可能成为约束）
+  → 模型高宽比 ≠ 画布高宽比时 scale 算错；flipY 候选的 ty 公式还隐含「SVG 顶到画布边缘」的假设，
+  而 generateSVG 留了 margin → 偏差可达 0.2 单位 > 容差 0.05。
+  现改为：按宽、按高各算一个 scale × 镜像/不镜像共 **4 个候选**取残差最小者，
+  flipY 的 ty 改用 `s.minY + sc*m.maxY`（由模型 y 最大值推出）。
+
+### 已知限制（未完全解决，如实登记）
+
+- **判据 E 在部分模板上仍不可靠**：`miura-ori` 0/945、`flat_crane` 16/266（修前 0/266）。
+  几何本身正确（C 判据全绿、SVG 良构、边数一致），问题在匹配器与 `generateSVG` 的
+  fit/margin 约定尚未完全对齐。**未在本版彻底解决**。
+- **内置生成器的定位已由实测澄清**（不是"无用"，也不是"该留"）：
+  - 几何正确性：star / tiger / radial / fish **全过**（0 交叉）；crane 409/469、miura 28/36、modular 5/11
+  - 但对「模板复现不了的 10 件官方形态」**零增益**（最近距离 1.088–3.085）
+  - → 结论：当前形态族覆盖不到官方形态的镶嵌/曲面/剪纸族；**加参数只能扩展它自己的族**，
+    不改变这一点。保留与否待定（见 `docs/VERIFICATION-AGAINST-OFFICIAL.md`）。
+
 ## [2.48.4] - 2026-11-26
 
 ### Fixed
