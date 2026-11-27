@@ -106,14 +106,14 @@ origami generate crane --output-dir ./out
 origami generate star --seed 42 --thickness 1.0
 
 # 模式 B：模板模式 —— 用真实折痕图作模板，按参数做对称变换
-origami generate --template Bases-birdBase --copies 3 --rotate 120 --output-dir ./out
+origami generate --template birdBase --copies 3 --rotate 120 --output-dir ./out
 origami generate --template Origami-flat_crane --copies 6 --rotate 60
 ```
 
 模板模式可用 id（`templates/manifest.json`）：
 
 ```
-Bases-birdBase            Bases-openSinkBase      Bases-pinwheelBase
+birdBase            Bases-openSinkBase      Bases-pinwheelBase
 Bases-squareBase          Bases-waterbombBase     Curved-curvedcrease2
 Origami-flat_crane        Curved-CircularPleat-antiFacet
 Kirigami-honeycombKiri    Origami-flappingBird    Tessellations-huffmanWaterbomb

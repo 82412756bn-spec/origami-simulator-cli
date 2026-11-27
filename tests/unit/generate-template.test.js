@@ -116,14 +116,14 @@ describe('模板模式 · 确定性', () => {
   test('同参数两次跑 → 产物逐字节一致', () => {
     const dirA = fs.mkdtempSync(path.join(os.tmpdir(), 'origami-det-a-'));
     const dirB = fs.mkdtempSync(path.join(os.tmpdir(), 'origami-det-b-'));
-    const args = ['generate', '--template', 'Bases-birdBase', '--copies', '3', '--rotate', '120', '--quiet'];
+    const args = ['generate', '--template', 'birdBase', '--copies', '3', '--rotate', '120', '--quiet'];
     run([...args, '--output-dir', dirA]);
     run([...args, '--output-dir', dirB]);
-    const a = fs.readFileSync(path.join(dirA, 'Bases-birdBase.fold'));
-    const b = fs.readFileSync(path.join(dirB, 'Bases-birdBase.fold'));
+    const a = fs.readFileSync(path.join(dirA, 'birdBase.fold'));
+    const b = fs.readFileSync(path.join(dirB, 'birdBase.fold'));
     expect(a.equals(b)).toBe(true);
-    const sa = fs.readFileSync(path.join(dirA, 'Bases-birdBase.svg'), 'utf8');
-    const sb = fs.readFileSync(path.join(dirB, 'Bases-birdBase.svg'), 'utf8');
+    const sa = fs.readFileSync(path.join(dirA, 'birdBase.svg'), 'utf8');
+    const sb = fs.readFileSync(path.join(dirB, 'birdBase.svg'), 'utf8');
     expect(sa).toBe(sb);
   });
 });
@@ -131,11 +131,11 @@ describe('模板模式 · 确定性', () => {
 describe('模板模式 · 参数校验', () => {
   const cases = [
     [['generate', '--template', 'no-such-template'], /未知模板|Unknown template/i],
-    [['generate', '--template', 'Bases-birdBase', '--copies', '0'], /copies/i],
-    [['generate', '--template', 'Bases-birdBase', '--copies', '999'], /copies/i],
-    [['generate', '--template', 'Bases-birdBase', '--rotate', '9999'], /rotate/i],
-    [['generate', '--template', 'Bases-birdBase', '--scale', '0'], /scale/i],
-    [['generate', '--template', 'Bases-birdBase', 'star'], /互斥|二选一/i],
+    [['generate', '--template', 'birdBase', '--copies', '0'], /copies/i],
+    [['generate', '--template', 'birdBase', '--copies', '999'], /copies/i],
+    [['generate', '--template', 'birdBase', '--rotate', '9999'], /rotate/i],
+    [['generate', '--template', 'birdBase', '--scale', '0'], /scale/i],
+    [['generate', '--template', 'birdBase', 'star'], /互斥|二选一/i],
   ];
   test.each(cases)('非法用法 → 非 0 退出并给出清晰错误: %j', (args, pattern) => {
     const r = run(args);
@@ -147,11 +147,11 @@ describe('模板模式 · 参数校验', () => {
 describe('模板模式 · SVG 与 FOLD 一致', () => {
   test('产物 SVG 的边数 == FOLD 的边数', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'origami-svg-'));
-    const r = run(['generate', '--template', 'Bases-birdBase', '--copies', '2', '--rotate', '180',
+    const r = run(['generate', '--template', 'birdBase', '--copies', '2', '--rotate', '180',
       '--output-dir', dir, '--quiet']);
     expect(r.code).toBe(0);
-    const data = JSON.parse(fs.readFileSync(path.join(dir, 'Bases-birdBase.fold'), 'utf8'));
-    const svg = fs.readFileSync(path.join(dir, 'Bases-birdBase.svg'), 'utf8');
+    const data = JSON.parse(fs.readFileSync(path.join(dir, 'birdBase.fold'), 'utf8'));
+    const svg = fs.readFileSync(path.join(dir, 'birdBase.svg'), 'utf8');
     const paths = (svg.match(/<path[^>]*\sd="M/g) || []).length;
     expect(paths).toBe((data.edges_vertices || []).length);
   });
@@ -160,15 +160,15 @@ describe('模板模式 · SVG 与 FOLD 一致', () => {
 describe('模板模式 · 反自证（独立复算）', () => {
   test('独立复算的旋转与排布规则，与实现的产物一致（不变量断言）', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'origami-ind-'));
-    const r = run(['generate', '--template', 'Bases-birdBase', '--copies', '2', '--rotate', '180',
+    const r = run(['generate', '--template', 'birdBase', '--copies', '2', '--rotate', '180',
       '--output-dir', dir, '--quiet']);
     expect(r.code).toBe(0);
-    const data = JSON.parse(fs.readFileSync(path.join(dir, 'Bases-birdBase.fold'), 'utf8'));
+    const data = JSON.parse(fs.readFileSync(path.join(dir, 'birdBase.fold'), 'utf8'));
     const pts = data.vertices_coords || [];
 
     // 独立实现：读原始模板 → 绕包围盒中心旋转 180°
     const manifest = loadManifest();
-    const tpl = manifest.templates.find((x) => x.id === 'Bases-birdBase');
+    const tpl = manifest.templates.find((x) => x.id === 'birdBase');
     const raw = JSON.parse(fs.readFileSync(path.join(TEMPLATE_DIR, tpl.file), 'utf8'));
     const vs = raw.vertices_coords;
     const xs = vs.map((v) => v[0]);

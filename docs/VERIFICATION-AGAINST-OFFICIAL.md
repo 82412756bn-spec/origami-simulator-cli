@@ -68,7 +68,7 @@ splitCreasesAtCrossings  →  balanceMountainValley  →  dedupeVertices
 搜索空间：模板库 × copies{1,2,3,4,6} × rotate{0,30,45,60,90,120,180}
 
 **复现最好（距离 0）**：
-`birdBase → Bases-birdBase (1,0)` · `openSinkBase → Bases-openSinkBase (1,0)` ·
+`birdBase → birdBase (1,0)` · `openSinkBase → Bases-openSinkBase (1,0)` ·
 `flat_crane → Origami-flat_crane (1,0)` · `traditionalCrane → Origami-flappingBird (4,0)` ·
 `miura-ori → Tessellations-huffmanWaterbomb (1,0)` · `langOvalTessellation → Origami-flat_crane (6,0)` ·
 `langHoneycomb → Tessellations-huffmanWaterbomb (6,0)` · `langCardinal → Kirigami-honeycombKiri (2,0)`
@@ -96,3 +96,40 @@ splitCreasesAtCrossings  →  balanceMountainValley  →  dedupeVertices
   人为边界破坏了 M/V 平衡（见 `docs/CORPUS-HEALTH.md`），不是实现问题。
 - **拟合用的结构指纹是启发式**（不是折痕图的真正同构判定）—— 距离 < 0.9 是工程阈值，
   不是数学定理。
+
+
+---
+
+## 追加：转换器修复（2026-11-26 晚）
+
+验证中发现 **3 件官方 FOLD 是空的**（`HexSpiralTess` / `Treble_Clef` / `auxetic_triangle`）。
+追到主项目的 `evolution/svg_to_fold.py`，找到**两个真 bug**：
+
+| bug | 表现 |
+|---|---|
+| `_polyline_to_edges` 的坐标提取 | SVG 的 `points` 允许「x1,y1,x2,y2 逗号混写」，旧实现按空白切分再 `split(',')` → 得到 4 段 → `len != 2` → **丢掉整条边**。实测 `auxetic_triangle` 的 **846 个 polyline 全部产出 0 条边** |
+| 主循环 `path` 分支调错函数 | 调的是只认 M/L 的 `_line_to_edges_from_poly`，而支持 Q/C 的 `_path_to_edges` **从未被调用（死代码）** → 含贝塞尔曲线的 path 全废（`HexSpiralTess` 131 条、`Treble_Clef` 2 条） |
+
+修复：① 坐标改用「正则提取数字再两两配对」② path 分支改调 `_path_to_edges`
+③ `_path_to_edges` 重写为支持 `M/L/H/V/C/S/Q/T/A/Z`，曲线按**尺度自适应**采样（2–6 段，
+固定 8 段会让曲面折痕膨胀到 9.5 MB）。
+
+**修复结果：77/77 件 SVG 全部产出非空 FOLD**（修复前 3 件为空）。
+
+### 由此推翻此前的一个判断
+
+此前记录「Maekawa 只有 28% 通过，是语料形态问题（无限图案的有限片段）」。
+修好转换器后，**`miura-ori` 的 Maekawa 从 0/132 变成 132/132**。
+
+真因是：**旧转换器把折痕画成了「相互交叉但不共享顶点」的形式** → 规范化打断后
+边数从 312 涨到 682 → 交点处的 M/V 分配失衡 → Maekawa 全灭。
+新转换器直接生成规范折痕图（规范化不再改变它：182/315 不变）→ Maekawa 通过。
+
+→ **「语料形态问题」这个结论对一部分作品是错的，真因是转换器。**
+
+### 模板库从 12 件扩到 19 件
+
+按修好的语料重筛（规范化 → Kawasaki 与 Maekawa 全过）：
+
+新增可作模板：`miura-ori`（M132/132）· `scale`（M114/114）· `squaretwistManyAngles`（M36/36）·
+`singlesquaretwist` · `simpleVertex` · 以及若干无内部顶点的造型件（K0/0 M0/0）。

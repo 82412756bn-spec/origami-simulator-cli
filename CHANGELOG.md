@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.48.2] - 2026-11-26
+
+### Fixed
+
+- **模板库按修好的转换器重新生成**（12 → **19 件**，1047 KB）。
+  上游 `evolution/svg_to_fold.py` 修了两个真 bug（详见 `docs/VERIFICATION-AGAINST-OFFICIAL.md`）：
+  ① `_polyline_to_edges` 的坐标提取不兼容「x1,y1,x2,y2 逗号混写」→ 846 个 polyline 曾全部产出 0 条边
+  ② 主循环 `path` 分支调的是只认 M/L 的 `_line_to_edges_from_poly`，支持曲线的 `_path_to_edges` 从未被调用
+  → **77/77 件 SVG 现在全部产出非空 FOLD**（修复前 3 件为空）。
+
+### 由此推翻此前的一个判断
+
+此前记录「Maekawa 只有 28% 通过是语料形态问题」。修好转换器后
+**`miura-ori` 的 Maekawa 从 0/132 变成 132/132** —— 真因是**旧转换器把折痕画成
+「相互交叉但不共享顶点」的形式**，规范化打断后交点处 M/V 失衡 → Maekawa 全灭。
+**「语料形态问题」这个结论对一部分作品是错的，真因是转换器。**
+
+### Changed
+- `templates/manifest.json` 升到 schema v3，记录转换器修复内容与每件模板的判定结果。
+- 新增可作模板：`miura-ori`(K132/132 M132/132) · `scale`(M114/114) ·
+  `squaretwistManyAngles`(M36/36) · `singlesquaretwist` · `simpleVertex` 等。
+
 ## [2.48.1] - 2026-11-26
 
 ### Added

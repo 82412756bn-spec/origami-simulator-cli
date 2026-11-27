@@ -1,0 +1,146 @@
+{
+  "file_spec": "http://w3.org/TR/FOLD-FILE-FORMAT",
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "simpleVertex",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      2545.941,
+      2362.354,
+      0.0
+    ],
+    [
+      493.0,
+      2362.354,
+      0.0
+    ],
+    [
+      493.0,
+      309.412,
+      0.0
+    ],
+    [
+      2545.941,
+      309.412,
+      0.0
+    ],
+    [
+      493.0,
+      1335.882,
+      0.0
+    ],
+    [
+      2545.941,
+      1335.882,
+      0.0
+    ],
+    [
+      1519.471,
+      309.412,
+      0.0
+    ],
+    [
+      1519.471,
+      1335.883,
+      0.0
+    ],
+    [
+      1519.471,
+      2362.3540000000003,
+      0.0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      0
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      7,
+      8
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B",
+    "M",
+    "M",
+    "V"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0,
+    180,
+    180,
+    -180
+  ],
+  "faces_vertices": [
+    [
+      0,
+      0,
+      3,
+      2,
+      1
+    ],
+    [
+      0,
+      3,
+      2,
+      1,
+      1
+    ],
+    [
+      0,
+      3,
+      2,
+      2,
+      1
+    ],
+    [
+      0,
+      3,
+      3,
+      2,
+      1
+    ],
+    [
+      7,
+      7,
+      8
+    ]
+  ],
+  "metadata": {
+    "mountain_creases": 2,
+    "valley_creases": 1,
+    "total_edges": 7,
+    "total_vertices": 9,
+    "total_faces": 5,
+    "conversion_note": "Faces computed from planar graph traversal"
+  }
+}
