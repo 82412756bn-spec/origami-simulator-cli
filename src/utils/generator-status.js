@@ -33,9 +33,16 @@ function statusOf(pattern, file = FILE) {
 function suffix(pattern, file = FILE) {
   const st = statusOf(pattern, file);
   if (!st) return '';
+  // 措辞诚实性（Kun 2026-11-28 判断）：
+  //   ① 不得用 "verified" —— 它字面读起来像「验证过了」，而我们只验证了
+  //      **折平必要条件**（Kawasaki + Maekawa），**从未实物折过**。
+  //   ② 「未经实物折纸验证」必须对**所有**生成器都写出来 —— 不是只有 fish；
+  //      藏进 JSON 的 note 字段 = 用户看不见 = 等于没标。
   const geo = st.geometry === 'verified'
-    ? '  [几何 ✅ verified]'
-    : `  [几何 ⚠️ partial：${st.note}]`;
+    ? '  [几何 ✅ 满足折平必要条件 · 未经实物折纸验证]'
+    : st.geometry === 'na'
+      ? `  [几何 — ${st.note}]`
+      : `  [几何 ⚠️ 不满足折平必要条件：${st.note} · 未经实物折纸验证]`;
 
   // 同族替代物：当内置形态自身几何失衡、而同族替代物几何全过时，给出更稳的选择。
   // 必须说明「不是同一个形态」—— 只说"更稳"会让人以为可平替。

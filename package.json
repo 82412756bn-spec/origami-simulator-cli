@@ -1,6 +1,6 @@
 {
   "name": "origami-simulator-cli",
-  "version": "2.54.2",
+  "version": "2.55.0",
   "description": "FOLD-to-finish toolchain for paper folding and paper craft: analyze, validate, render and export FOLD/SVG/DXF/STL via CLI, MCP or an agent skill.",
   "main": "src/index.js",
   "bin": {

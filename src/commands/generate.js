@@ -81,10 +81,16 @@ function isTestInvocation() {
   return false;
 }
 
-function logGenerateCall(entry) {
+function logGenerateCall(entry, options) {
   try {
     // 测试产生的调用不是真实使用 —— 混入统计会让 Day 14 的判据误判
     if (isTestInvocation()) return;
+    if (options && (options.noLog || options.no_log)) return;
+    // **agent 的手工验证调用同样不是真实使用**（Kun 2026-11-28 判断）：
+    //   实测污染：74 行日志里 72 行是 agent 自己的 `generate <pattern>` 验证调用，
+    //   用户的真实使用 = 0 行 → 12-10 读出来的数会是 agent 的，不是用户的。
+    //   两种关闭方式：环境变量 ORIGAMI_NO_USAGE_LOG=1，或 CLI 的 --no-log。
+    if (process.env.ORIGAMI_NO_USAGE_LOG === '1') return;
     const dir = path.join(os.homedir(), '.origami', 'signals');
     fs.mkdirSync(dir, { recursive: true });
     fs.appendFileSync(
@@ -630,7 +636,7 @@ Notes:
             { copies: plan.copies, rotate: plan.rotate, scale: plan.scale });
           const result = generateFromFoldData(plan.template, transformed, options);
           logGenerateCall({ mode: 'intent', intent: options.intent, family: plan.family,
-                            template: plan.template, copies: plan.copies, rotate: plan.rotate });
+                            template: plan.template, copies: plan.copies, rotate: plan.rotate }, options);
           printReport(result);
         } catch (err) {
           fail(`意图生成失败：${err.message}`);
@@ -699,7 +705,7 @@ Notes:
             } catch (e) { /* 检测失败不影响生成 */ }
           }
           logGenerateCall({ mode: 'template', template: found.template.id,
-                            copies, rotate, scale: options.scale });
+                            copies, rotate, scale: options.scale }, options);
           printReport(result);
         } catch (err) {
           fail(`模板生成失败：${err.message}`);
@@ -708,7 +714,7 @@ Notes:
       }
 
       const result = generatePattern(pattern, options);
-      logGenerateCall({ mode: 'builtin', pattern, seed: options.seed, thickness: options.thickness });
+      logGenerateCall({ mode: 'builtin', pattern, seed: options.seed, thickness: options.thickness }, options);
 
       if (options.json) {
         console.log(JSON.stringify({
