@@ -85,17 +85,17 @@ const PATTERNS = {
 
   fish: {
     label: 'Fish base',
-    description: 'Fish base crease diagram (crease-pattern-generator-v3)',
+    description: '鱼基折痕图（preliminary base + 一对相对角的 22.5° 谷折）',
     source: 'src/crease-pattern-generator-v3.js',
     generator: () => new CreasePatternGeneratorV3(),
-    method: 'generateFishBase',
-    defaults: { grid: 32 },
+    method: 'generateFishBase22',
+    defaults: { scale: 1 },
     ranges: {
-      grid: { min: 4, max: 256, integer: true },
+      scale: { min: 0.1, max: 1000 },
     },
-    sizeParams: { width: 'grid', height: 'grid' },
+    sizeParams: { width: 'scale', height: 'scale' },
     options: [
-      { flag: '--grid <n>', param: 'grid', desc: 'Crease grid resolution (4-256, default 32)' },
+      { flag: '--scale <n>', param: 'scale', desc: '模型尺度（默认 1）' },
     ],
   },
 

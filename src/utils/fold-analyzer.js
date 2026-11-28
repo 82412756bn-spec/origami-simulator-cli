@@ -1745,6 +1745,7 @@ class FoldAnalyzer {
    * 实测（2026-11-27）：用折痕角 tiger 报「240/240 within 5°」；
    * 用扇区角真实值 2/240（误差中位 223.8°）。
    */
+
   _sectorAngles(vIdx, incidentEdges) {
     const [vx, vy] = this.vertices[vIdx] || [0, 0];
     const dirs = incidentEdges.map((eIdx) => {

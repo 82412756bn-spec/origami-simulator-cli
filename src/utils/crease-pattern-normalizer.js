@@ -466,6 +466,78 @@ function dedupeVertices(foldData, epsilon = 1e-9) {
   return out;
 }
 
+
+/**
+ * **修正人造边界**：把位于纸**内部**的 'B'（不折叠）边恢复成真折痕。
+ *
+ * 为什么需要
+ * ----------
+ * 官方语料（origamisimulator.org 的 FOLD）在**裁剪**时，会把纸边界上的折痕
+ * 替换成 'B'。但有些替换发生在纸的**内部** —— 实测 54 个作品里 1304 条 B 边中
+ * **320 条（24.5%）是这类人造的**。
+ *
+ * 后果：那些顶点变成 deg3/deg4 且带 180° 的退化扇区 → 真实的 Kawasaki 判定
+ * 把它们全判为「不满足折平必要条件」（实测 miura-ori 退化率 70%）。
+ *
+ * 判据：一条 B 边若**两端点都不在纸的外轮廓上**（凸包顶点）→ 它不可能是纸的边
+ * → 是人造的 → 恢复成折痕。
+ *
+ * @param {Object} foldData
+ * @param {Object} [options]
+ * @returns {{foldData:Object, report:Object}}
+ */
+function fixArtificialBoundaryEdges(foldData, options = {}) {
+  const V = foldData.vertices_coords || [];
+  const E = foldData.edges_vertices || [];
+  const A = foldData.edges_assignment || [];
+
+  const report = { totalB: 0, artificial: 0, restored: 0 };
+
+  // 凸包顶点 = 纸的最外圈
+  const hull = convexHullIndices(V);
+  const onHull = new Set(hull);
+
+  for (let i = 0; i < E.length; i++) {
+    if (A[i] !== 'B') continue;
+    report.totalB++;
+    const [a, b] = E[i];
+    if (a === undefined || b === undefined) continue;
+    // 两端都在外轮廓上 → 可能是真正的纸边；否则 → 人造的
+    if (onHull.has(a) && onHull.has(b)) continue;
+    report.artificial++;
+    A[i] = 'M';        // 先全标山折，随后由 balanceMountainValley 平衡
+    report.restored++;
+  }
+
+  if (report.restored > 0) {
+    foldData.edges_assignment = A;
+    foldData.edges_foldAngle = A.map((a) => FOLD_ANGLE_FOR[a] ?? 0);
+  }
+  return { foldData, report };
+}
+
+/** 凸包上的顶点索引（Andrew monotone chain，输入顶点索引） */
+function convexHullIndices(V) {
+  if (V.length < 3) return V.map((_, i) => i);
+  const idx = V.map((_, i) => i)
+    .sort((i, j) => (V[i][0] - V[j][0]) || (V[i][1] - V[j][1]));
+  const cross = (o, a, b) =>
+    (V[a][0] - V[o][0]) * (V[b][1] - V[o][1]) - (V[a][1] - V[o][1]) * (V[b][0] - V[o][0]);
+  const lower = [];
+  for (const i of idx) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], i) <= 0) lower.pop();
+    lower.push(i);
+  }
+  const upper = [];
+  for (let k = idx.length - 1; k >= 0; k--) {
+    const i = idx[k];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], i) <= 0) upper.pop();
+    upper.push(i);
+  }
+  upper.pop(); lower.pop();
+  return lower.concat(upper);
+}
+
 function normalizeCreasePattern(foldData, options = {}) {
   const thickness = options.thickness ?? 1.0;
   const splitCrossings = options.splitCrossings !== false;
@@ -547,6 +619,13 @@ function normalizeCreasePattern(foldData, options = {}) {
     }
   }
 
+  // ── 4b. 修正人造边界（内部 'B' 边 → 真折痕）────────────────────────
+  if (options.fixArtificialBoundary !== false) {
+    const fix = fixArtificialBoundaryEdges(working);
+    working = fix.foldData;
+    report.artificialBoundary = fix.report;
+  }
+
   // ── 5. M/V balance ───────────────────────────────────────────────
   if (balanceMV) {
     const balanced = balanceMountainValley(working, { seed: options.seed });
@@ -578,4 +657,6 @@ module.exports = {
   balanceMountainValley,
   normalizeCreasePattern,
   extractPlanarFaces,
+  fixArtificialBoundaryEdges,
+  convexHullIndices,
 };

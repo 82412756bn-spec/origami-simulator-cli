@@ -517,11 +517,14 @@ function splitCreasesAtCrossings(foldData, options = {}) {
   const newVertices = [];
   const mergeTolerance = options.mergeTolerance ?? GEOMETRY_TOLERANCE;
 
-  const findOrAddVertex = (pt) => {
-    for (let i = 0; i < newVertices.length; i++) {
-      const v = newVertices[i];
-      if (Math.abs(v[0] - pt[0]) <= mergeTolerance && Math.abs(v[1] - pt[1]) <= mergeTolerance) {
-        return vertices.length + i;
+  // unique=true → 永远新建（即使坐标与已有顶点重合）→ 用于 X 交叉的「两条折痕各自独立」
+  const findOrAddVertex = (pt, unique = false) => {
+    if (!unique) {
+      for (let i = 0; i < newVertices.length; i++) {
+        const v = newVertices[i];
+        if (Math.abs(v[0] - pt[0]) <= mergeTolerance && Math.abs(v[1] - pt[1]) <= mergeTolerance) {
+          return vertices.length + i;
+        }
       }
     }
     newVertices.push([pt[0], pt[1], 0]);
@@ -529,6 +532,13 @@ function splitCreasesAtCrossings(foldData, options = {}) {
   };
 
   for (const crossing of crossings.crossings) {
+    // 两条被切的折痕**共享**交点顶点（保持原有的拓扑表示）。
+    //
+    // 曾试过「每条折痕各用独立顶点」（FOLD 里 X 交叉的另一种标准表示）—— 它确实让
+    // 交点不再是 deg4 假失败顶点，但会**改变模板库的顶点结构**，连带破坏
+    // balanceMountainValley 的结果（实测 birdBase 模板的 Maekawa 从全过变成 12/15）。
+    // → 拓扑表示保持原样；交点处的 Kawasaki 问题改由「修正人造边界」间接缓解，
+    //   剩余部分属**源文件几何退化**（见 v2.52.0 的 CHANGELOG 与技术决策记录）。
     const idx = findOrAddVertex(crossing.point);
     splitPoints[crossing.edge1].push({ t: 0, idx, point: crossing.point });
     splitPoints[crossing.edge2].push({ t: 0, idx, point: crossing.point });

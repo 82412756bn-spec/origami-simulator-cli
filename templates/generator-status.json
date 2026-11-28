@@ -49,7 +49,7 @@
       "geometry": "verified",
       "kawasaki": "5/5",
       "maekawa": "5/5",
-      "note": "**真正的鹤基**：preliminary base + 8 条 22.5° 真折痕（tan22.5° 精确值）。拓扑与模板库真实作品 birdBase 一致（13 顶点 / 24 边 / 中心 deg8 M5/V3 / 4 个 deg4 轴点）",
+      "note": "**真正的鹤基**：preliminary base + 8 条 22.5° 真折痕（山折，每个角连相邻 2 个轴点，tan(π/8) 精确值）。拓扑与模板库真实作品 birdBase 完全一致（13 顶点/24 边/中心 deg8 M5/V3/4 个 deg4 轴点 M3/V1，轴点扇区 [112.5,112.5,67.5,67.5]）",
       "substitute": {
         "template": "birdBase",
         "copies": 1,
@@ -61,7 +61,7 @@
       "geometry": "verified",
       "kawasaki": "1/1",
       "maekawa": "1/1",
-      "note": "**虎基**：preliminary base + 4 条 22.5° 预折痕（标 F = 折了再展开的辅助线）。与 crane 区分：crane 的 22.5° 线是真折痕，tiger 的是预折痕",
+      "note": "**虎基**：preliminary base + 4 条 22.5° 预折痕（标 F = 折了再展开的辅助线，不参与折平判定）→ 检查集只剩 preliminary base 的中心 deg8",
       "substitute": {
         "template": "squareBase",
         "copies": 1,
@@ -73,12 +73,12 @@
       "geometry": "na",
       "kawasaki": "0/0",
       "maekawa": "0/0",
-      "note": "preliminary base + 鱼尾（鱼尾标 F = 预折痕）→ 无内部折痕顶点（鱼基本身是单片折叠）",
+      "note": "**鱼基**：preliminary base + 一对相对角的 4 条 22.5° **谷折**（squash 进去）→ 检查集只剩中心 deg8。**诚实标注**：官方语料无鱼基作品可参照（只有 birdBase/squareBase/openSinkBase/pinwheelBase/boatBase/waterbombBase/frogBase），本构造由 preliminary base + 22.5° 规律推导，满足折平必要条件但**未经实物折纸验证**",
       "substitute": {
-        "template": "simpleVertex",
-        "copies": 6,
+        "template": "birdBase",
+        "copies": 1,
         "rotate": 0,
-        "distance": 1.951
+        "distance": 0.42
       }
     },
     "unit": {

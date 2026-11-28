@@ -244,6 +244,85 @@ class CreasePatternGeneratorV3 {
    * 标 'F' 既语义诚实（真实折纸里它们就是折了再展开的预折痕），
    * 也让检查集只剩 preliminary base 的中心 deg8（真正的折叠结构）。
    */
+  /**
+   * **鱼基（fish base）**折痕图 —— preliminary base + **一对相对角的 22.5° 谷折**。
+   *
+   * 构造依据：鱼基是把 preliminary base 的**两个相对角 squash 进去**得到的，
+   * squash 会在展开图上留下 22.5° 的折痕（与 crane 的角折痕同一套角度规律，
+   * 见 generateTrueBirdBase 的推导）。
+   *
+   * 与 crane / tiger 的区别：
+   *   - crane（真鹤基）：8 条 22.5° **真折痕**（山折），每角 2 条
+   *   - tiger（虎基）  ：4 条 22.5° **预折痕**（'F'）
+   *   - fish（鱼基）    ：4 条 22.5° **谷折**（'V'），只在一对相对角上
+   *
+   * **诚实标注**：官方语料里没有鱼基作品可作参照（只有 birdBase / squareBase /
+   * openSinkBase / pinwheelBase / boatBase / waterbombBase / frogBase），
+   * 所以本构造由 preliminary base + 22.5° 规律推导，并用**折平必要条件**实测。
+   * 它满足必要条件（Kawasaki + Maekawa），但**未经实物折纸验证**。
+   */
+  generateFishBase22(options = {}) {
+    const scale = options.scale || 1;
+    const t = Math.tan(Math.PI / 8);
+    const q = (1 - t) * scale;
+
+    const vertices = [];
+    const edges = [];
+    const faces = [];
+    const edges_assignment = [];
+    const edges_foldAngle = [];
+
+    const V = (x, y) => {
+      vertices.push([x * scale, y * scale, 0]);
+      return vertices.length - 1;
+    };
+    const E = (a, b, kind) => {
+      edges.push([a, b]);
+      edges_assignment.push(kind);
+      edges_foldAngle.push(kind === 'M' ? 180 : kind === 'V' ? -180 : 0);
+    };
+
+    const c0 = V(-scale, -scale);
+    const c1 = V(scale, -scale);
+    const c2 = V(scale, scale);
+    const c3 = V(-scale, scale);
+    const cen = V(0, 0);
+    const midL = V(-q, 0);
+    const midR = V(q, 0);
+    const midB = V(0, -q);
+    const midT = V(0, q);
+    const edgeL = V(-scale, 0);
+    const edgeR = V(scale, 0);
+    const edgeB = V(0, -scale);
+    const edgeT = V(0, scale);
+
+    // 纸边
+    E(c0, c1, 'B'); E(c1, c2, 'B'); E(c2, c3, 'B'); E(c3, c0, 'B');
+
+    // preliminary base：中心 8 射线（到 4 角 + 4 个边中点）
+    E(cen, c0, 'M'); E(cen, c1, 'V'); E(cen, c2, 'M'); E(cen, c3, 'V');
+    E(cen, edgeL, 'M'); E(cen, edgeR, 'M'); E(cen, edgeB, 'M'); E(cen, edgeT, 'M');
+
+    // 4 条 22.5° 谷折（squash 一对相对角：左下 c0 与右上 c2）
+    E(c0, midB, 'V'); E(c0, midL, 'V');
+    E(c2, midR, 'V'); E(c2, midT, 'V');
+
+    this.balanceMaekawa({ vertices_coords: vertices, edges_vertices: edges, edges_assignment: edges_assignment });
+
+    try {
+      const { extractPlanarFaces } = require('./utils/crease-pattern-normalizer');
+      const computed = extractPlanarFaces({ vertices_coords: vertices, edges_vertices: edges });
+      if (computed && computed.length > 1) faces.push(...computed);
+    } catch (e) { /* 算不出就沿用空 faces */ }
+
+    return this.createFoldResult(vertices, edges, faces, edges_assignment, edges_foldAngle, {
+      title: 'Fish Base (鱼基：preliminary base + 一对相对角的 22.5° 谷折)',
+      type: 'fish_base',
+      params: { scale },
+      isCreasePattern: true,
+    });
+  }
+
   generateTigerBase22(options = {}) {
     const scale = options.scale || 1;
     const t = Math.tan(Math.PI / 8);
