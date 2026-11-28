@@ -691,6 +691,10 @@ Notes:
               if (!fr.ok && fr.faces > 0) {
                 console.log(`  ⚠️ 面片重叠：${fr.overlaps.length} 处（面积和/纸面积 = ${fr.areaRatio.toFixed(2)}）`
                   + ' → 下游折叠模拟可能失真');
+              } else if (fr.faces > 0 && fr.areaRatio < 0.9) {
+                // 面覆盖不全（大副 2026-11-28 复核意见 ③）：不能默认当成"完整划分"
+                console.log(`  ℹ️ 面覆盖 ${(fr.areaRatio * 100).toFixed(0)}%（${fr.faces} 个面，互不重叠）`
+                  + ' → 面划分不完整，下游折叠模拟请自行确认是否接受缺口');
               }
             } catch (e) { /* 检测失败不影响生成 */ }
           }

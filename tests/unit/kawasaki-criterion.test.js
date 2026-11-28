@@ -166,6 +166,19 @@ describe('Maekawa criterion — expected value depends on vertex valence', () =>
     expect(r.outOfTolerance).toBe(1);
   });
 
+  test('奇偶性不变量：|M-V| 必须与折痕数同奇偶', () => {
+    // deg4 + M3/V1 → |M-V|=2（偶）≡ 4（偶）✓
+    let r = new FoldAnalyzer(synthVertex(4, 3)).analyzeMaekawa();
+    expect(r.parityViolations || 0).toBe(0);
+    // deg3 + M2/V1 → |M-V|=1（奇）≡ 3（奇）✓
+    r = new FoldAnalyzer(synthVertex(3, 2)).analyzeMaekawa();
+    expect(r.parityViolations || 0).toBe(0);
+    // deg4 + M4/V0 → |M-V|=4（偶）≡ 4（偶）✓ 但仍不满足期望值 2 → 判失败
+    r = new FoldAnalyzer(synthVertex(4, 4)).analyzeMaekawa();
+    expect(r.parityViolations || 0).toBe(0);
+    expect(r.withinTolerance).toBe(0);
+  });
+
   test('even valence with |M-V| = 4 still fails', () => {
     const r = new FoldAnalyzer(synthVertex(4, 4)).analyzeMaekawa();
     expect(r.totalChecked).toBe(1);

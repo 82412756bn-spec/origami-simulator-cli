@@ -493,17 +493,37 @@ function fixArtificialBoundaryEdges(foldData, options = {}) {
 
   const report = { totalB: 0, artificial: 0, restored: 0 };
 
-  // 凸包顶点 = 纸的最外圈
-  const hull = convexHullIndices(V);
-  const onHull = new Set(hull);
+  // 纸的**包围盒**（比凸包保守）：只有两端点都**严格在包围盒内部**的 B 边
+  // 才判为「人造」。
+  //
+  // 为什么不用凸包（大副 2026-11-28 复核意见 ①）：凸包顶点在**非凸轮廓**、
+  // **纸上有孔**、**多张纸拼接**的情形下不等于纸边 → 会误伤真正的内部纸边，
+  // 把该折的边变成折痕 → 改变折叠语义。
+  // 包围盒严格内部这个判据**只会命中明显在纸内部的边**，宁可漏判也不误伤。
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const v of V) {
+    if (!v) continue;
+    if (v[0] < minX) minX = v[0];
+    if (v[0] > maxX) maxX = v[0];
+    if (v[1] < minY) minY = v[1];
+    if (v[1] > maxY) maxY = v[1];
+  }
+  const spanX = (maxX - minX) || 1;
+  const spanY = (maxY - minY) || 1;
+  const eps = 1e-9;
+  const strictlyInside = (vi) => {
+    const v = V[vi];
+    if (!v) return false;
+    return v[0] > minX + eps && v[0] < maxX - eps
+        && v[1] > minY + eps && v[1] < maxY - eps;
+  };
 
   for (let i = 0; i < E.length; i++) {
     if (A[i] !== 'B') continue;
     report.totalB++;
     const [a, b] = E[i];
     if (a === undefined || b === undefined) continue;
-    // 两端都在外轮廓上 → 可能是真正的纸边；否则 → 人造的
-    if (onHull.has(a) && onHull.has(b)) continue;
+    if (!strictlyInside(a) || !strictlyInside(b)) continue;   // 可能是真正的纸边
     report.artificial++;
     A[i] = 'M';        // 先全标山折，随后由 balanceMountainValley 平衡
     report.restored++;

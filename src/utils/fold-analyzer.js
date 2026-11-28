@@ -1847,6 +1847,13 @@ class FoldAnalyzer {
       const expectedMv = oddValence ? 1 : 2;
       const deviation = Math.abs(mvAbs - expectedMv);  // ||M-V| - expected|
 
+      // 奇偶性不变量：|M − V| 与折痕数 n 必须同奇偶（因为 M+V = n、|M−V| ≡ M+V (mod 2)）。
+      // 这是 Maekawa 的**必要条件**，与期望值无关 —— 若不成立，说明 assignment 或
+      // 边结构本身有问题（例：某条边被同时算成 M 和 V）。
+      if ((mvAbs % 2) !== (incidentEdges.length % 2)) {
+        result.parityViolations = (result.parityViolations || 0) + 1;
+      }
+
       result.totalChecked++;
       if (deviation === 0) {
         result.withinTolerance++;
