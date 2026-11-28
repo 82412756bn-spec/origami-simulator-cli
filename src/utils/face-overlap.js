@@ -167,6 +167,65 @@ function detectFaceOverlaps(foldData, options = {}) {
     }
   }
 
+  // ── Euler 特征：平面图 F = E − V + 1 + C（C = 连通分量数，含外平面）──
+  // 不依赖任何参考文件，是**独立**判据（大副 2026-11-28 复核建议）。
+  let eulerExpected = null, eulerActual = null, connectedComponents = null;
+  {
+    const nV = (foldData.vertices_coords || []).length;
+    const usedV = new Set();
+    const adj = new Map();
+    for (const e of rawEdges) {
+      if (!e || e.length < 2) continue;
+      usedV.add(e[0]); usedV.add(e[1]);
+      if (!adj.has(e[0])) adj.set(e[0], []);
+      if (!adj.has(e[1])) adj.set(e[1], []);
+      adj.get(e[0]).push(e[1]);
+      adj.get(e[1]).push(e[0]);
+    }
+    // 连通分量（只看出现在边里的顶点）
+    const seen = new Set();
+    let C = 0;
+    for (const v of usedV) {
+      if (seen.has(v)) continue;
+      C++;
+      const stack = [v]; seen.add(v);
+      while (stack.length) {
+        const x = stack.pop();
+        for (const y of adj.get(x) || []) if (!seen.has(y)) { seen.add(y); stack.push(y); }
+      }
+    }
+    connectedComponents = C;
+    // Euler 公式要求图**每个顶点度 ≥ 2**（无悬挂顶点）—— 折痕图有大量度 1 的悬挂顶点
+    // → 公式不成立（实测纯半边 birdBase 期望 1 / 实际 9）。且无 edges 时无从计算。
+    // → 只在**给出了 edges_vertices** 且图无悬挂顶点时作为判据，否则仅作诊断输出。
+    const hasHanging = [...usedV].some((v) => (adj.get(v) || []).length < 2);
+    if (rawEdges.length && !hasHanging) {
+      eulerExpected = rawEdges.length - usedV.size + 1 + C;   // 含外平面
+      eulerActual = polys.length + 1;                          // 面 + 外平面
+    }
+  }
+
+  // ── 边-面关联度：每条内边应被**恰好 2** 个面共享；每条边界边恰好 1 个 ──
+  // （orphanEdges 只覆盖「0 个面」，不覆盖「3+ 个面」——大副指出的缺口）
+  let badIncidence = 0;
+  {
+    const faceEdgeCount = new Map();
+    for (const f of (foldData.faces_vertices || [])) {
+      if (!f || f.length < 3) continue;
+      const seenEdge = new Set();
+      for (let i = 0; i < f.length; i++) {
+        const a = f[i], b = f[(i + 1) % f.length];
+        const k = `${Math.min(a, b)},${Math.max(a, b)}`;
+        if (seenEdge.has(k)) continue;      // 同面内重复边只算一次
+        seenEdge.add(k);
+        faceEdgeCount.set(k, (faceEdgeCount.get(k) || 0) + 1);
+      }
+    }
+    for (const [k, n] of faceEdgeCount) {
+      if (n !== 1 && n !== 2) badIncidence++;
+    }
+  }
+
   return {
     faces: polys.length,
     overlaps,
@@ -175,8 +234,13 @@ function detectFaceOverlaps(foldData, options = {}) {
     areaRatio,
     nonSimple,
     orphanEdges,
-    ok: overlaps.length === 0 && nonSimple === 0 && orphanEdges === 0
-      && (hullArea === 0 || areaRatio <= 1.0001),
+    eulerExpected,
+    eulerActual,
+    connectedComponents,
+    badIncidence,
+    ok: overlaps.length === 0 && nonSimple === 0 && orphanEdges === 0 && badIncidence === 0
+      && (hullArea === 0 || areaRatio <= 1.0001)
+      && (eulerExpected === null || eulerExpected === eulerActual),
   };
 }
 

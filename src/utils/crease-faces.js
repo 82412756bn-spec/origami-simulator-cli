@@ -51,9 +51,13 @@ function build(foldData, mode) {
     const dir = [dx / len, dy / len];
     const aHang = (deg.get(a) || 0) === 1 && !onHull.has(a);
     const bHang = (deg.get(b) || 0) === 1 && !onHull.has(b);
+    // 延长方向（大副 2026-11-28 复核确认的 bug）：
+    //   clipToHull(P, d) 返回 [t_enter, t_exit]，其中 t_enter < 0 < t_exit（P 在凸包内）。
+    //   沿 d0 = -dir 参数化 P + t·d0 时，**-dir 那一侧的边界在 t = t_exit = c[1]**（>0），
+    //   不是 t_enter。原来取 c[0]（负值）→ A 端被推向 **+dir**（纸内方向）→ 折痕根本没伸到纸边。
     if (mode === 'extendAll' || (mode === 'hangOnly' && aHang)) {
       const c = clipToHull(pa, [-dir[0], -dir[1]], hull, V);
-      if (c) A = [pa[0] - dir[0] * c[0], pa[1] - dir[1] * c[0]];
+      if (c) A = [pa[0] - dir[0] * c[1], pa[1] - dir[1] * c[1]];
     }
     if (mode === 'extendAll' || (mode === 'hangOnly' && bHang)) {
       const c = clipToHull(pb, dir, hull, V);
