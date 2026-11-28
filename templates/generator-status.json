@@ -73,7 +73,7 @@
       "geometry": "verified",
       "kawasaki": "1/1",
       "maekawa": "1/1",
-      "note": "**鱼基**：preliminary base + 一对相对角的 4 条 22.5° **谷折**（squash 进去）→ 检查集只剩中心 deg8，Kawasaki 1/1 · Maekawa 1/1。**诚实标注**：官方语料无鱼基作品可参照（只有 birdBase/squareBase/openSinkBase/pinwheelBase/boatBase/waterbombBase/frogBase），本构造由 preliminary base + 22.5° 规律推导，满足折平必要条件但**未经实物折纸验证**",
+      "note": "**鱼基**：preliminary base + 一对相对角的 4 条 22.5° **谷折**（squash 进去）→ Kawasaki 1/1 · Maekawa 1/1。**构造依据**：权威折纸资料 —— origamiexpressions.com/origami-fish-base 明说「The Fish Base is basically two rabbit ear folds next to each other」（origamiok.com/fish-base-fold 同源）→ 一对角各一组 22.5° 折痕 = 两个 rabbit ear。**诚实标注**：无机器可读的权威鱼基折痕图（只有图片）→ **未经实物折纸验证**",
       "substitute": {
         "template": "birdBase",
         "copies": 1,

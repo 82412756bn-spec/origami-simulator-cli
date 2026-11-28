@@ -1,0 +1,208 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "waterbombBase",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      432,
+      288,
+      0
+    ],
+    [
+      2448,
+      288,
+      0
+    ],
+    [
+      2448,
+      2304,
+      0
+    ],
+    [
+      432,
+      2304,
+      0
+    ],
+    [
+      432,
+      1296,
+      0
+    ],
+    [
+      2448,
+      1296,
+      0
+    ],
+    [
+      1440,
+      288,
+      0
+    ],
+    [
+      1440,
+      2304,
+      0
+    ],
+    [
+      1440,
+      1296,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      2
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      0,
+      8
+    ],
+    [
+      8,
+      2
+    ],
+    [
+      1,
+      8
+    ],
+    [
+      8,
+      3
+    ],
+    [
+      4,
+      8
+    ],
+    [
+      8,
+      5
+    ],
+    [
+      6,
+      8
+    ],
+    [
+      8,
+      7
+    ]
+  ],
+  "edges_assignment": [
+    "B",
+    "B",
+    "B",
+    "B",
+    "V",
+    "M",
+    "M",
+    "M",
+    "V",
+    "V",
+    "V",
+    "V"
+  ],
+  "edges_foldAngle": [
+    0,
+    0,
+    0,
+    0,
+    -180,
+    180,
+    180,
+    180,
+    -180,
+    -180,
+    -180,
+    -180
+  ],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 2,
+    "valley_creases": 2,
+    "total_edges": 8,
+    "total_vertices": 8,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null,
+    "corpus_rebuild": {
+      "source_svg": "waterbombBase.svg",
+      "chosen": "normalized",
+      "reason": "规范化版判据全过",
+      "rebuilt_at": "2026-11-28T02:54:07.018Z"
+    }
+  },
+  "file_creator": "origami generate (origami-simulator-cli)",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "thickness": 1,
+  "vertices_edges": [
+    [
+      0,
+      3,
+      4
+    ],
+    [
+      0,
+      1,
+      6
+    ],
+    [
+      1,
+      2,
+      5
+    ],
+    [
+      2,
+      3,
+      7
+    ],
+    [
+      8
+    ],
+    [
+      9
+    ],
+    [
+      10
+    ],
+    [
+      11
+    ],
+    [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  ]
+}

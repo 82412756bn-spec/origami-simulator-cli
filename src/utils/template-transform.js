@@ -116,20 +116,7 @@ function transformTemplate(foldData, { copies = 1, rotate = 0, scale = 1, gap = 
   const gapSize = gap === null ? Math.max((box.width || 1) * scale * 0.02, 1e-6) : gap;
 
   const rad = (d) => (d * Math.PI) / 180;
-  const allV = [], allE = [], allA = [], allF = [], allFaces = [];
-  // 面**从边重算**（planar half-edge），而不是沿用来源文件里的 faces：
-  // 来源文件的 faces 往往是转换/规范化的产物，可能互相重叠
-  // （实测模板库的面面积和是纸的凸包面积的 3–15 倍）→ 下游折叠模拟会失真。
-  // loadTemplateFold 已经打断过交点、平衡过 M/V、去过重顶点 → 边是干净的划分，
-  // 重算出的面互不重叠。旋转/缩放不改变拓扑 → 只需算一次，再按份偏移。
-  let baseFaces = foldData.faces_vertices || [];
-  try {
-    const { extractPlanarFaces } = require('./crease-pattern-normalizer');
-    const recomputed = extractPlanarFaces(foldData);
-    if (recomputed && recomputed.length) baseFaces = recomputed;
-  } catch (e) {
-    /* 重算失败 → 沿用来源文件的面（判定会如实报出重叠） */
-  }
+  const allV = [], allE = [], allA = [], allF = [];
 
   // 先各自旋转，再按**旋转后的实际包围盒**依次排开 —— 否则相邻份会重叠，
   // 表现为「2D 交叉」判据报警（旋转 120° 的菱形轮廓比原包围盒宽）。
@@ -160,13 +147,7 @@ function transformTemplate(foldData, { copies = 1, rotate = 0, scale = 1, gap = 
       allA.push(baseA[i] !== undefined ? baseA[i] : 'B');
       allF.push(baseF[i] !== undefined ? baseF[i] : 0);
     }
-    // 面（faces）也要跟着偏移 —— 之前被硬编码清空（faces_vertices: []），
-    // 导致模板模式产出的 FOLD 缺面信息，下游折叠模拟会缺面数据。
-    // 旋转/缩放不改变面内的顶点**索引**（同一份内），只需加该份的顶点偏移。
-    for (const f of baseFaces) {
-      if (!f || !f.length) continue;
-      allFaces.push(f.map((i) => i + off));
-    }
+
     // 推进游标必须用 **shift 之后** 的 maxX —— 之前误用了旧 cursorX，导致相邻两份重叠
     cursorX = b.maxX + shift + gapSize;
   }
@@ -176,8 +157,32 @@ function transformTemplate(foldData, { copies = 1, rotate = 0, scale = 1, gap = 
     edges_vertices: allE,
     edges_assignment: allA,
     edges_foldAngle: allF,
-    faces_vertices: allFaces,    // 按份偏移重建（不再清空 —— 下游折叠模拟需要面信息）
+    faces_vertices: [],
   });
+
+  // 面：从**边**重算（planar half-edge），不沿用来源文件的 faces。
+  //
+  // 来源文件的 faces 往往是转换/规范化的产物，**面之间互相重叠**
+  // （实测模板库的面面积和是纸的凸包面积的 5.66–15.46 倍）→ 下游折叠模拟会失真。
+  // loadTemplateFold 已经打断过交点、平衡过 M/V、去过重顶点 → 边是干净的划分，
+  // 重算出的面**互不重叠**（但会漏面，见下）。
+  //
+  // **已知局限（2026-11-28 实测，诚实记录）**：纯半边算法对**悬挂边**不产生面边界
+  // → 漏面（实测覆盖 57–91%：birdBase 8 面/0.571、flat_crane 66 面/0.909、
+  // miura-ori 134 面/0.848、squaretwist 85 面/0.778）。
+  // 「面」的完整正确算法需要**三步**：
+  //   ① 把 X 交叉切成 T 型 junction（打断交点）→ ② 每条折痕延长到纸边
+  //   → ③ 在折痕与纸边的交点处切分纸的边界边
+  // 目前只做到 ②③ 的部分实现（src/utils/crease-faces.js，诊断用），
+  // 三步齐全才能给出「重叠 0 + 面积比 1.00」的完美划分 → **列为专档任务**。
+  // 当前的取舍：**宁可少面也不能重叠**（下游模拟宁可有缺口，也不能拿重叠的面当划分）。
+  try {
+    const { extractPlanarFaces } = require('./crease-pattern-normalizer');
+    const recomputed = extractPlanarFaces(out);
+    if (recomputed && recomputed.length) out.faces_vertices = recomputed;
+  } catch (e) {
+    /* 算不出就留空（判定会如实报出面缺失） */
+  }
   if (typeof foldData.thickness === 'number') out.thickness = foldData.thickness;
   out.metadata = Object.assign({}, foldData.metadata, {
     generated_from: 'template',

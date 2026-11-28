@@ -1,0 +1,138 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "brochurefold",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      1379.706,
+      2014.824,
+      0
+    ],
+    [
+      1870.411,
+      2014.824,
+      0
+    ],
+    [
+      2361.117,
+      2014.824,
+      0
+    ],
+    [
+      889,
+      2735.412,
+      0
+    ],
+    [
+      1870.411,
+      2735.412,
+      0
+    ],
+    [
+      1379.706,
+      2735.412,
+      0
+    ],
+    [
+      2361.117,
+      2735.412,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      5,
+      6
+    ]
+  ],
+  "edges_assignment": [
+    "V",
+    "V",
+    "V",
+    "V",
+    "M"
+  ],
+  "edges_foldAngle": [
+    -180,
+    -180,
+    -180,
+    -180,
+    180
+  ],
+  "faces_vertices": [],
+  "metadata": {
+    "mountain_creases": 1,
+    "valley_creases": 4,
+    "total_edges": 5,
+    "total_vertices": 7,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null,
+    "corpus_rebuild": {
+      "source_svg": "brochurefold.svg",
+      "chosen": "normalized-partial",
+      "reason": "两者都未全过，规范化版通过率更高（0.0% vs 0.0%）",
+      "rebuilt_at": "2026-11-28T02:53:20.810Z"
+    }
+  },
+  "file_creator": "origami generate (origami-simulator-cli)",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "thickness": 1,
+  "vertices_edges": [
+    [
+      0
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3
+    ],
+    [
+      4
+    ],
+    [
+      4
+    ]
+  ]
+}

@@ -1,0 +1,244 @@
+{
+  "file_spec": 1.2,
+  "schema_version": "1.0",
+  "creator": "SVG to FOLD Converter",
+  "created": "2026-05-09",
+  "title": "Rotating_Star",
+  "description": "Converted from Origami Simulator SVG crease pattern",
+  "vertices_coords": [
+    [
+      543.484,
+      552.257,
+      0
+    ],
+    [
+      451.418,
+      659.334,
+      0
+    ],
+    [
+      318.148,
+      706.035,
+      0
+    ],
+    [
+      179.382,
+      679.843,
+      0
+    ],
+    [
+      72.304,
+      587.777,
+      0
+    ],
+    [
+      25.605,
+      454.507,
+      0
+    ],
+    [
+      51.796,
+      315.74,
+      0
+    ],
+    [
+      143.862,
+      208.662,
+      0
+    ],
+    [
+      277.132,
+      161.962,
+      0
+    ],
+    [
+      415.898,
+      188.155,
+      0
+    ],
+    [
+      522.977,
+      280.221,
+      0
+    ],
+    [
+      569.676,
+      413.492,
+      0
+    ]
+  ],
+  "edges_vertices": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      7,
+      8
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ],
+    [
+      11,
+      0
+    ]
+  ],
+  "edges_assignment": [
+    "M",
+    "B",
+    "B",
+    "M",
+    "B",
+    "B",
+    "M",
+    "B",
+    "B",
+    "M",
+    "B",
+    "B"
+  ],
+  "edges_foldAngle": [
+    180,
+    0,
+    0,
+    180,
+    0,
+    0,
+    180,
+    0,
+    0,
+    180,
+    0,
+    0
+  ],
+  "faces_vertices": [
+    [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  ],
+  "metadata": {
+    "mountain_creases": 0,
+    "valley_creases": 0,
+    "total_edges": 12,
+    "total_vertices": 12,
+    "conversion_note": "Faces computed as planar regions - verify with Origami Simulator",
+    "generator": "origami generate",
+    "normalized": true,
+    "pattern": null,
+    "seed": null,
+    "parameters": null,
+    "corpus_rebuild": {
+      "source_svg": "Rotating_Star.svg",
+      "chosen": "normalized-partial",
+      "reason": "两者都未全过，规范化版通过率更高（0.0% vs 0.0%）",
+      "rebuilt_at": "2026-11-28T02:53:20.268Z"
+    }
+  },
+  "file_creator": "origami generate (origami-simulator-cli)",
+  "file_classes": [
+    "creasePattern"
+  ],
+  "frame_classes": [
+    "creasePattern"
+  ],
+  "frame_attributes": [
+    "2D"
+  ],
+  "frame_title": "Crease Pattern",
+  "thickness": 1,
+  "vertices_edges": [
+    [
+      0,
+      11
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      2,
+      3
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      5
+    ],
+    [
+      5,
+      6
+    ],
+    [
+      6,
+      7
+    ],
+    [
+      7,
+      8
+    ],
+    [
+      8,
+      9
+    ],
+    [
+      9,
+      10
+    ],
+    [
+      10,
+      11
+    ]
+  ]
+}
