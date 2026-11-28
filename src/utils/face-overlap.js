@@ -143,14 +143,72 @@ function detectFaceOverlaps(foldData, options = {}) {
   }
 
   const areaRatio = hullArea > 0 ? sumArea / hullArea : 0;
+
+  // **简单多边形**检查：面不能自交（否则面积与拓扑都不可信）
+  let nonSimple = 0;
+  for (const poly of polys) {
+    if (!isSimplePolygon(poly)) nonSimple++;
+  }
+
+  // **边集包含关系**：面的每条边都必须是折痕图里存在的边（否则面是凭空造的）
+  // 只有在**提供了 edges_vertices** 时才能判「孤儿边」——
+  // 否则（只给 faces 的调用方）无从判断面的边是否真实存在。
+  const rawEdges = foldData.edges_vertices || [];
+  let orphanEdges = 0;
+  if (rawEdges.length) {
+    const edgeSet = new Set(rawEdges.map(
+      (e) => `${Math.min(e[0], e[1])},${Math.max(e[0], e[1])}`));
+    for (const f of (foldData.faces_vertices || [])) {
+      if (!f || f.length < 3) continue;
+      for (let i = 0; i < f.length; i++) {
+        const a = f[i], b = f[(i + 1) % f.length];
+        if (!edgeSet.has(`${Math.min(a, b)},${Math.max(a, b)}`)) { orphanEdges++; break; }
+      }
+    }
+  }
+
   return {
     faces: polys.length,
     overlaps,
     sumArea,
     hullArea,
     areaRatio,
-    ok: overlaps.length === 0 && (hullArea === 0 || areaRatio <= 1.0001),
+    nonSimple,
+    orphanEdges,
+    ok: overlaps.length === 0 && nonSimple === 0 && orphanEdges === 0
+      && (hullArea === 0 || areaRatio <= 1.0001),
   };
 }
 
-module.exports = { detectFaceOverlaps, polyArea, convexHull, clipPolygon };
+
+/** 简单多边形检查：相邻边不自交（O(n²)，面数不大时可接受） */
+function isSimplePolygon(poly) {
+  const n = poly.length;
+  if (n < 3) return false;
+  // 重复顶点
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (Math.hypot(poly[i][0] - poly[j][0], poly[i][1] - poly[j][1]) < 1e-12) return false;
+    }
+  }
+  // 非相邻边相交
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (j === i || (i === 0 && j === n - 1) || Math.abs(i - j) === 1) continue;
+      if (segmentsIntersect(poly[i], poly[(i + 1) % n], poly[j], poly[(j + 1) % n])) return false;
+    }
+  }
+  return true;
+}
+
+function segmentsIntersect(p1, p2, p3, p4) {
+  const d = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const d1 = d(p3, p4, p1), d2 = d(p3, p4, p2), d3 = d(p1, p2, p3), d4 = d(p1, p2, p4);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+  const onSeg = (a, b, c) => Math.abs(d(a, b, c)) < 1e-12
+    && c[0] >= Math.min(a[0], b[0]) - 1e-12 && c[0] <= Math.max(a[0], b[0]) + 1e-12
+    && c[1] >= Math.min(a[1], b[1]) - 1e-12 && c[1] <= Math.max(a[1], b[1]) + 1e-12;
+  return onSeg(p3, p4, p1) || onSeg(p3, p4, p2) || onSeg(p1, p2, p3) || onSeg(p1, p2, p4);
+}
+
+module.exports = { detectFaceOverlaps, polyArea, convexHull, clipPolygon, isSimplePolygon };

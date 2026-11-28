@@ -115,6 +115,7 @@ function main() {
   if (!args.dryRun) fs.mkdirSync(args.out, { recursive: true });
   const tmp = fs.mkdtempSync('/tmp/rebuild-');
   const rows = [];
+  const rebuildFailures = [];
   const list = args.limit ? names.slice(0, args.limit) : names;
 
   for (const n of list) {
@@ -122,10 +123,15 @@ function main() {
     const svgFile = svgs.get(n);
     const outFold = path.join(tmp, `${n}.fold`);
     let rebuilt = null;
+    let rebuildError = null;
     try {
       execFileSync('python3', [CONVERTER, svgFile, outFold], { timeout: 240, stdio: 'ignore' });
       if (fs.existsSync(outFold)) rebuilt = JSON.parse(fs.readFileSync(outFold, 'utf8'));
-    } catch (e) { /* 转换失败 → 退回规范化版 */ }
+      else rebuildError = '转换器未产出文件';
+    } catch (e) {
+      rebuildError = (e && e.stderr ? String(e.stderr).trim().split('\n').slice(-1)[0] : String(e.message || e));
+    }
+    if (rebuildError) rebuildFailures.push({ name: n, error: rebuildError });
 
     // ② 官方 FOLD 规范化版（兜底）
     let normalized = null;
@@ -153,7 +159,17 @@ function main() {
     const sN = score(jNorm, normalized ? degeneracy(normalized) : null);
 
     let chosen = 'none', data = null, j = null, why = '';
+    // 排序（按优先级）：
+    //   1. **退化率作 hard gate**：退化率高的那版直接出局
+    //      （理由：大副 2026-11-28 复核指出 —— 退化面会「膨胀」通过率
+    //        （面少 → 失败顶点也少）→ 若按通过率优先，会选到更差的分解）
+    //   2. 判据**全过**者优先
+    //   3. 顶点级通过率（Kaw 与 Mae 取小）更高者
+    //   4. 取重建版
+    const DEG_GATE = 0.02;   // 退化率 2% 以内才算「干净」
     const better = (a, b) => {
+      const aClean = a.deg <= DEG_GATE, bClean = b.deg <= DEG_GATE;
+      if (aClean !== bClean) return aClean;          // 干净的优先（hard gate）
       if (a.pass !== b.pass) return a.pass > b.pass;
       if (a.deg !== b.deg) return a.deg < b.deg;
       return false;
@@ -199,6 +215,10 @@ function main() {
   }
   console.log('─'.repeat(104));
   console.log(`采用重建版: ${cnt.rebuilt} 份 · 采用规范化版: ${cnt.normalized} 份 · 未产出: ${cnt.none} 份`);
+  if (rebuildFailures.length) {
+    console.log(`\n⚠️ SVG 重建失败 ${rebuildFailures.length} 份（已自动回退规范化版，不是静默失败）：`);
+    for (const f of rebuildFailures.slice(0, 10)) console.log(`   - ${f.name}: ${f.error}`);
+  }
   console.log('\n判据说明：Kawasaki(扇区角, 5° 容差) · Maekawa(偶数价期望 2 / 奇数价期望 1)；'
     + '「退化」= 扇区 >180° 的顶点占比');
   console.log('选择器：重建版**判据全过**才采用；否则回退规范化版（自动化、零风险）');

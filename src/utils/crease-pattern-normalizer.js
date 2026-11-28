@@ -493,37 +493,57 @@ function fixArtificialBoundaryEdges(foldData, options = {}) {
 
   const report = { totalB: 0, artificial: 0, restored: 0 };
 
-  // 纸的**包围盒**（比凸包保守）：只有两端点都**严格在包围盒内部**的 B 边
-  // 才判为「人造」。
+  // 纸的**实际外轮廓** = 由 'B' 边构成的**闭合回路**。
   //
   // 为什么不用凸包（大副 2026-11-28 复核意见 ①）：凸包顶点在**非凸轮廓**、
-  // **纸上有孔**、**多张纸拼接**的情形下不等于纸边 → 会误伤真正的内部纸边，
-  // 把该折的边变成折痕 → 改变折叠语义。
-  // 包围盒严格内部这个判据**只会命中明显在纸内部的边**，宁可漏判也不误伤。
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of V) {
-    if (!v) continue;
-    if (v[0] < minX) minX = v[0];
-    if (v[0] > maxX) maxX = v[0];
-    if (v[1] < minY) minY = v[1];
-    if (v[1] > maxY) maxY = v[1];
-  }
-  const spanX = (maxX - minX) || 1;
-  const spanY = (maxY - minY) || 1;
-  const eps = 1e-9;
-  const strictlyInside = (vi) => {
-    const v = V[vi];
-    if (!v) return false;
-    return v[0] > minX + eps && v[0] < maxX - eps
-        && v[1] > minY + eps && v[1] < maxY - eps;
-  };
-
+  // **纸上有孔**、**多张纸拼接**的情形下不等于纸边 → 会误伤真正的内部纸边。
+  // 为什么不用包围盒：同样的问题 —— **非凸纸的凹口边**，两端点都严格在 bbox 内
+  // → 也会被误判。实测：包围盒口径在全量语料上把 32511 条 B 边里的 **94.3%** 判成人造
+  //   → 过度恢复，把真纸边也折了。
+  //
+  // 正确做法：把 B 边当成图，**闭合回路**（每个节点度 = 2）上的边才是真纸边
+  // （纸的边界、孔的边界、拼接纸的接缝）；不在任何闭合回路上的 B 边 → 是人造的
+  // （裁剪时把内部折痕换成了 B）。
+  const bEdges = [];
+  const bAdj = new Map();
   for (let i = 0; i < E.length; i++) {
     if (A[i] !== 'B') continue;
     report.totalB++;
     const [a, b] = E[i];
     if (a === undefined || b === undefined) continue;
-    if (!strictlyInside(a) || !strictlyInside(b)) continue;   // 可能是真正的纸边
+    bEdges.push(i);
+    if (!bAdj.has(a)) bAdj.set(a, []);
+    if (!bAdj.has(b)) bAdj.set(b, []);
+    bAdj.get(a).push(i);
+    bAdj.get(b).push(i);
+  }
+  // 闭合回路上的边：节点度全为 2 的连通分量
+  const inClosedLoop = new Set();
+  {
+    const seen = new Set();
+    for (const start of bAdj.keys()) {
+      if (seen.has(start)) continue;
+      const comp = [];
+      const stack = [start];
+      seen.add(start);
+      while (stack.length) {
+        const v = stack.pop();
+        comp.push(v);
+        for (const ei of bAdj.get(v) || []) {
+          const e = E[ei];
+          const o = e[0] === v ? e[1] : e[0];
+          if (!seen.has(o)) { seen.add(o); stack.push(o); }
+        }
+      }
+      const allDeg2 = comp.every((v) => (bAdj.get(v) || []).length === 2);
+      if (allDeg2) {
+        for (const v of comp) for (const ei of bAdj.get(v) || []) inClosedLoop.add(ei);
+      }
+    }
+  }
+
+  for (const i of bEdges) {
+    if (inClosedLoop.has(i)) continue;      // 在纸的边界回路上 → 真纸边
     report.artificial++;
     A[i] = 'M';        // 先全标山折，随后由 balanceMountainValley 平衡
     report.restored++;
@@ -570,6 +590,23 @@ function normalizeCreasePattern(foldData, options = {}) {
     faces: {},
     mvBalance: {},
   };
+
+  // ── 0. 修正人造边界（内部 'B' 边 → 真折痕）────────────────────────
+  //
+  // **必须在任何几何处理之前做**（在原始图上判定）。
+  //
+  // 为什么（2026-11-28 实测踩坑）：
+  //   裁剪会把一条纸边切成多段 → 每段都变成**悬挂边**（端点度 = 1）→
+  //   此时「B 边构成的闭合回路」几乎不存在 → 用它判「哪些 B 是人造的」会
+  //   把 **98.8%** 的 B 边误判成人造（实测全量语料）；用包围盒判据也误判 94.3%
+  //   （非凸纸的凹口边两端点都在 bbox 内）。
+  //   而**原始图**上 B 边就是完整的纸边 → 判据才准（1304 条里 24.5%）。
+  if (options.fixArtificialBoundary !== false) {
+    const fix = fixArtificialBoundaryEdges(foldData);
+    report.artificialBoundary = fix.report;
+    // 注意：fix 直接改的是 foldData 的 edges_assignment 数组，
+    // 下面 working = { ...foldData } 会带上修改后的 assignment。
+  }
 
   // ── 1. envelope ──────────────────────────────────────────────────
   let working = { ...foldData };
@@ -637,13 +674,6 @@ function normalizeCreasePattern(foldData, options = {}) {
       working.faces_vertices = working.faces_vertices || [];
       report.faces = { count: (working.faces_vertices || []).length, method: 'generator (no planar faces found)' };
     }
-  }
-
-  // ── 4b. 修正人造边界（内部 'B' 边 → 真折痕）────────────────────────
-  if (options.fixArtificialBoundary !== false) {
-    const fix = fixArtificialBoundaryEdges(working);
-    working = fix.foldData;
-    report.artificialBoundary = fix.report;
   }
 
   // ── 5. M/V balance ───────────────────────────────────────────────

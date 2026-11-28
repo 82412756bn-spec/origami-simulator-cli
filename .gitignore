@@ -59,3 +59,7 @@ tmp/
 # macOS 资源叉垃圾（不提交）
 ._*
 .DS_Store
+
+# 语料规范化 / 重建的产物（11M × 2）—— **可再生的生成物**，不进版本库
+benchmarks/corpus-normalized/
+benchmarks/corpus-rebuilt/
