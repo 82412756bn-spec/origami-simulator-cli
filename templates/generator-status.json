@@ -70,10 +70,10 @@
       }
     },
     "fish": {
-      "geometry": "na",
-      "kawasaki": "0/0",
-      "maekawa": "0/0",
-      "note": "**鱼基**：preliminary base + 一对相对角的 4 条 22.5° **谷折**（squash 进去）→ 检查集只剩中心 deg8。**诚实标注**：官方语料无鱼基作品可参照（只有 birdBase/squareBase/openSinkBase/pinwheelBase/boatBase/waterbombBase/frogBase），本构造由 preliminary base + 22.5° 规律推导，满足折平必要条件但**未经实物折纸验证**",
+      "geometry": "verified",
+      "kawasaki": "1/1",
+      "maekawa": "1/1",
+      "note": "**鱼基**：preliminary base + 一对相对角的 4 条 22.5° **谷折**（squash 进去）→ 检查集只剩中心 deg8，Kawasaki 1/1 · Maekawa 1/1。**诚实标注**：官方语料无鱼基作品可参照（只有 birdBase/squareBase/openSinkBase/pinwheelBase/boatBase/waterbombBase/frogBase），本构造由 preliminary base + 22.5° 规律推导，满足折平必要条件但**未经实物折纸验证**",
       "substitute": {
         "template": "birdBase",
         "copies": 1,
